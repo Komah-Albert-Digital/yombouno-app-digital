@@ -1926,8 +1926,8 @@ const SYNC_BACKEND_ACTIF = true; // un backend de synchronisation (Google Drive)
    connecté) et de le SIGNALER clairement, avec un lien de téléchargement en un clic — voir le
    guide « Procédure de mise à jour » pour la marche à suivre lors de la publication d'une version.
    VERSION_APP doit être incrémenté à chaque nouvelle version envoyée sur Drive. */
-const VERSION_APP = 159;
-const VERSION_APP_DATE = '2026-09-28';
+const VERSION_APP = 160;
+const VERSION_APP_DATE = '2026-10-03';
 const FICHIER_VERSION_APP = 'tekoulo__app_version.json';
 let MAJ_APP_DISPONIBLE = null; // {version, url, date, notes} une fois qu'une version plus récente est détectée
 
@@ -4986,6 +4986,7 @@ function renderGuide(container){
       <a href="#g16n">16. Dictionnaire, présence et supervision</a>
       <a href="#g17">17. Fermeture de l'application</a>
       <a href="#g17b">17 bis. Installer, désinstaller et transférer l'application</a>
+      <a href="#g17c">17 ter. Adresse officielle, hébergement GitHub et changement de compte</a>
       <a href="#g18">18. Foire aux questions</a>
       <a href="#g19">19. Aide-mémoire rapide</a>
     </div>
@@ -5424,6 +5425,8 @@ function renderGuide(container){
         <li><b>Page blanche à l'ouverture</b> → vérifier la connexion internet et la batterie de l'appareil ; recharger la page en navigation privée pour écarter tout souci de cache.</li>
         <li><b>« Accès bloqué : erreur d'autorisation » lors de la connexion Google</b> → le compte Google utilisé n'a pas encore été ajouté comme utilisateur test (10 bis.8), ou le champ d'application Drive n'a pas été correctement configuré côté Google Cloud — contacter la personne technique.</li>
         <li><b>Fenêtre Google qui se ferme toute seule (« popup fermée »)</b> → fermer les autres onglets du navigateur et ne pas changer d'application pendant la connexion, puis réessayer (10 bis.8).</li>
+        <li><b>« Erreur 400 : origin_mismatch » ou Google refuse la connexion depuis la nouvelle adresse</b> → l'adresse du site n'est pas encore dans les « Origines JavaScript autorisées » du client OAuth (chapitre 17 ter.4) ; attendre quelques minutes après l'enregistrement, puis réessayer.</li>
+        <li><b>Connexion refusée alors que la fenêtre Google s'ouvre</b> → vérifier que les cases d'autorisation Drive (et e-mail) sont bien cochées et que l'adresse Gmail figure dans les utilisateurs de test (chapitre 17 ter.3).</li>
         <li><b>Dossier Drive vide après synchronisation</b> → vérifier qu'on est connecté, dans l'application comme dans Drive, avec le même compte Google (10 bis.9).</li>
         <li><b>Une donnée saisie sur un appareil n'apparaît pas sur un autre</b> → sur les deux appareils, ouvrir le tableau de bord et appuyer sur « 🔄 Synchroniser » ; vérifier qu'ils utilisent la même année scolaire active et le même compte Google / dossier Drive.</li>
         <li><b>« Session Google à renouveler »</b> → toucher l'écran, ou appuyer sur « 🔗 Connecter Google Drive » ; les données saisies entre-temps sont conservées et envoyées ensuite.</li>
@@ -5742,6 +5745,67 @@ function renderGuide(container){
       <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>GitHub met à jour le fonctionnement de l'application ; seule la sauvegarde/restauration ou la synchronisation Google Drive transportent le contenu d'un appareil à l'autre.</div>
     </div>
 
+    <div class="guide-chapter" id="g17c">
+      <h2>17 ter. Adresse officielle, hébergement GitHub et changement de compte (octobre 2026)</h2>
+      <p>Le 3 octobre 2026, l'application a été republiée sur un nouveau compte GitHub, car l'accès à l'ancien compte avait été perdu (compte créé avec Google, sans mot de passe GitHub). Ce chapitre résume ce qui a changé et ce que chaque utilisateur doit faire.</p>
+
+      <h3>17 ter.1 La nouvelle adresse officielle</h3>
+      <table class="guide-table">
+        <thead><tr><th>Élément</th><th>Adresse</th></tr></thead>
+        <tbody>
+          <tr><td>Application (à utiliser désormais)</td><td><code>komah-albert-digital.github.io/yombouno-app-digital/</code></td></tr>
+          <tr><td>Dépôt GitHub (fichiers de l'application)</td><td><code>github.com/Komah-Albert-Digital/yombouno-app-digital</code></td></tr>
+          <tr><td>Ancienne adresse (à abandonner)</td><td><code>tekoulo-centre.github.io/tekoulo-app</code></td></tr>
+        </tbody>
+      </table>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Données propres à chaque adresse</b>Les données locales d'un appareil sont rattachées à l'adresse du site. Les données saisies sur l'ancienne adresse n'apparaissent donc pas automatiquement sur la nouvelle : elles se retrouvent en connectant Google Drive (chapitre 10 bis) ou en passant par une sauvegarde/restauration (chapitre 9). Avant d'abandonner l'ancienne adresse, vérifiez qu'une synchronisation Drive ou une sauvegarde récente existe.</div>
+
+      <h3>17 ter.2 Ce que chaque utilisateur doit faire (une seule fois par appareil)</h3>
+      <ol>
+        <li>Ouvrir la nouvelle adresse dans Chrome.</li>
+        <li>Installer l'application : bouton <b>« 📲 Installer l'application »</b>, ou menu ⋮ → « Installer l'application » / « Ajouter à l'écran d'accueil » (chapitre 17 bis.1).</li>
+        <li>Supprimer l'ancienne icône de l'écran d'accueil, pour ne pas ouvrir l'ancienne version par erreur.</li>
+        <li>Appuyer sur <b>« 🔗 Connecter Google Drive »</b> et choisir son compte Google (chapitre 10 bis.1).</li>
+        <li>Sur une installation neuve, utiliser d'abord <b>« ⭱ Restaurer »</b> ou la synchronisation pour récupérer les données <b>avant</b> tout « ⭳ Sauvegarder », afin de ne jamais remplacer une bonne sauvegarde par des données vides.</li>
+      </ol>
+
+      <h3>17 ter.3 Fenêtre d'autorisation Google : les cases à cocher</h3>
+      <p>À la première connexion, Google affiche la liste des autorisations demandées par l'application, <b>toutes décochées par défaut</b>. Il faut cocher :</p>
+      <ul>
+        <li><b>« Afficher, modifier, créer et supprimer des fichiers dans Google Drive »</b> : indispensable à la synchronisation ;</li>
+        <li><b>« Envoyer des e-mails en votre nom »</b> : nécessaire pour l'envoi automatique des bulletins de salaire par e-mail (chapitre 15 bis.4).</li>
+      </ul>
+      <p>Puis appuyer sur <b>« Continuer »</b>. Si l'écran « Google n'a pas validé cette application » apparaît, c'est normal en phase de test : choisir <b>« Avancé »</b>, puis <b>« Accéder à … »</b>.</p>
+      <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>Si la fenêtre se ferme et que le message « Popup window closed » s'affiche, rien n'est cassé : la fenêtre Google a simplement été fermée avant la fin. Appuyer de nouveau sur « Connecter Google Drive », cocher la case Drive, appuyer sur « Continuer » et ne rien fermer ni changer d'application jusqu'au retour dans l'application.</div>
+
+      <h3>17 ter.4 Réglages Google Cloud liés à l'adresse</h3>
+      <p>Google n'accepte la connexion que depuis les adresses déclarées dans le projet Google Cloud de l'école. Ces réglages sont à faire par le Fondateur ou la personne technique, avec le compte Google qui a créé le projet :</p>
+      <ul>
+        <li><b>Origine autorisée</b> : dans <code>console.cloud.google.com/apis/credentials</code>, ouvrir le client OAuth « Albert digital - web », section « Origines JavaScript autorisées », et y inscrire l'adresse du site <b>sans chemin</b> : <code>https://komah-albert-digital.github.io</code> (pas de « / » final, pas de nom de dépôt), puis « Enregistrer ». La prise en compte peut demander de quelques minutes à quelques heures.</li>
+        <li><b>Utilisateurs de test</b> : dans <code>console.cloud.google.com/auth/audience</code>, « Add users » pour chaque adresse Gmail qui doit se connecter (chapitre 10 bis.8).</li>
+        <li><b>Case « This client will be used by an AI-powered agent »</b> : à laisser <b>décochée</b>.</li>
+      </ul>
+      <div class="guide-callout info"><b class="gc-label">ℹ️ Si une autre adresse est utilisée un jour</b>Chaque nouvelle adresse d'hébergement (nouveau compte GitHub, autre école, nom de domaine personnalisé) doit être ajoutée aux origines JavaScript autorisées, sinon Google refuse la connexion (erreur « origin_mismatch »).</div>
+
+      <h3>17 ter.5 Sécurité du compte GitHub et du compte Google</h3>
+      <ul>
+        <li>Le dépôt GitHub est <b>public</b> (nécessaire à GitHub Pages avec un compte gratuit) : <b>tout ce qui est écrit dans index.html est lisible par n'importe qui</b>. Ne jamais y inscrire de mot de passe, de code de secours ni de clé secrète.</li>
+        <li>Activer la <b>double authentification</b> sur le compte GitHub (Paramètres → Password and authentication) et sur le compte Google (<code>g.co/2sv</code>). Google Cloud exige cette validation en deux étapes à partir du <b>10 octobre 2026</b>.</li>
+        <li>Télécharger et conserver, hors de l'appareil et hors de toute conversation, les <b>codes de secours</b> de chaque compte. Chaque code ne sert qu'une fois ; en générer de nouveaux sur <code>g.co/2sv</code> annule les anciens.</li>
+        <li>Noter, dans un endroit sûr, l'adresse e-mail et le mode de connexion de chaque compte (GitHub, Google Cloud, Orange Developer, Cloudflare) : l'oubli de l'adresse utilisée à la création a justifié ce changement de compte.</li>
+        <li>Garder une copie de tous les fichiers de l'application (index.html, manifest.json, sw.js, icônes) sur Google Drive ou sur le téléphone.</li>
+      </ul>
+
+      <h3>17 ter.6 Publier une mise à jour sur le nouveau dépôt</h3>
+      <ol>
+        <li>Se connecter à GitHub avec le compte propriétaire du dépôt.</li>
+        <li>Ouvrir le dépôt, puis <b>« + » → « Upload files »</b>, et envoyer le nouveau fichier <code>index.html</code> à la racine (même nom), puis « Commit changes ».</li>
+        <li>Attendre 1 à 2 minutes : GitHub Pages republie automatiquement (onglet « Actions » ou carte « Deployments » du dépôt, coche verte).</li>
+        <li>Rouvrir l'application et, si l'ancien affichage persiste, vider le cache du navigateur (sans effacer les données du site).</li>
+      </ol>
+      <p>Une mise à jour du fichier ne touche jamais aux données déjà saisies (chapitre 17 bis.4).</p>
+    </div>
+
     <div class="guide-chapter" id="g18">
       <h2>18. Foire aux questions et dépannage</h2>
       <h3>J'ai oublié le mot de passe, que faire ?</h3>
@@ -5786,6 +5850,9 @@ function renderGuide(container){
           <tr><td>Sauvegarder les données</td><td>« ⭳ Sauvegarder » (barre supérieure) ou Paramètres → « Télécharger une sauvegarde ».</td></tr>
           <tr><td>Changer d'année scolaire</td><td>Sélecteur d'année dans la barre latérale.</td></tr>
           <tr><td>Changer le mot de passe administrateur</td><td>Paramètres → section « Sécurité ».</td></tr>
+          <tr><td>Connaître l'adresse officielle de l'application</td><td>Chapitre 17 ter.1 : <code>komah-albert-digital.github.io/yombouno-app-digital/</code>.</td></tr>
+          <tr><td>Autoriser une nouvelle adresse auprès de Google</td><td>Google Cloud → Identifiants → client « Albert digital - web » → Origines JavaScript autorisées (chapitre 17 ter.4).</td></tr>
+          <tr><td>Publier une mise à jour</td><td>GitHub → dépôt → « + » → « Upload files » → index.html → « Commit changes » (chapitre 17 ter.6).</td></tr>
           <tr><td>Quitter l'application</td><td>Bouton rouge « Quitter » en haut à droite.</td></tr>
         </tbody>
       </table>
@@ -6027,9 +6094,87 @@ function techniqueContenuHTML(){
             <td style="white-space:nowrap;"><a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a></td>
             <td>Tableau de bord Cloudflare — pour vérifier l'état, redémarrer ou consulter les journaux (logs) du serveur relais de l'assistant IA, en cas de panne de ce dernier.</td>
           </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://github.com/Komah-Albert-Digital/yombouno-app-digital" target="_blank" rel="noopener">github.com/Komah-Albert-Digital/yombouno-app-digital</a></td>
+            <td>Le dépôt GitHub qui contient les fichiers de l'application (index.html, manifest.json, sw.js, icônes). On y envoie une nouvelle version avec « + » → « Upload files ». Réservé au propriétaire du dépôt.</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://github.com/Komah-Albert-Digital/yombouno-app-digital/settings/pages" target="_blank" rel="noopener">Réglages GitHub Pages</a></td>
+            <td>Vérifier que la publication est active (« Deploy from a branch », branche main, dossier / root) et lire l'adresse du site publié.</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://github.com/Komah-Albert-Digital/yombouno-app-digital/actions" target="_blank" rel="noopener">Onglet Actions du dépôt</a></td>
+            <td>Suivre la publication après l'envoi d'un fichier : une coche verte signifie que la nouvelle version est en ligne (1 à 2 minutes).</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://github.com/settings/security" target="_blank" rel="noopener">github.com/settings/security</a></td>
+            <td>Sécurité du compte GitHub : double authentification, codes de récupération, clés d'accès (passkeys).</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://github.com/settings/emails" target="_blank" rel="noopener">github.com/settings/emails</a></td>
+            <td>Voir ou changer l'adresse e-mail du compte GitHub — utile pour retrouver l'adresse de récupération.</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">console.cloud.google.com/auth/clients</a></td>
+            <td>Ouvrir le client OAuth « Albert digital - web » pour y ajouter l'adresse du site dans « Origines JavaScript autorisées » (nécessaire à chaque changement d'adresse).</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://g.co/2sv" target="_blank" rel="noopener">g.co/2sv</a></td>
+            <td>Validation en deux étapes du compte Google (exigée par Google Cloud à partir du 10 octobre 2026) et génération de codes de secours.</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://g.co/recover" target="_blank" rel="noopener">g.co/recover</a></td>
+            <td>Récupérer un compte Google dont le mot de passe est oublié.</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://developer.orange.com" target="_blank" rel="noopener">developer.orange.com</a></td>
+            <td>Compte Orange Developer : gérer l'application et les identifiants (Client ID / Client Secret) utilisés pour l'envoi des SMS de paiement et de rappel.</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;"><a href="https://support.github.com/contact" target="_blank" rel="noopener">support.github.com/contact</a></td>
+            <td>Contacter le support GitHub (récupération de compte, dépôt supprimé).</td>
+          </tr>
         </tbody>
       </table></div>
       <div class="guide-callout attention"><b class="gc-label">⚠️ Accès sensible</b>Ces pages permettent de modifier qui peut accéder aux données de l'école. Elles ne doivent être ouvertes que par le Fondateur ou une personne de confiance, connectée avec le compte Google qui a créé le projet.</div>
+
+      <div class="section-title"><h3><span class="bar"></span>8 bis. Hébergement, comptes et changement d'adresse (octobre 2026)</h3></div>
+      <div class="hint-box">Fiche de référence : où l'application est hébergée, quels comptes la font fonctionner, et que faire quand l'adresse change. Ne contient volontairement aucun mot de passe : le dépôt GitHub étant public, tout ce qui est écrit dans ce fichier est visible de tous.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th style="white-space:nowrap;">Élément</th><th>Rôle et où le gérer</th></tr></thead>
+        <tbody>
+          <tr><td style="white-space:nowrap;"><b>Adresse officielle</b></td><td><code>https://komah-albert-digital.github.io/yombouno-app-digital/</code> — c'est l'adresse à installer et à partager. L'ancienne adresse <code>tekoulo-centre.github.io/tekoulo-app</code> n'est plus à utiliser.</td></tr>
+          <tr><td style="white-space:nowrap;"><b>Compte GitHub</b></td><td>Compte « Komah-Albert-Digital » : héberge les fichiers de l'application via GitHub Pages (gratuit, dépôt public). Sécurisé par la double authentification et des codes de récupération.</td></tr>
+          <tr><td style="white-space:nowrap;"><b>Compte Google (projet Google Cloud)</b></td><td>Projet « My ALBERT DIGITAL GUINEE » : fournit l'identifiant client OAuth « Albert digital - web » et la liste des utilisateurs de test. La synchronisation Drive, l'envoi d'e-mails et la connexion Google en dépendent.</td></tr>
+          <tr><td style="white-space:nowrap;"><b>Dossier Google Drive</b></td><td>Dossier partagé de l'école, qui contient les fichiers .json synchronisés. Il ne change pas quand l'adresse du site change.</td></tr>
+          <tr><td style="white-space:nowrap;"><b>Compte Orange Developer</b></td><td>Fournit l'accès à l'API SMS (SMS de paiement des salaires, rappels de scolarité). Les identifiants se renseignent dans Paramètres, jamais dans les messages ni dans les documents partagés.</td></tr>
+          <tr><td style="white-space:nowrap;"><b>Cloudflare Worker</b></td><td>Petit serveur relais de l'assistant IA (chapitre 10 ter). Indépendant de GitHub et de Google Drive.</td></tr>
+        </tbody>
+      </table></div>
+
+      <p style="font-weight:700; font-size:13px; margin:14px 0 6px; color:var(--green-deep);">Procédure — changer l'adresse de l'application (nouveau compte GitHub, nouvelle école…)</p>
+      <ol style="font-size:12.6px; padding-left:20px; line-height:1.7;">
+        <li>Avant tout : vérifier qu'une synchronisation Google Drive ou une sauvegarde (⭳) récente existe sur l'ancienne adresse.</li>
+        <li>Créer le compte GitHub (avec une adresse e-mail dont l'accès est assuré), activer la double authentification et télécharger les codes de récupération.</li>
+        <li>Créer un dépôt <b>public</b>, y envoyer index.html, manifest.json, sw.js et les icônes à la racine (« Upload files »).</li>
+        <li>Dépôt → Settings → Pages → « Deploy from a branch », branche <b>main</b>, dossier <b>/ (root)</b> → Save. Attendre la coche verte.</li>
+        <li>Google Cloud → Identifiants → client OAuth → <b>Origines JavaScript autorisées</b> : ajouter <code>https://NOUVEAU-COMPTE.github.io</code> (sans chemin) → Enregistrer. Vérifier aussi les <b>utilisateurs de test</b> (Audience).</li>
+        <li>Sur chaque appareil : ouvrir la nouvelle adresse, installer l'application, supprimer l'ancienne icône, « Connecter Google Drive » (cocher la case Drive, ne rien fermer), puis récupérer les données (Restaurer ou synchronisation) <b>avant</b> toute sauvegarde.</li>
+        <li>Mettre à jour l'adresse dans ce fichier (module technique et chapitre 17 ter du guide) et republier.</li>
+      </ol>
+
+      <p style="font-weight:700; font-size:13px; margin:14px 0 6px; color:var(--green-deep);">Messages d'erreur fréquents liés à l'adresse et à la connexion</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th style="white-space:nowrap;">Message</th><th>Cause et solution</th></tr></thead>
+        <tbody>
+          <tr><td><b>404 sur GitHub</b></td><td>Adresse mal saisie (par exemple « IDENTIFIANT » laissé tel quel), dépôt privé consulté sans être connecté, ou dépôt renommé. Vérifier l'adresse exacte et la connexion au bon compte.</td></tr>
+          <tr><td><b>« This account does not support password sign-in »</b></td><td>Compte GitHub créé avec Google ou Apple : se connecter avec « Continue with Google » (ou Apple), ou avec une clé d'accès (passkey).</td></tr>
+          <tr><td><b>origin_mismatch</b></td><td>L'adresse du site n'est pas dans les origines JavaScript autorisées du client OAuth. Voir la procédure ci-dessus, étape 5.</td></tr>
+          <tr><td><b>« Popup window closed » (type popup_closed)</b></td><td>La fenêtre Google a été fermée avant la fin, ou n'a pas pu s'ouvrir. Autoriser les fenêtres pop-up pour le site (Chrome → Paramètres → Paramètres des sites → Pop-ups et redirections), puis réessayer sans rien fermer.</td></tr>
+          <tr><td><b>Application non validée / accès bloqué</b></td><td>Normal en mode Test. Ajouter l'adresse Gmail aux utilisateurs de test, puis « Avancé » → « Accéder à … ».</td></tr>
+        </tbody>
+      </table></div>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Dépôt public : aucun secret dans index.html</b>Tout le contenu de ce fichier est lisible par n'importe quel visiteur du dépôt GitHub. Les mots de passe, codes de secours et clés secrètes (par exemple le Client Secret Orange) ne doivent pas y figurer : les saisir dans Paramètres et les régénérer chez le fournisseur s'ils ont été exposés.</div>
 
       <div class="section-title"><h3><span class="bar"></span>9. Dictionnaire technique — mots et expressions fréquents</h3></div>
       <div class="hint-box">Petit lexique des mots que la personne technique (ou un message d'erreur) peut utiliser, expliqués simplement — pour comprendre sans avoir à demander à chaque fois.</div>
