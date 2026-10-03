@@ -8176,6 +8176,37 @@ function salaireNotifierPaiementParSms(rec){
     .then(()=>{ toast('📱 SMS de paiement envoyé à '+(personne.prenoms||'')+' '+(personne.nom||'')+'.'); })
     .catch(err=>{ toast('Échec de l\u2019envoi du SMS à '+(personne.prenoms||'')+' '+(personne.nom||'')+' : '+((err&&err.message)||err), true); });
 }
+/* Rappel SMS « frais de scolarité impayés » — envoyé manuellement depuis la fiche d'un élève (bouton
+   « 📱 Envoyer un rappel SMS » à côté du reste à payer), au contact des parents renseigné dans la fiche
+   Élèves (champ « Contact des parents »). Utilise le même service Orange que la notification de paiement
+   des salaires ci-dessus ; ignoré avec un message clair si le service SMS n'est pas configuré. */
+function scoRappelerParSms(recordId){
+  const p = getParams();
+  if(!(p.smsOrangeClientId||'').trim() || !(p.smsOrangeClientSecret||'').trim()){
+    toast('Le service SMS Orange n\u2019est pas configuré (Paramètres → Établissement → Notification SMS de paiement).', true);
+    return;
+  }
+  const rec = dbGet('fraisscolarite').find(r=>r.__id===recordId);
+  if(!rec){ toast('Fiche introuvable.', true); return; }
+  const rep = scolariteRepartition(rec);
+  const reste = rep.annuelle - scoMontantVerse(rec);
+  if(reste<=0){ toast('Cet élève n\u2019a plus de frais de scolarité en attente.'); return; }
+  const eleves = dbGet('eleves');
+  const eleve = eleves.find(e=> e.identifiant && rec.identifiantEleve && e.identifiant===rec.identifiantEleve)
+             || eleves.find(e=> (e.prenom||'')===(rec.prenom||'') && (e.nom||'')===(rec.nom||''));
+  const telephone = orangeNormaliserNumeroGuinee((eleve && eleve.contactParents) || '');
+  if(!telephone){
+    toast('Rappel non envoyé : contact des parents manquant ou invalide pour '+(rec.prenom||'')+' '+(rec.nom||'')+' (module Élèves → champ « Contact des parents »).', true);
+    return;
+  }
+  const fG = n => Number(n||0).toLocaleString('fr-FR')+' GNF';
+  const message = 'Bonjour, nous vous rappelons que les frais de scolarité de '+(rec.prenom||'')+' '+(rec.nom||'')
+    +' s\u2019élèvent à '+fG(reste)+' restant dû pour l\u2019année scolaire '+(p.anneeScolaire||'')
+    +'. Merci de bien vouloir régulariser dans les meilleurs délais. '+(p.nomEcole||'L\u2019école');
+  orangeSmsEnvoyer(telephone, message)
+    .then(()=>{ toast('📱 Rappel SMS envoyé au contact de '+(rec.prenom||'')+' '+(rec.nom||'')+'.'); })
+    .catch(err=>{ toast('Échec de l\u2019envoi du rappel : '+((err&&err.message)||err), true); });
+}
 /* Met un numéro de téléphone saisi librement (avec ou sans indicatif, espaces, tirets…) au format
    attendu par l'API Orange : un numéro guinéen à 9 chiffres, sans le +224. Renvoie '' si le numéro
    ne ressemble pas à un numéro guinéen valide (9 chiffres après nettoyage). */
@@ -10040,9 +10071,10 @@ const GENERIC_MODULES = {
           <div><span class="muted" style="font-size:11px;">Scolarité annuelle</span><br><b id="sco-prev-annuelle">${fmt(rep.annuelle)}</b></div>
           ${rep.tranches.map((t,i)=>`<div><span class="muted" style="font-size:11px;">${esc(t.label)}</span><br><b class="sco-prev-tranche" data-i="${i}">${fmt(t.montant)}</b></div>`).join('')}
         </div>
-        <div style="margin-top:10px; display:flex; gap:18px; font-size:12.5px; flex-wrap:wrap;">
+        <div style="margin-top:10px; display:flex; gap:18px; font-size:12.5px; flex-wrap:wrap; align-items:center;">
           <div>Total versé : <b>${fmt(totalVerse)}</b></div>
           <div>Reste à payer : <b id="sco-prev-reste" style="color:${reste>0?'var(--red)':'var(--green)'}">${fmt(reste)}</b></div>
+          ${(record.__id && reste>0) ? `<button type="button" class="btn ghost sm" onclick="scoRappelerParSms('${record.__id}')">📱 Envoyer un rappel SMS</button>` : ''}
         </div>
       </div>
       ${record.__id ? `
