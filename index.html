@@ -12,7 +12,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Collège Tekoulo Centre">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Playfair+Display:wght@600;700;900&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Playfair+Display:wght@600;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Playfair+Display:wght@600;700;900&display=swap"></noscript>
 <style>
   /* =========================================================
      CSS de toute l'application. Déjà subdivisé par des commentaires
@@ -81,65 +82,105 @@
   }
   .login-espace-titre{display:inline-block; margin:2px 0 12px; padding:5px 16px; border-radius:20px; background:var(--grad-emerald); color:#fff; font-weight:700; font-size:12.5px; letter-spacing:.4px;}
 
-  /* ===== Splash screen Albert Digital (écran de bienvenue au lancement) ===== */
+  /* ===== Splash screen Albert Digital (écran de bienvenue au lancement) — v2 professionnelle =====
+     Uniquement des animations « transform » et « opacity » : elles sont exécutées par le processeur
+     graphique et restent fluides même pendant que le navigateur charge le reste de l'application. */
   #albert-splash{
-    position:fixed; inset:0; z-index:99999;
+    position:fixed; inset:0; z-index:99999; overflow:hidden;
     display:flex; align-items:center; justify-content:center;
     background:
       radial-gradient(900px 500px at 15% 10%, rgba(41,121,255,.16), transparent 60%),
-      radial-gradient(900px 550px at 88% 92%, rgba(80,160,255,.12), transparent 60%),
+      radial-gradient(900px 550px at 88% 92%, rgba(212,175,55,.10), transparent 60%),
       linear-gradient(160deg, #05070d 0%, #0a0f1c 55%, #050607 100%);
-    animation: albertSplashFadeIn .5s ease both;
+    contain:layout paint style; opacity:1;
   }
   #albert-splash.albert-splash-out{
-    animation: albertSplashFadeOut .55s cubic-bezier(.4,0,.2,1) both;
+    animation: albertSplashOut .6s cubic-bezier(.4,0,.2,1) forwards;
     pointer-events:none;
   }
   .albert-splash-inner{
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    text-align:center; padding:0 24px;
-    animation: albertSplashRise .7s cubic-bezier(.2,.8,.2,1) both .05s;
+    position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:0 24px; width:100%; max-width:420px;
   }
   .albert-splash-logo-wrap{
-    width:112px; height:112px; margin-bottom:18px;
-    filter: drop-shadow(0 8px 26px rgba(41,121,255,.35));
-    animation: albertSplashPulse 2.4s ease-in-out infinite;
+    position:relative; width:112px; height:112px; margin-bottom:22px;
+    opacity:0; transform:translate3d(0,0,0) scale(.82);
+    animation: albertSplashLogoIn .9s cubic-bezier(.2,.8,.2,1) .1s forwards;
+    will-change:transform,opacity;
   }
-  .albert-splash-logo{width:100%; height:100%; object-fit:contain; border-radius:22px;}
+  .albert-splash-logo-wrap::before{ /* halo statique + pulsation par opacité (aucun filtre animé) */
+    content:""; position:absolute; inset:-22px; border-radius:50%;
+    background:radial-gradient(circle, rgba(61,139,255,.38) 0%, rgba(61,139,255,0) 68%);
+    opacity:.55; animation: albertSplashHalo 2.6s ease-in-out 1s infinite; will-change:opacity,transform;
+  }
+  .albert-splash-logo{position:relative; width:100%; height:100%; object-fit:contain; border-radius:22px; box-shadow:0 10px 30px rgba(0,0,0,.45);}
   .albert-splash-word{
-    font-family:var(--sans); font-weight:800; font-size:26px; letter-spacing:2px;
+    font-family:var(--sans); font-weight:800; font-size:25px; letter-spacing:2.5px;
     color:#f2f6ff; text-transform:uppercase;
+    opacity:0; transform:translate3d(0,12px,0);
+    animation: albertSplashRise .8s cubic-bezier(.2,.8,.2,1) .55s forwards; will-change:transform,opacity;
   }
   .albert-splash-word span{
     background:linear-gradient(90deg,#3d8bff,#8fc4ff);
     -webkit-background-clip:text; background-clip:text; color:transparent;
   }
+  .albert-splash-rule{
+    width:64px; height:2px; margin:16px 0 14px; border-radius:2px;
+    background:linear-gradient(90deg, transparent, #d4af37, transparent);
+    opacity:0; transform:scaleX(.2);
+    animation: albertSplashRule .8s cubic-bezier(.2,.8,.2,1) .95s forwards; will-change:transform,opacity;
+  }
   .albert-splash-tagline{
-    margin-top:10px; font-family:var(--sans); font-size:13.5px; letter-spacing:.3px;
-    color:rgba(230,238,255,.85); max-width:300px;
+    font-family:var(--sans); font-size:13.5px; letter-spacing:.3px;
+    color:rgba(230,238,255,.85); max-width:320px;
+    opacity:0; transform:translate3d(0,10px,0);
+    animation: albertSplashRise .8s cubic-bezier(.2,.8,.2,1) 1.05s forwards; will-change:transform,opacity;
   }
-  .albert-splash-tagline.albert-splash-sub{
-    margin-top:6px; font-size:11.5px; color:rgba(230,238,255,.5);
+  .albert-splash-thanks{
+    margin-top:22px; display:flex; flex-direction:column; align-items:center; gap:2px;
+    opacity:0; transform:translate3d(0,12px,0);
+    animation: albertSplashRise .9s cubic-bezier(.2,.8,.2,1) 1.4s forwards; will-change:transform,opacity;
   }
-  .albert-splash-loader{display:flex; gap:6px; margin-top:26px;}
-  .albert-splash-loader span{
-    width:7px; height:7px; border-radius:50%;
-    background:linear-gradient(135deg,#3d8bff,#8fc4ff);
-    animation: albertSplashDot 1s ease-in-out infinite;
+  .albert-splash-thanks .st-name{
+    font-family:'Great Vibes','Brush Script MT','Segoe Script',cursive; font-size:38px; line-height:1.15;
+    background:linear-gradient(90deg,#f1d97a,#d4af37,#f7e7a1); -webkit-background-clip:text; background-clip:text; color:transparent;
   }
-  .albert-splash-loader span:nth-child(2){animation-delay:.15s;}
-  .albert-splash-loader span:nth-child(3){animation-delay:.3s;}
-
-  @keyframes albertSplashFadeIn{ from{opacity:0;} to{opacity:1;} }
-  @keyframes albertSplashFadeOut{ from{opacity:1; transform:translateY(0) scale(1);} to{opacity:0; transform:translateY(-18px) scale(.98);} }
-  @keyframes albertSplashRise{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);} }
-  @keyframes albertSplashPulse{ 0%,100%{transform:scale(1);} 50%{transform:scale(1.045);} }
-  @keyframes albertSplashDot{ 0%,80%,100%{opacity:.3; transform:scale(.75);} 40%{opacity:1; transform:scale(1);} }
+  .albert-splash-thanks .st-msg{
+    font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif; font-style:italic; font-size:17px;
+    letter-spacing:.4px; color:rgba(240,244,255,.92);
+  }
+  .albert-splash-progress{
+    margin-top:30px; width:150px; height:3px; border-radius:3px; overflow:hidden;
+    background:rgba(255,255,255,.10); opacity:0; animation: albertSplashFade .5s ease 1.2s forwards;
+  }
+  .albert-splash-progress i{
+    display:block; width:100%; height:100%; border-radius:3px; transform-origin:left center; transform:scaleX(0);
+    background:linear-gradient(90deg,#3d8bff,#8fc4ff,#d4af37);
+    animation: albertSplashBar 2.1s cubic-bezier(.45,.05,.25,1) 1.2s forwards; will-change:transform;
+  }
+  @keyframes albertSplashLogoIn{ from{opacity:0; transform:translate3d(0,0,0) scale(.82);} to{opacity:1; transform:translate3d(0,0,0) scale(1);} }
+  @keyframes albertSplashRise{ from{opacity:0; transform:translate3d(0,12px,0);} to{opacity:1; transform:translate3d(0,0,0);} }
+  @keyframes albertSplashRule{ from{opacity:0; transform:scaleX(.2);} to{opacity:1; transform:scaleX(1);} }
+  @keyframes albertSplashFade{ from{opacity:0;} to{opacity:1;} }
+  @keyframes albertSplashBar{ from{transform:scaleX(0);} to{transform:scaleX(1);} }
+  @keyframes albertSplashHalo{ 0%,100%{opacity:.35; transform:scale(.94);} 50%{opacity:.7; transform:scale(1.06);} }
+  @keyframes albertSplashOut{ from{opacity:1; transform:scale(1);} to{opacity:0; transform:scale(1.03);} }
   @media (prefers-reduced-motion: reduce){
-    #albert-splash, #albert-splash.albert-splash-out, .albert-splash-inner, .albert-splash-logo-wrap, .albert-splash-loader span{
-      animation:none !important; transition:none !important;
+    #albert-splash.albert-splash-out, .albert-splash-inner *, .albert-splash-inner *::before{
+      animation-duration:.01s !important; animation-delay:0s !important;
     }
   }
+  @media (max-width:380px){ .albert-splash-word{font-size:21px;} .albert-splash-thanks .st-name{font-size:32px;} }
+  /* Bandeau « hors connexion » (discret, non bloquant) */
+  #albert-offline-pill{
+    position:fixed; left:50%; bottom:14px; z-index:99990; transform:translate(-50%,24px); opacity:0; pointer-events:none;
+    padding:7px 16px; border-radius:20px; font:600 12px/1.2 var(--sans,system-ui,sans-serif); letter-spacing:.2px;
+    color:#fff; background:#3a4660; box-shadow:0 4px 16px rgba(0,0,0,.25); transition:opacity .3s, transform .3s;
+  }
+  #albert-offline-pill.on{ opacity:.95; transform:translate(-50%,0); }
+  #albert-offline-pill.back{ background:#1c7a4b; }
+  @media print{ #albert-offline-pill{display:none !important;} }
+  
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -1221,7 +1262,8 @@
   @media(max-width:860px){ .app-foot{ margin:8px 12px 0; } }
   @media print{ #main::before, #main::after, .app-foot{ display:none !important; } }
 </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="preload" as="style" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"></noscript>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1229,17 +1271,22 @@
 <body>
 
 <!-- ===================== SPLASH ALBERT DIGITAL ===================== -->
-<div id="albert-splash" role="status" aria-live="polite">
+<div id="albert-splash" role="status" aria-live="polite" aria-label="Yombouno Albert vous remercie pour votre excellent choix">
   <div class="albert-splash-inner">
     <div class="albert-splash-logo-wrap">
-      <img src="icon-512.png" alt="Albert Digital" class="albert-splash-logo" width="512" height="512" fetchpriority="high">
+      <img src="icon-512.png" alt="Albert Digital" class="albert-splash-logo" width="512" height="512" fetchpriority="high" decoding="async">
     </div>
     <div class="albert-splash-word">ALBERT <span>DIGITAL</span> GUINÉE</div>
+    <div class="albert-splash-rule"></div>
     <div class="albert-splash-tagline">Bienvenue dans l'application Albert Digital Guinée</div>
-    <div class="albert-splash-tagline albert-splash-sub"><span data-ecole-nom>Collège Tekoulo Centre</span> — Base de Données de Gestion</div>
-    <div class="albert-splash-loader"><span></span><span></span><span></span></div>
+    <div class="albert-splash-thanks">
+      <span class="st-name">Yombouno Albert</span>
+      <span class="st-msg">vous remercie pour votre excellent choix</span>
+    </div>
+    <div class="albert-splash-progress"><i></i></div>
   </div>
 </div>
+<div id="albert-offline-pill" role="status" aria-live="polite"></div>
 
 <div id="toast-host"></div>
 
@@ -1567,8 +1614,15 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 /* Un service worker enregistré (avec un gestionnaire « fetch ») fait partie des conditions
    d'installabilité vérifiées par Chrome/Edge avant de proposer l'installation — voir sw.js. */
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+/* Service worker (fonctionnement hors connexion). Il met en cache l'application et ses bibliothèques
+   à la première ouverture en ligne ; ensuite l'application démarre entièrement sans internet.
+   Nécessite un hébergement en https:// (GitHub Pages, etc.) — le mode « fichier local » (file://) ne le permet pas. */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(reg=>{
+      try{ reg.update(); }catch(e){}
+    }).catch(()=>{});
+  });
 }
 
 /* ============================ STORAGE (avec gestion multi-années scolaires) ============================ */
@@ -5918,7 +5972,7 @@ function renderGuide(container){
 /* Interrupteur temporaire de phase de conception : mettre à false avant la mise en service pour
    réactiver la restriction « Informations de l'établissement » / « Frais de scolarité par cycle »
    au seul Fondateur. Tant que MODE_CONCEPTION vaut true, tous les rôles y ont accès. */
-const MODE_CONCEPTION = true; // ⬅ repasser à false avant la mise en service
+const MODE_CONCEPTION = false; // Mode professionnel : phase de conception terminée (permissions normales actives)
 /* Seul le Fondateur (et l'ancien rôle chef_etablissement, en attendant sa migration) peut consulter/modifier
    les informations générales de l'école et les tarifs de scolarité par cycle (audit permissions, point 16). */
 function estFondateurActuel(){
@@ -19181,33 +19235,51 @@ function figerColonnesPlanifier(root){
 </div>
 
 <script>
-/* ===================== SPLASH ALBERT DIGITAL (v1) =====================
-   Écran de bienvenue affiché au lancement de l'application (icône bureau /
-   PWA / rechargement), avant l'affichage de la page d'accueil — sur le
-   principe du splash screen de Word. Purement cosmétique : ne modifie
-   aucune logique d'authentification ni d'affichage existante, il se
-   contente de se superposer puis de disparaître tout seul. */
+/* ===================== SPLASH ALBERT DIGITAL (v2) =====================
+   Écran de bienvenue au lancement. Purement cosmétique : se superpose puis disparaît tout seul.
+   - Ne dépend plus de l'événement « load » (qui attendait les polices et bibliothèques en ligne et
+     bloquait le démarrage hors connexion) : il suffit que la page soit analysée (DOMContentLoaded).
+   - Durée minimale = durée de l'animation (≈ 3,3 s) pour qu'elle se déroule entièrement, sans coupure. */
 (function(){
   const splash = document.getElementById('albert-splash');
   if(!splash) return;
-  const MIN_DISPLAY_MS = 3000; // durée minimale à l'écran, même si tout charge instantanément
-  const MAX_WAIT_MS = 6000;    // filet de sécurité : ne jamais bloquer l'app plus de 6s
-  const startedAt = Date.now();
+  const MIN_DISPLAY_MS = 3300;  // durée de la séquence animée
+  const MAX_WAIT_MS = 5000;     // filet de sécurité : ne jamais bloquer l'application plus de 5 s
+  const startedAt = (window.performance && performance.now) ? performance.now() : 0;
   let dismissed = false;
+  function retirer(){ if(splash.parentNode) splash.remove(); }
   function dismiss(){
     if(dismissed) return;
     dismissed = true;
-    const elapsed = Date.now() - startedAt;
-    const wait = Math.max(0, MIN_DISPLAY_MS - elapsed);
+    const now = (window.performance && performance.now) ? performance.now() : MIN_DISPLAY_MS;
+    const wait = Math.max(0, MIN_DISPLAY_MS - (now - startedAt));
     setTimeout(()=>{
-      splash.classList.add('albert-splash-out');
-      splash.addEventListener('transitionend', ()=>{ splash.remove(); }, {once:true});
-      setTimeout(()=>{ if(splash.parentNode) splash.remove(); }, 900); // filet si transitionend ne se déclenche pas
+      requestAnimationFrame(()=>{
+        splash.classList.add('albert-splash-out');
+        splash.addEventListener('animationend', retirer, {once:true});
+        setTimeout(retirer, 900);
+      });
     }, wait);
   }
-  if(document.readyState === 'complete'){ dismiss(); }
-  else{ window.addEventListener('load', dismiss); }
+  if(document.readyState === 'interactive' || document.readyState === 'complete'){ dismiss(); }
+  else{ document.addEventListener('DOMContentLoaded', dismiss); }
   setTimeout(dismiss, MAX_WAIT_MS);
+})();
+
+/* ===================== INDICATEUR DE CONNEXION =====================
+   Informe discrètement que l'application fonctionne hors connexion (les données restent enregistrées
+   sur l'appareil et se synchronisent dès le retour d'internet). */
+(function(){
+  const pill = document.getElementById('albert-offline-pill');
+  if(!pill) return;
+  let t = null;
+  function montrer(txt, back){
+    pill.textContent = txt; pill.classList.toggle('back', !!back); pill.classList.add('on');
+    clearTimeout(t); if(back) t = setTimeout(()=>pill.classList.remove('on'), 3000);
+  }
+  window.addEventListener('offline', ()=>montrer('📴 Mode hors connexion — vos données restent enregistrées sur l\u2019appareil', false));
+  window.addEventListener('online',  ()=>montrer('✅ Connexion rétablie', true));
+  if(navigator.onLine === false) window.addEventListener('DOMContentLoaded', ()=>montrer('📴 Mode hors connexion — vos données restent enregistrées sur l\u2019appareil', false));
 })();
 </script>
 
