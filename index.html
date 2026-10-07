@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#7a1f1f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Tekoulo Centre">
+<meta name="apple-mobile-web-app-title" content="Collège Tekoulo Centre">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Playfair+Display:wght@600;700;900&display=swap" rel="stylesheet">
 <style>
@@ -552,6 +552,20 @@
   .year-switcher select option{color:#20241F;}
   .year-switcher .year-add-btn{width:32px; flex-shrink:0; background:var(--gold); color:#20241F; border:none; border-radius:8px; font-size:16px; font-weight:700; cursor:pointer;}
   .year-switcher .year-add-btn:hover{filter:brightness(1.08);}
+  /* Recherche rapide d'un module (sous le sélecteur d'année scolaire) */
+  .module-search{padding:10px 18px 12px; border-bottom:1px solid rgba(255,255,255,.08);}
+  .module-search label{display:block; font-size:10px; text-transform:uppercase; letter-spacing:.6px; color:var(--gold); font-weight:700; margin-bottom:6px;}
+  .module-search .ms-wrap{position:relative;}
+  .module-search input{width:100%; box-sizing:border-box; background:var(--field-bg); color:var(--ink); border:2px solid var(--gold); border-radius:8px; padding:7px 30px 7px 10px; font-size:12.5px; font-family:inherit;}
+  .module-search .ms-clear{position:absolute; right:5px; top:50%; transform:translateY(-50%); min-height:0 !important; width:22px; height:22px; padding:0; border:none; border-radius:50%; background:rgba(0,0,0,.12); color:#20241F; font-size:11px; line-height:22px; cursor:pointer;}
+  #module-search-results{margin-top:6px; max-height:290px; overflow-y:auto; border-radius:8px; background:rgba(255,255,255,.07);}
+  .ms-item{display:flex; align-items:center; gap:9px; padding:8px 10px; cursor:pointer; color:#D9E4DA; font-size:13px; border-bottom:1px solid rgba(255,255,255,.05);}
+  .ms-item:last-child{border-bottom:none;}
+  .ms-item .ms-ic{width:18px; text-align:center; flex-shrink:0;}
+  .ms-item small{display:block; font-size:10.5px; opacity:.7; margin-top:1px;}
+  .ms-item:hover, .ms-item.sel{background:rgba(255,255,255,.16); color:#fff;}
+  .ms-vide{padding:9px 10px; font-size:12px; color:#D9E4DA; opacity:.85; line-height:1.4;}
+  @media print{ .module-search{display:none !important;} }
   .archive-banner{background:linear-gradient(120deg,#7A4A00,#9C6300); color:#fff; border-radius:var(--radius); padding:12px 18px; margin:0 0 18px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; box-shadow:var(--shadow); font-size:13px;}
   .archive-banner b{color:var(--gold);}
   .archive-banner .btn{flex-shrink:0; background:#fff; color:#7A4A00; font-weight:700;}
@@ -1222,7 +1236,7 @@
     </div>
     <div class="albert-splash-word">ALBERT <span>DIGITAL</span> GUINÉE</div>
     <div class="albert-splash-tagline">Bienvenue dans l'application Albert Digital Guinée</div>
-    <div class="albert-splash-tagline albert-splash-sub">Collège Tekoulo Centre — Base de Données de Gestion</div>
+    <div class="albert-splash-tagline albert-splash-sub"><span data-ecole-nom>Collège Tekoulo Centre</span> — Base de Données de Gestion</div>
     <div class="albert-splash-loader"><span></span><span></span><span></span></div>
   </div>
 </div>
@@ -1237,12 +1251,12 @@
       <div class="tricolor"><span class="g"></span><span class="y"></span><span class="v"></span></div>
       <div class="login-grid">
         <aside class="login-side">
-          <div style="display:flex;justify-content:center;"><div class="seal"><img id="seal-login-img" src="" alt="Sceau du Collège Tekoulo Centre"></div></div>
+          <div style="display:flex;justify-content:center;"><div class="seal"><img id="seal-login-img" src="" alt="Sceau de l'établissement"></div></div>
           <div class="acc-rep">République de Guinée</div>
           <div class="acc-devise">Travail — Justice — Solidarité</div>
           <h1>Base de Données de Gestion</h1>
           <div id="login-espace-titre" class="login-espace-titre"></div>
-          <p class="sub">Collège Tekoulo Centre — Préfecture de Guéckédou<br>République de Guinée</p>
+          <p class="sub"><span data-ecole-nom>Collège Tekoulo Centre</span> — Préfecture de <span data-ecole-ville>Guéckédou</span><br>République de Guinée</p>
           <ul class="login-points">
             <li>🔒 Accès réservé au personnel autorisé</li>
             <li>📶 Fonctionne aussi hors connexion</li>
@@ -1272,7 +1286,7 @@
     </div>
     <footer class="acc-foot">
       <div class="motto"><span class="orn">❧</span>Nul n'apprend sans désir, nul n'apprend sans effort<span class="orn">❧</span></div>
-      <div class="acc-copy">Collège Tekoulo Centre · Guéckédou · République de Guinée</div>
+      <div class="acc-copy"><span data-ecole-nom>Collège Tekoulo Centre</span> · <span data-ecole-ville>Guéckédou</span> · République de Guinée</div>
     </footer>
   </div>
 </div>
@@ -1283,7 +1297,7 @@
   <div class="acc-wrap">
     <header class="acc-head">
       <div class="acc-head-row">
-        <div class="seal"><img id="seal-cycle-img" src="" alt="Sceau du Collège Tekoulo Centre"></div>
+        <div class="seal"><img id="seal-cycle-img" src="" alt="Sceau de l'établissement"></div>
         <div class="acc-head-center">
           <div class="acc-rep">République de Guinée</div>
           <div class="acc-devise">Travail — Justice — Solidarité</div>
@@ -1293,7 +1307,7 @@
       <div class="acc-dove" aria-hidden="true">
         <img src="data:image/png;base64,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" alt="Albert Digital">
       </div>
-      <h1 class="acc-nom">Collège Tekoulo Centre</h1>
+      <h1 class="acc-nom" data-ecole-nom>Collège Tekoulo Centre</h1>
       <div class="acc-sub">Base de données de gestion scolaire · Préfecture de Guéckédou</div>
       <div class="acc-sep"><i></i><i></i><i></i></div>
     </header>
@@ -1324,7 +1338,7 @@
     </div>
     <footer class="acc-foot">
       <div class="motto"><span class="orn">❧</span>Nul n'apprend sans désir, nul n'apprend sans effort<span class="orn">❧</span></div>
-      <div class="acc-copy">Collège Tekoulo Centre · Guéckédou · République de Guinée</div>
+      <div class="acc-copy"><span data-ecole-nom>Collège Tekoulo Centre</span> · <span data-ecole-ville>Guéckédou</span> · République de Guinée</div>
     </footer>
   </div>
 </div>
@@ -1333,13 +1347,21 @@
   <!-- ===================== SIDEBAR ===================== -->
   <aside id="sidebar">
     <div class="brand">
-      <div class="seal"><img id="seal-sidebar-img" src="" alt="Sceau du Collège Tekoulo Centre"></div>
+      <div class="seal"><img id="seal-sidebar-img" src="" alt="Sceau de l'établissement"></div>
       <div>
-        <h2>Collège Tekoulo<br>Centre</h2>
+        <h2 data-ecole-nom>Collège Tekoulo Centre</h2>
         <small>GUÉCKÉDOU · GUINÉE</small>
       </div>
     </div>
     <div id="year-switcher-zone"></div>
+    <div class="module-search" id="module-search-zone">
+      <label for="module-search-input">🔎 Rechercher un module</label>
+      <div class="ms-wrap">
+        <input id="module-search-input" type="text" autocomplete="off" spellcheck="false" placeholder="Ex. salaire, inscription, paramètres…" aria-label="Rechercher un module de l'application">
+        <button type="button" class="ms-clear" id="module-search-clear" title="Effacer la recherche" hidden>✕</button>
+      </div>
+      <div id="module-search-results" role="listbox" hidden></div>
+    </div>
     <nav class="nav" id="nav"></nav>
     <div class="sidebar-foot">Base de données de gestion scolaire<br>La sécurité de vos données est notre priorité<br><b>Albert Digital</b></div>
   </aside>
@@ -1379,7 +1401,7 @@
     <div id="content"></div>
     <footer class="app-foot">
       <div class="af-motto"><span class="orn">❧</span>Nul n'apprend sans désir, nul n'apprend sans effort<span class="orn">❧</span></div>
-      <div class="acc-copy">Collège Tekoulo Centre · Guéckédou · République de Guinée</div>
+      <div class="acc-copy"><span data-ecole-nom>Collège Tekoulo Centre</span> · <span data-ecole-ville>Guéckédou</span> · République de Guinée</div>
       <div class="af-brand">Solution fournie par <b>Albert Digital</b> — la sécurité de vos données est notre priorité</div>
     </footer>
   </div>
@@ -1550,7 +1572,28 @@ if('serviceWorker' in navigator){
 }
 
 /* ============================ STORAGE (avec gestion multi-années scolaires) ============================ */
-const DB_PREFIX = 'tekoulo_';
+/* ===================== CONFIGURATION DE L'ÉCOLE =====================
+   Seul bloc à modifier pour installer l'application dans une nouvelle école (voir guide, chapitre 10 quater).
+   - id : identifiant court UNIQUE de l'école (lettres/chiffres, ex. 'lyceemamou'). Il sépare les données des
+     écoles qui seraient hébergées sur le même domaine (ex. plusieurs dépôts sous le même compte github.io).
+     Laisser '' UNIQUEMENT pour la copie historique du Collège Tekoulo Centre (conserve ses données existantes).
+   - nom / ire / dpe / ville : valeurs de départ, modifiables ensuite dans Paramètres → Établissement.
+   - dossierDrive : identifiant du dossier Google Drive PROPRE à l'école ('' = synchronisation bloquée tant
+     qu'il n'est pas renseigné ici ou dans Paramètres → Sécurité & comptes).
+   - googleClientId : identifiant technique de l'application Google (peut être partagé, ou propre à l'école).
+   - smsClientId / smsClientSecret : accès Orange SMS de l'école ('' = SMS désactivés tant qu'ils ne sont pas saisis). */
+const ECOLE_CONFIG = {
+  id: '',
+  nom: 'COLLÈGE TEKOULO CENTRE',
+  ire: 'N\'ZÉRÉKORÉ',
+  dpe: 'GUÉCKÉDOU',
+  ville: 'Guéckédou',
+  dossierDrive: '1u27j3ij5Qa2CUg3sW0O0SJXKBqRUMTjU',
+  googleClientId: '169405877176-rka8kdjl9o5q6b7b8dlthifttm7qc8bj.apps.googleusercontent.com',
+  smsClientId: 'FJfkBQMwicxeyZFNz4mWOl06SElFZTTv',
+  smsClientSecret: '3vPM4C2Q0ZrzOlKiuc4Jt4xUpr3tFBSzNXJNva5SFDdx'
+};
+const DB_PREFIX = 'tekoulo_' + (ECOLE_CONFIG.id ? String(ECOLE_CONFIG.id).toLowerCase().replace(/[^a-z0-9]/g,'') + '_' : '');
 /* Clés qui restent communes à toutes les années scolaires (identité de l'école, mot de passe, liste des années) */
 const YEAR_EXEMPT_KEYS = ['parametres', 'password', 'passwordTechnique', 'years', 'comptesLocaux'];
 
@@ -1595,14 +1638,14 @@ const CLES_NON_SYNCHRONISEES = ['comptesLocaux','password','passwordTechnique'];
 const DUREE_CONSERVATION_SUPPRESSIONS_MS = 180*24*3600*1000;
 
 let _tsMaxVu = 0;
-try{ _tsMaxVu = Number(localStorage.getItem('tekoulo___maxts')||0) || 0; }catch(e){}
+try{ _tsMaxVu = Number(localStorage.getItem(DB_PREFIX+'__maxts')||0) || 0; }catch(e){}
 /* Horodatage monotone : jamais inférieur à un horodatage déjà vu venant d'un autre appareil (atténue
    l'effet d'une horloge de téléphone en retard : une modification faite APRÈS avoir reçu une donnée l'emporte toujours). */
 function nowTs(){ return Math.max(Date.now(), _tsMaxVu+1); }
 function _majTsVu(ts){
   if(typeof ts==='number' && isFinite(ts) && ts>_tsMaxVu && ts<Date.now()+2*86400000) _tsMaxVu = ts;
 }
-function _sauverTsVu(){ try{ localStorage.setItem('tekoulo___maxts', String(_tsMaxVu)); }catch(e){} }
+function _sauverTsVu(){ try{ localStorage.setItem(DB_PREFIX+'__maxts', String(_tsMaxVu)); }catch(e){} }
 
 function _baseCle(cle){ return String(cle||'').split('__')[0]; }
 function _cleFiche(obj, baseKey){
@@ -1891,13 +1934,14 @@ let TEKOULO_TOKEN = sessionStorage.getItem('tekoulo_token') || null;
    fusion/merge existante (fusionnerCollections, file d'attente "pending", etc.) reste inchangée :
    seule la façon dont les données transitent vers/depuis "le serveur" change. */
 // Identifiants reconfigurés le 25/09/2026 avec le nouveau compte barohyombouno7@gmail.com.
-const GOOGLE_CLIENT_ID = '169405877176-rka8kdjl9o5q6b7b8dlthifttm7qc8bj.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = ECOLE_CONFIG.googleClientId; // configurable dans ECOLE_CONFIG (peut être propre à l'école)
 // Dossier Drive : configurable depuis Paramètres → Sécurité & comptes, pour permettre à chaque
 // copie de cette application (une par école) d'utiliser son propre dossier Google Drive, sans
-// jamais toucher au code. GOOGLE_DRIVE_FOLDER_ID_DEFAUT reste le dossier historique du Collège
-// Tekoulo Centre, utilisé tant qu'aucun autre dossier n'a été renseigné dans les Paramètres.
-const GOOGLE_DRIVE_FOLDER_ID_DEFAUT = '1u27j3ij5Qa2CUg3sW0O0SJXKBqRUMTjU';
+// jamais toucher au code. GOOGLE_DRIVE_FOLDER_ID_DEFAUT vient du bloc ECOLE_CONFIG (vide pour une
+// nouvelle école : la synchronisation reste bloquée tant qu'aucun dossier n'est renseigné).
+const GOOGLE_DRIVE_FOLDER_ID_DEFAUT = ECOLE_CONFIG.dossierDrive || ''; // vide pour une nouvelle école : aucune synchronisation tant que non renseigné
 let GOOGLE_DRIVE_FOLDER_ID = localStorage.getItem(DB_PREFIX+'googleDriveFolderId') || GOOGLE_DRIVE_FOLDER_ID_DEFAUT;
+function driveVerifierDossier(){ if(!GOOGLE_DRIVE_FOLDER_ID) throw new Error('drive_dossier_non_configure'); }
 function definirDossierDriveEcole(id){
   const propre = (id||'').trim();
   if(!propre){ toast('Veuillez saisir un identifiant de dossier Google Drive.', true); return; }
@@ -1909,7 +1953,7 @@ function definirDossierDriveEcole(id){
 function reinitialiserDossierDriveEcole(){
   GOOGLE_DRIVE_FOLDER_ID = GOOGLE_DRIVE_FOLDER_ID_DEFAUT;
   try{ localStorage.removeItem(DB_PREFIX+'googleDriveFolderId'); }catch(e){}
-  toast('Dossier Google Drive réinitialisé au dossier par défaut (Collège Tekoulo Centre).');
+  toast(GOOGLE_DRIVE_FOLDER_ID ? 'Dossier Google Drive réinitialisé au dossier par défaut de cette copie.' : 'Dossier Google Drive retiré : la synchronisation reste bloquée tant qu\u2019aucun dossier n\u2019est renseigné.', !GOOGLE_DRIVE_FOLDER_ID);
   renderParametres();
 }
 // Portée étendue le 27/09/2026 pour inclure l'envoi automatique des bulletins de salaire par e-mail
@@ -1926,8 +1970,8 @@ const SYNC_BACKEND_ACTIF = true; // un backend de synchronisation (Google Drive)
    connecté) et de le SIGNALER clairement, avec un lien de téléchargement en un clic — voir le
    guide « Procédure de mise à jour » pour la marche à suivre lors de la publication d'une version.
    VERSION_APP doit être incrémenté à chaque nouvelle version envoyée sur Drive. */
-const VERSION_APP = 160;
-const VERSION_APP_DATE = '2026-10-03';
+const VERSION_APP = 159;
+const VERSION_APP_DATE = '2026-09-28';
 const FICHIER_VERSION_APP = 'tekoulo__app_version.json';
 let MAJ_APP_DISPONIBLE = null; // {version, url, date, notes} une fois qu'une version plus récente est détectée
 
@@ -2053,6 +2097,7 @@ function initGoogleDriveAuth(){
   }catch(e){}
 }
 function connecterGoogleDrive(){
+  if(!GOOGLE_DRIVE_FOLDER_ID){ toast('Aucun dossier Google Drive n\u2019est défini pour cette école. Collez d\u2019abord son identifiant dans Paramètres → Sécurité & comptes.', true); return; }
   if(!GOOGLE_CLIENT_ID){ toast('Compte Google non configuré pour le moment. Contactez la personne technique.', true); return; }
   if(!googleTokenClient){ toast('Google n\u2019est pas encore chargé, réessayez dans un instant.', true); return; }
   // Un clic manuel est une action volontaire : on ouvre toujours la vraie fenêtre de connexion
@@ -2211,6 +2256,7 @@ function _construireEntree(fichiers){
            doublons: tries.slice(1).map(f=>({id:f.id, createdTime:f.createdTime, modifiedTime:f.modifiedTime})) };
 }
 async function driveTrouverEntree(nomFichier){
+  driveVerifierDossier();
   const q = encodeURIComponent("name='"+nomFichier.replace(/'/g,"\\'")+"' and '"+GOOGLE_DRIVE_FOLDER_ID+"' in parents and trashed=false");
   const res = await driveRequete('https://www.googleapis.com/drive/v3/files?q='+q+'&orderBy=createdTime&pageSize=20&fields='+encodeURIComponent('files(id,name,createdTime,modifiedTime)'), {});
   if(!res.ok) throw new Error('drive_list_failed:'+res.status);
@@ -2223,6 +2269,7 @@ async function driveTrouverFichier(nomFichier){
 }
 // Liste tout le dossier en UNE requête (avec pagination) : sert à ne télécharger que les fichiers réellement modifiés.
 async function driveListerDossier(){
+  driveVerifierDossier();
   const q = encodeURIComponent("'"+GOOGLE_DRIVE_FOLDER_ID+"' in parents and trashed=false");
   const champs = encodeURIComponent('nextPageToken,files(id,name,createdTime,modifiedTime)');
   const parNom = new Map();
@@ -2239,6 +2286,7 @@ async function driveListerDossier(){
   return liste;
 }
 async function driveCreerFichier(nomFichier, contenuTexte){
+  driveVerifierDossier();
   const metadata = {name: nomFichier, parents:[GOOGLE_DRIVE_FOLDER_ID], mimeType:'application/json'};
   const boundary = 'tekoulo_'+Date.now();
   const body = '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n'
@@ -4274,7 +4322,7 @@ let __linkedWriteTimer = null;
 
 function idbOpen(){
   return new Promise((resolve,reject)=>{
-    const req = indexedDB.open('tekoulo_fs', 1);
+    const req = indexedDB.open(DB_PREFIX+'fs', 1);
     req.onupgradeneeded = ()=> req.result.createObjectStore('handles');
     req.onsuccess = ()=> resolve(req.result);
     req.onerror = ()=> reject(req.error);
@@ -4505,17 +4553,26 @@ function xlsxColLetter(idx){
   return s;
 }
 const XLSX_STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-  + '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>'
+  + '<fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="12"/><color rgb="FF0B4A32"/><name val="Calibri"/></font><font><sz val="10"/><color rgb="FF5B6259"/><name val="Calibri"/></font></fonts>'
   + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0B4A32"/><bgColor indexed="64"/></patternFill></fill></fills>'
   + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>'
   + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-  + '<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+  + '<cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
   + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
   + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
-  + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf></cellXfs>'
+  + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>'
+  + '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+  + '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+  + '</cellXfs>'
   + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
-/* Feuille mise en forme : en-tête vert (texte blanc gras), bordures, largeurs de colonnes adaptées, 1re ligne figée */
-function xlsxSheetXML(rows, images, photoColIdx){
+/* Feuille mise en forme : en-tête administratif fusionné (si présent) + en-tête de colonnes vert (texte
+   blanc gras), bordures, largeurs de colonnes adaptées, ligne de colonnes figée (juste sous l'en-tête
+   administratif). enteteRowIndex = index (0-based) de la ligne des noms de colonnes ; toutes les lignes
+   avant elle sont l'en-tête administratif (fusionnées sur toute la largeur). enteteAdminStyles = style
+   (s="4" ou "5") à appliquer à chacune de ces lignes d'en-tête administratif. */
+function xlsxSheetXML(rows, images, photoColIdx, enteteRowIndex, enteteAdminStyles){
+  enteteRowIndex = enteteRowIndex||0;
+  enteteAdminStyles = enteteAdminStyles||[];
   const rowHeightXML = (images && images.length) ? ' ht="58" customHeight="1"' : '';
   const photoRows = new Set((images||[]).map(im=>im.row));
   const nCols = rows.reduce((m,r)=>Math.max(m,r.length),0);
@@ -4523,28 +4580,61 @@ function xlsxSheetXML(rows, images, photoColIdx){
   for(let ci=0; ci<nCols; ci++){
     let m = 0;
     rows.forEach((row,ri)=>{
+      if(ri<enteteRowIndex) return; // lignes d'en-tête administratif (fusionnées) : ne doivent pas élargir les colonnes
       const v = row[ci]; if(v===undefined || v===null) return;
       const t = String(v).split('\n').reduce((x,l)=>Math.max(x,l.length),0);
-      m = Math.max(m, ri===0 ? Math.min(t,26) : t);
+      m = Math.max(m, ri===enteteRowIndex ? Math.min(t,26) : t);
     });
     largeurs.push(Math.max(10, Math.min(48, Math.round(m*1.15)+2)));
   }
   const rowsXML = rows.map((row, ri)=>{
     const cells = row.map((val, ci)=>{
       const ref = xlsxColLetter(ci)+(ri+1);
-      if(ri===0) return `<c r="${ref}" s="1" t="inlineStr"><is><t xml:space="preserve">${xlsxEsc(val)}</t></is></c>`;
+      if(ri<enteteRowIndex){
+        const s = enteteAdminStyles[ri] || 4;
+        return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xlsxEsc(val)}</t></is></c>`;
+      }
+      if(ri===enteteRowIndex) return `<c r="${ref}" s="1" t="inlineStr"><is><t xml:space="preserve">${xlsxEsc(val)}</t></is></c>`;
       if(typeof val === 'number' && isFinite(val)) return `<c r="${ref}" s="3"><v>${val}</v></c>`;
       return `<c r="${ref}" s="2" t="inlineStr"><is><t xml:space="preserve">${xlsxEsc(val)}</t></is></c>`;
     }).join('');
-    const ht = photoRows.has(ri) ? rowHeightXML : (ri===0 ? ' ht="34" customHeight="1"' : '');
+    const ht = photoRows.has(ri) ? rowHeightXML : (ri===enteteRowIndex ? ' ht="34" customHeight="1"' : '');
     return `<row r="${ri+1}"${ht}>${cells}</row>`;
   }).join('');
   const colsXML = nCols ? '<cols>'+largeurs.map((w,ci)=>{
     const isPhoto = (photoColIdx!==undefined && photoColIdx!==null && ci===photoColIdx);
     return `<col min="${ci+1}" max="${ci+1}" width="${isPhoto?9:w}" customWidth="1"/>`;
   }).join('')+'</cols>' : '';
-  const viewsXML = '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews>';
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${viewsXML}${colsXML}<sheetData>${rowsXML}</sheetData>__DRAWING__</worksheet>`;
+  const viewsXML = `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${enteteRowIndex+1}" topLeftCell="A${enteteRowIndex+2}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews>`;
+  let mergeCellsXML = '';
+  if(enteteRowIndex>0 && nCols>1){
+    const lastCol = xlsxColLetter(nCols-1);
+    const merges = [];
+    for(let ri=0; ri<enteteRowIndex; ri++){
+      const texte = (rows[ri] && rows[ri][0]) || '';
+      if(String(texte).trim()==='') continue;
+      merges.push(`<mergeCell ref="A${ri+1}:${lastCol}${ri+1}"/>`);
+    }
+    if(merges.length) mergeCellsXML = `<mergeCells count="${merges.length}">${merges.join('')}</mergeCells>`;
+  }
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${viewsXML}${colsXML}<sheetData>${rowsXML}</sheetData>${mergeCellsXML}__DRAWING__</worksheet>`;
+}
+/* Lignes de l'en-tête administratif (République de Guinée, devise, ministère, IRE/DPE/École,
+   coordonnées, année scolaire) ajoutées automatiquement en haut de CHAQUE feuille exportée en Excel
+   — voir buildAndDownloadXLSX. Chaque entrée = {t: texte, s: style (4 = accentué, 5 = discret)}. */
+function xlsxEnteteAdminLignes(p){
+  p = p || getParams();
+  const coord = [p.adresseEcole, p.telephoneEcole?('Tél : '+p.telephoneEcole):'', p.emailEcole?('E-mail : '+p.emailEcole):''].filter(Boolean).join('   ·   ');
+  const lignes = [
+    {t:'RÉPUBLIQUE DE GUINÉE', s:4},
+    {t:'Travail — Justice — Solidarité', s:5},
+  ];
+  if(p.ministereExamen) lignes.push({t:p.ministereExamen, s:5});
+  lignes.push({t:'IRE : '+(p.ire||'—')+'     DPE : '+(p.dpe||'—')+'     '+(p.nomEcole||''), s:4});
+  if(coord) lignes.push({t:coord, s:5});
+  if(p.anneeScolaire) lignes.push({t:'Année scolaire : '+p.anneeScolaire, s:5});
+  lignes.push({t:'', s:5}); // ligne vide de séparation avant les données
+  return lignes;
 }
 function xlsxSafeName(name){
   return String(name).replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31) || 'Feuille';
@@ -4572,6 +4662,18 @@ function xlsxTwoCellAnchorXML(row, col, rId, picId){
 /* Construit un classeur .xlsx à partir de {name, rows, images?, photoColIdx?} et déclenche le téléchargement.
    images: [{row, col, dataUrl}] — insère une vraie image incrustée (pas du texte) à la cellule indiquée. */
 function buildAndDownloadXLSX(sheets, filename){
+  // En-tête administratif (République de Guinée, Ministère, IRE/DPE/École, coordonnées, année scolaire)
+  // ajouté automatiquement en haut de CHAQUE feuille, avec décalage des photos incrustées en conséquence.
+  const enteteLignes = xlsxEnteteAdminLignes();
+  const decalage = enteteLignes.length;
+  const enteteAdminStyles = enteteLignes.map(l=>l.s);
+  const enteteAdminRows = enteteLignes.map(l=>[l.t]);
+  sheets.forEach(s=>{
+    s.rows = enteteAdminRows.concat(s.rows||[]);
+    if(s.images && s.images.length) s.images = s.images.map(im=>Object.assign({}, im, {row: im.row+decalage}));
+    s.enteteRowIndex = decalage;
+    s.enteteAdminStyles = enteteAdminStyles;
+  });
   const usedNames = {};
   sheets.forEach(s=>{
     let n = xlsxSafeName(s.name);
@@ -4596,7 +4698,7 @@ function buildAndDownloadXLSX(sheets, filename){
   files.push({ name:'xl/styles.xml', data: encoder.encode(XLSX_STYLES_XML) });
 
   sheets.forEach((s,i)=>{
-    let sheetXML = xlsxSheetXML(s.rows, s.images, s.photoColIdx);
+    let sheetXML = xlsxSheetXML(s.rows, s.images, s.photoColIdx, s.enteteRowIndex, s.enteteAdminStyles);
     contentTypeOverrides.push(`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`);
 
     if(s.images && s.images.length){
@@ -4728,10 +4830,10 @@ function figerParametresAnnees(p){
 }
 function getParams(){
   const defaults = {
-    nomEcole:'COLLÈGE TEKOULO CENTRE',
-    ire:"N'ZÉRÉKORÉ",
-    dpe:'GUÉCKÉDOU',
-    ville:'Guéckédou',
+    nomEcole:ECOLE_CONFIG.nom,
+    ire:ECOLE_CONFIG.ire,
+    dpe:ECOLE_CONFIG.dpe,
+    ville:ECOLE_CONFIG.ville,
     adresseEcole:'',
     anneeScolaire: (new Date().getFullYear())+'-'+(new Date().getFullYear()+1),
     chefEtablissement:'',
@@ -4752,8 +4854,8 @@ function getParams(){
     telephoneChargeOrientationLycee:'',
     telephoneEcole:'',
     emailEcole:'',
-    smsOrangeClientId:'FJfkBQMwicxeyZFNz4mWOl06SElFZTTv',
-    smsOrangeClientSecret:'3vPM4C2Q0ZrzOlKiuc4Jt4xUpr3tFBSzNXJNva5SFDdx',
+    smsOrangeClientId:ECOLE_CONFIG.smsClientId,
+    smsOrangeClientSecret:ECOLE_CONFIG.smsClientSecret,
     smsOrangeSenderName:'',
     budgetInitial: 0,
     montantApeaeParEleve: 0,
@@ -4951,7 +5053,7 @@ function renderGuide(container){
     </div>
 
     <div class="guide-cover">
-      <img src="${logoEcoleActuel()}" alt="Sceau du Collège Tekoulo Centre">
+      <img src="${logoEcoleActuel()}" alt="Sceau de l'établissement">
       <div class="guide-cover-country">RÉPUBLIQUE DE GUINÉE</div>
       <div class="guide-cover-motto">Travail — Justice — Solidarité</div>
       <div class="guide-cover-rule"></div>
@@ -4986,7 +5088,6 @@ function renderGuide(container){
       <a href="#g16n">16. Dictionnaire, présence et supervision</a>
       <a href="#g17">17. Fermeture de l'application</a>
       <a href="#g17b">17 bis. Installer, désinstaller et transférer l'application</a>
-      <a href="#g17c">17 ter. Adresse officielle, hébergement GitHub et changement de compte</a>
       <a href="#g18">18. Foire aux questions</a>
       <a href="#g19">19. Aide-mémoire rapide</a>
     </div>
@@ -5039,7 +5140,7 @@ function renderGuide(container){
         <li>Cliquez sur « Entrer dans la base de données » (ou appuyez sur Entrée). En cas d'erreur, un message s'affiche : vérifiez la saisie et réessayez.</li>
         <li>Le bouton « ← Changer d'espace » ramène à l'écran de choix des espaces.</li>
       </ul>
-      <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>Le mot de passe administrateur peut être personnalisé à tout moment dans Paramètres (chapitre 10.5). Il est recommandé de le changer dès la première utilisation et de ne le communiquer qu'aux personnes autorisées.</div>
+      <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>Le mot de passe administrateur peut être personnalisé à tout moment dans Paramètres (chapitre 10.5). Tant qu'il n'a pas été changé, l'application impose de le remplacer dès la première connexion (voir 10.5). Ne le communiquez qu'aux personnes autorisées.</div>
       <h3>2.4 Après la connexion</h3>
       <p>L'écran de connexion disparaît et l'application s'ouvre directement dans l'espace choisi, sur le <b>Tableau de bord</b> de cet espace. Pour passer à un autre cycle, il faut se déconnecter puis se connecter dans l'autre espace (bouton « 🔁 Changer », chapitre 3.1).</p>
     </div>
@@ -5052,6 +5153,7 @@ function renderGuide(container){
         <li><b>En-tête :</b> le sceau (logo) et le nom de l'établissement.</li>
         <li><b>Bandeau « Espace … » :</b> il rappelle en permanence l'espace actif, dans la couleur de ce cycle. Son bouton <b>« 🔁 Changer »</b> déconnecte l'utilisateur et ramène au choix de l'espace.</li>
         <li><b>Sélecteur d'année scolaire :</b> permet de choisir l'année active et d'en créer une nouvelle (chapitre 4).</li>
+        <li><b>🔎 Rechercher un module :</b> champ placé juste sous l'année scolaire. Tapez un mot (« salaire », « inscription », « notes », « paramètres », « mot de passe »…) : la liste des modules correspondants s'affiche, sans tenir compte des accents ni des majuscules. Cliquez sur un résultat, ou utilisez les flèches ↑ ↓ puis la touche Entrée, pour l'ouvrir ; la touche Échap efface la recherche. Seuls les modules auxquels votre rôle donne accès sont proposés.</li>
         <li><b>Menu de navigation :</b> organisé par groupes de modules. Il n'affiche que les modules disponibles pour l'espace actif, le type d'établissement (Public/Privé) et le rôle de la personne connectée.</li>
         <li><b>Compteurs (badges) :</b> certains modules affichent le nombre d'enregistrements existants dans l'espace actif.</li>
       </ul>
@@ -5249,6 +5351,7 @@ function renderGuide(container){
 
       <h3>9.5 Exporter vers Excel</h3>
       <p>Le bouton « 📊 Exporter tous les formulaires vers Excel » (Paramètres → Sauvegarde &amp; données) génère un classeur unique (.xlsx) contenant une feuille par module.</p>
+      <p>Chaque feuille exportée commence automatiquement par l'<b>en-tête administratif de l'établissement</b> : République de Guinée et devise, ministère (s'il est renseigné), IRE / DPE et nom de l'école, adresse, téléphone et e-mail, puis l'année scolaire. Ces informations proviennent de Paramètres → Établissement (chapitre 10.1) : pensez à les compléter avant d'exporter. Les photos des élèves ou du personnel, lorsqu'elles existent, sont incrustées comme de vraies images dans la feuille, et la ligne des titres de colonnes reste figée en haut pendant le défilement.</p>
 
       <h3>9.6 Transfert vers un autre ordinateur (via Xender)</h3>
       <p>Le bouton « 🔄 Préparer le transfert via Xender » (Paramètres → Sauvegarde &amp; données) génère le classeur Excel complet dans les téléchargements ; ouvrez ensuite Xender pour l'envoyer vers l'autre poste.</p>
@@ -5283,9 +5386,15 @@ function renderGuide(container){
       <h3>10.5 Sécurité — mot de passe administrateur</h3>
       <ol>
         <li>Saisissez le mot de passe actuel.</li>
-        <li>Saisissez le nouveau mot de passe (4 caractères minimum), puis confirmez-le.</li>
+        <li>Saisissez le nouveau mot de passe (<b>8 caractères minimum</b>), puis confirmez-le.</li>
         <li>Cliquez sur « Changer le mot de passe ».</li>
       </ol>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Changement obligatoire à la première connexion</b>Tant que le mot de passe administrateur par défaut est conservé, une fenêtre « Choisissez votre mot de passe » s'affiche après la connexion du Fondateur ou du Chef d'établissement, et l'application ne peut pas être utilisée avant d'en avoir choisi un nouveau (8 caractères minimum, différent de celui par défaut). Ce mot de passe est propre à l'appareil : sur un nouvel ordinateur ou une nouvelle école, il faut le définir de nouveau.</div>
+      <ul>
+        <li><b>Comptes personnels</b> (chapitre 10.7) : le mot de passe doit contenir au moins 4 caractères.</li>
+        <li><b>Module technique</b> : il dispose de son propre mot de passe (6 caractères minimum), modifiable dans la section dédiée ; le mot de passe administrateur l'ouvre aussi.</li>
+        <li><b>Tentatives de connexion :</b> après 5 échecs consécutifs, l'application impose un temps d'attente qui s'allonge à chaque nouvelle série d'échecs.</li>
+      </ul>
       <h3>10.6 Réinitialisation complète des données</h3>
       <div class="guide-callout attention"><b class="gc-label">⚠️ Danger</b>Le bouton « ✕ Réinitialiser toutes les données » (section Sauvegarde &amp; données) supprime définitivement l'ensemble des informations enregistrées. Cette action est irréversible : effectuez impérativement une sauvegarde avant toute réinitialisation.</div>
       <h3>10.7 Comptes de connexion par rôle</h3>
@@ -5425,8 +5534,6 @@ function renderGuide(container){
         <li><b>Page blanche à l'ouverture</b> → vérifier la connexion internet et la batterie de l'appareil ; recharger la page en navigation privée pour écarter tout souci de cache.</li>
         <li><b>« Accès bloqué : erreur d'autorisation » lors de la connexion Google</b> → le compte Google utilisé n'a pas encore été ajouté comme utilisateur test (10 bis.8), ou le champ d'application Drive n'a pas été correctement configuré côté Google Cloud — contacter la personne technique.</li>
         <li><b>Fenêtre Google qui se ferme toute seule (« popup fermée »)</b> → fermer les autres onglets du navigateur et ne pas changer d'application pendant la connexion, puis réessayer (10 bis.8).</li>
-        <li><b>« Erreur 400 : origin_mismatch » ou Google refuse la connexion depuis la nouvelle adresse</b> → l'adresse du site n'est pas encore dans les « Origines JavaScript autorisées » du client OAuth (chapitre 17 ter.4) ; attendre quelques minutes après l'enregistrement, puis réessayer.</li>
-        <li><b>Connexion refusée alors que la fenêtre Google s'ouvre</b> → vérifier que les cases d'autorisation Drive (et e-mail) sont bien cochées et que l'adresse Gmail figure dans les utilisateurs de test (chapitre 17 ter.3).</li>
         <li><b>Dossier Drive vide après synchronisation</b> → vérifier qu'on est connecté, dans l'application comme dans Drive, avec le même compte Google (10 bis.9).</li>
         <li><b>Une donnée saisie sur un appareil n'apparaît pas sur un autre</b> → sur les deux appareils, ouvrir le tableau de bord et appuyer sur « 🔄 Synchroniser » ; vérifier qu'ils utilisent la même année scolaire active et le même compte Google / dossier Drive.</li>
         <li><b>« Session Google à renouveler »</b> → toucher l'écran, ou appuyer sur « 🔗 Connecter Google Drive » ; les données saisies entre-temps sont conservées et envoyées ensuite.</li>
@@ -5508,34 +5615,46 @@ function renderGuide(container){
       <h2>10 quater. Utiliser l'application pour plusieurs écoles</h2>
       <p>Cette application peut servir à plusieurs écoles différentes, chacune avec ses propres données, totalement séparées et invisibles les unes des autres. Le principe retenu est volontairement simple : <b>une copie complète de l'application par école</b>, chacune reliée à son propre dossier Google Drive — plutôt qu'un système à comptes multiples partageant une seule base de données, plus complexe et plus risqué en cas d'erreur.</p>
 
-      <h3>10 quater.1 Ce qui est déjà prêt dans l'application</h3>
-      <p>Aucune modification du code n'est nécessaire pour ajouter une école : dans <b>Paramètres → Sécurité &amp; comptes</b>, un champ permet de coller l'<b>identifiant du dossier Google Drive</b> propre à chaque copie de l'application. Il suffit donc de renseigner ce champ, depuis l'interface, pour que cette copie n'utilise que les données de la nouvelle école.</p>
+      <h3>10 quater.1 Le bloc de configuration de l'école</h3>
+      <p>Tout ce qui est propre à une école est réuni dans <b>un seul bloc</b>, au début du script du fichier <code>index.html</code> : ouvrez le fichier avec un éditeur de texte (Bloc-notes, par exemple) et cherchez « CONFIGURATION DE L'ÉCOLE ». Seul ce bloc est à modifier ; le reste du fichier ne doit pas être touché.</p>
+      <table class="guide-table">
+        <thead><tr><th>Réglage</th><th>Rôle</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>Identifiant court et <b>unique</b> de l'école (lettres et chiffres, ex. <code>lyceemamou</code>). Il sépare les données des écoles hébergées sur un même domaine. Ne le laissez vide que pour la copie historique du Collège Tekoulo Centre.</td></tr>
+          <tr><td><code>nom</code>, <code>ire</code>, <code>dpe</code>, <code>ville</code></td><td>Valeurs de départ de l'école, modifiables ensuite dans Paramètres → Établissement.</td></tr>
+          <tr><td><code>dossierDrive</code></td><td>Identifiant du dossier Google Drive <b>propre</b> à l'école (peut aussi être saisi plus tard dans Paramètres → Sécurité &amp; comptes).</td></tr>
+          <tr><td><code>googleClientId</code></td><td>Identifiant technique de l'application Google (voir 10 quater.4).</td></tr>
+          <tr><td><code>smsClientId</code>, <code>smsClientSecret</code></td><td>Accès Orange SMS de l'école. Vides par défaut : les SMS sont inactifs tant qu'ils ne sont pas renseignés (Paramètres).</td></tr>
+        </tbody>
+      </table>
+      <p>Le nom et la ville de l'école affichés à l'écran de connexion, dans le menu, dans l'onglet du navigateur et sur les documents imprimés proviennent ensuite de Paramètres → Établissement : ils suivent automatiquement toute modification.</p>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Aucun dossier Drive par défaut</b>Une copie neuve n'est reliée à aucun dossier Google Drive. Tant que l'identifiant du dossier de l'école n'est pas renseigné, la synchronisation est bloquée et l'application l'indique clairement : aucune donnée ne peut donc partir par erreur vers le dossier d'une autre école.</div>
 
       <h3>10 quater.2 Étapes pour ajouter une nouvelle école</h3>
       <ol>
-        <li><b>Dupliquer le fichier</b> <code>index.html</code> à partir d'une copie « modèle » propre (sans les données d'une école déjà en service).</li>
-        <li><b>Héberger cette copie séparément</b>, selon l'une de ces deux organisations :
-          <ul>
-            <li>Un nouveau dépôt GitHub par école (comme celui déjà en place) → chaque école obtient sa propre adresse <code>xxx.github.io</code> ; ou</li>
-            <li>Un seul dépôt avec un sous-dossier par école (par exemple <code>/ecole1/index.html</code>, <code>/ecole2/index.html</code>) si l'on préfère tout centraliser au même endroit.</li>
-          </ul>
-        </li>
-        <li><b>Créer un dossier Google Drive</b> dédié, avec le compte Google de la nouvelle école, puis coller son identifiant dans <b>Paramètres → Sécurité &amp; comptes</b> de cette copie (voir 10 quater.1).</li>
-        <li><b>Autoriser les comptes Google</b> des personnes de cette école (Fondateur, Comptable…) sur <code>console.cloud.google.com/auth/audience</code>, section « Utilisateurs test » (voir chapitre 10 bis).</li>
-        <li><b>Renseigner les informations propres à l'école</b> (nom, ville, logo, IRE/DPE, responsables…) dans <b>Paramètres → Établissement</b>.</li>
-        <li><b>Changer le mot de passe administrateur par défaut</b> dès la première connexion — chaque école doit avoir le sien, distinct des autres.</li>
+        <li><b>Partir du fichier « modèle »</b> (<code>index-modele-ecole.html</code>, à renommer <code>index.html</code>), jamais d'une copie contenant les données ou les identifiants d'une autre école.</li>
+        <li><b>Modifier le bloc de configuration</b> (10 quater.1) : un <code>id</code> unique, puis le nom, l'IRE, la DPE et la ville de l'école.</li>
+        <li><b>Créer un dossier Google Drive</b> dédié, avec le compte Google de la nouvelle école. L'identifiant du dossier est la longue suite de lettres et de chiffres qui termine son adresse dans le navigateur. Collez-le dans <code>dossierDrive</code>, ou plus tard dans Paramètres → Sécurité &amp; comptes, <b>avant</b> de cliquer sur « 🔗 Connecter Google Drive ».</li>
+        <li><b>Héberger cette copie séparément</b> : un dépôt GitHub par école, en y déposant aussi <code>manifest.json</code> et <code>sw.js</code> (adaptez le nom de l'école dans <code>manifest.json</code> pour que l'icône installée porte le bon nom).</li>
+        <li><b>Autoriser les comptes Google</b> des personnes de cette école (Fondateur, Comptable…) sur <code>console.cloud.google.com/auth/audience</code>, section « Utilisateurs test » (voir chapitre 10 bis), et partager le dossier Drive avec elles.</li>
+        <li><b>Compléter Paramètres → Établissement</b> : coordonnées, responsables, et surtout le <b>logo et le sceau de l'école</b> — tant qu'ils ne sont pas téléversés, les images par défaut du modèle restent affichées.</li>
+        <li><b>Choisir le mot de passe administrateur</b> : l'application l'exige dès la première connexion (chapitre 10.5) ; chaque école doit avoir le sien.</li>
+        <li><b>Installer l'application sur les appareils de l'école</b> (téléphones, tablettes, ordinateurs) à partir de l'adresse propre à cette école, en suivant le chapitre 17 bis, puis relier chaque appareil au dossier Drive de l'école (chapitre 10 bis.2).</li>
       </ol>
 
       <h3>10 quater.3 Séparation et sécurité des données</h3>
-      <div class="guide-callout info"><b class="gc-label">ℹ️ Ce qui protège réellement les données</b>Toutes les copies de l'application peuvent partager le même « Client ID » Google (l'identifiant technique de l'application elle-même) sans aucun risque : il identifie l'application, pas les données. Ce qui garantit la séparation entre écoles, c'est que <b>chaque dossier Google Drive reste privé</b> et n'est partagé qu'avec les comptes Google de cette école précise. Tant que ce partage n'est pas modifié, une école ne peut jamais voir ni modifier les données d'une autre.</div>
+      <div class="guide-callout info"><b class="gc-label">ℹ️ Ce qui protège réellement les données</b>Chaque dossier Google Drive reste privé et n'est partagé qu'avec les comptes Google de l'école concernée. Tant que ce partage n'est pas modifié, une école ne peut jamais voir ni modifier les données d'une autre. Sur un même appareil, l'<code>id</code> de chaque école garantit en plus que les données enregistrées dans le navigateur ne se mélangent pas.</div>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Un même domaine pour plusieurs écoles</b>Tous les dépôts GitHub d'un même compte partagent la même adresse de base (<code>compte.github.io</code>), et un navigateur range les données par adresse de base. Si deux écoles sont hébergées sous le même compte, leurs copies <b>doivent</b> avoir des <code>id</code> différents ; sinon, un appareil qui ouvre les deux verrait leurs données se mélanger. Mettre un <code>id</code> distinct est donc conseillé dans tous les cas.</div>
       <ul>
         <li>Ne jamais partager le dossier Drive d'une école avec un compte d'une autre école.</li>
-        <li>Donner à chaque école son propre mot de passe administrateur et ses propres comptes de rôle (voir chapitre 10).</li>
+        <li>Donner à chaque école son propre mot de passe administrateur et ses propres comptes de rôle (chapitre 10).</li>
         <li>En cas de doute sur qui a accès à un dossier, vérifier dans Google Drive : clic droit sur le dossier → Partager → la liste des personnes ayant accès s'affiche.</li>
+        <li>Ne copiez jamais les identifiants SMS d'une école dans la copie d'une autre : chaque école utilise son propre compte Orange.</li>
       </ul>
 
-      <h3>10 quater.4 Limite à connaître</h3>
-      <div class="guide-callout attention"><b class="gc-label">⚠️ Limite de 100 comptes en mode Test</b>Tant que le projet Google Cloud reste en statut « Test » (le statut par défaut), Google limite à <b>100 comptes autorisés au total</b>, tous établissements confondus s'ils partagent le même projet Cloud. Pour un usage au-delà d'une poignée d'écoles, il faudra un jour faire vérifier l'application par Google (statut « Production ») pour lever cette limite, ou créer un projet Google Cloud distinct pour chaque groupe d'écoles.</div>
+      <h3>10 quater.4 Identifiant Google (Client ID) et limite à connaître</h3>
+      <p>Toutes les copies peuvent partager le même <code>googleClientId</code> sans risque : il identifie l'application, pas les données. Une école ou un groupe d'écoles peut aussi avoir le sien : créez un projet sur Google Cloud, puis collez son identifiant dans <code>googleClientId</code>.</p>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Limite de 100 comptes en mode Test</b>Tant qu'un projet Google Cloud reste en statut « Test » (statut par défaut), Google limite à <b>100 comptes autorisés au total</b> pour ce projet, toutes les écoles qui le partagent confondues. Au-delà d'une poignée d'écoles, il faut soit un projet Google Cloud distinct par groupe d'écoles (donc un <code>googleClientId</code> distinct), soit faire vérifier l'application par Google (statut « Production »), seule façon de lever cette limite.</div>
     </div>
 
     <div class="guide-chapter" id="g11n">
@@ -5745,67 +5864,6 @@ function renderGuide(container){
       <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>GitHub met à jour le fonctionnement de l'application ; seule la sauvegarde/restauration ou la synchronisation Google Drive transportent le contenu d'un appareil à l'autre.</div>
     </div>
 
-    <div class="guide-chapter" id="g17c">
-      <h2>17 ter. Adresse officielle, hébergement GitHub et changement de compte (octobre 2026)</h2>
-      <p>Le 3 octobre 2026, l'application a été republiée sur un nouveau compte GitHub, car l'accès à l'ancien compte avait été perdu (compte créé avec Google, sans mot de passe GitHub). Ce chapitre résume ce qui a changé et ce que chaque utilisateur doit faire.</p>
-
-      <h3>17 ter.1 La nouvelle adresse officielle</h3>
-      <table class="guide-table">
-        <thead><tr><th>Élément</th><th>Adresse</th></tr></thead>
-        <tbody>
-          <tr><td>Application (à utiliser désormais)</td><td><code>komah-albert-digital.github.io/yombouno-app-digital/</code></td></tr>
-          <tr><td>Dépôt GitHub (fichiers de l'application)</td><td><code>github.com/Komah-Albert-Digital/yombouno-app-digital</code></td></tr>
-          <tr><td>Ancienne adresse (à abandonner)</td><td><code>tekoulo-centre.github.io/tekoulo-app</code></td></tr>
-        </tbody>
-      </table>
-      <div class="guide-callout attention"><b class="gc-label">⚠️ Données propres à chaque adresse</b>Les données locales d'un appareil sont rattachées à l'adresse du site. Les données saisies sur l'ancienne adresse n'apparaissent donc pas automatiquement sur la nouvelle : elles se retrouvent en connectant Google Drive (chapitre 10 bis) ou en passant par une sauvegarde/restauration (chapitre 9). Avant d'abandonner l'ancienne adresse, vérifiez qu'une synchronisation Drive ou une sauvegarde récente existe.</div>
-
-      <h3>17 ter.2 Ce que chaque utilisateur doit faire (une seule fois par appareil)</h3>
-      <ol>
-        <li>Ouvrir la nouvelle adresse dans Chrome.</li>
-        <li>Installer l'application : bouton <b>« 📲 Installer l'application »</b>, ou menu ⋮ → « Installer l'application » / « Ajouter à l'écran d'accueil » (chapitre 17 bis.1).</li>
-        <li>Supprimer l'ancienne icône de l'écran d'accueil, pour ne pas ouvrir l'ancienne version par erreur.</li>
-        <li>Appuyer sur <b>« 🔗 Connecter Google Drive »</b> et choisir son compte Google (chapitre 10 bis.1).</li>
-        <li>Sur une installation neuve, utiliser d'abord <b>« ⭱ Restaurer »</b> ou la synchronisation pour récupérer les données <b>avant</b> tout « ⭳ Sauvegarder », afin de ne jamais remplacer une bonne sauvegarde par des données vides.</li>
-      </ol>
-
-      <h3>17 ter.3 Fenêtre d'autorisation Google : les cases à cocher</h3>
-      <p>À la première connexion, Google affiche la liste des autorisations demandées par l'application, <b>toutes décochées par défaut</b>. Il faut cocher :</p>
-      <ul>
-        <li><b>« Afficher, modifier, créer et supprimer des fichiers dans Google Drive »</b> : indispensable à la synchronisation ;</li>
-        <li><b>« Envoyer des e-mails en votre nom »</b> : nécessaire pour l'envoi automatique des bulletins de salaire par e-mail (chapitre 15 bis.4).</li>
-      </ul>
-      <p>Puis appuyer sur <b>« Continuer »</b>. Si l'écran « Google n'a pas validé cette application » apparaît, c'est normal en phase de test : choisir <b>« Avancé »</b>, puis <b>« Accéder à … »</b>.</p>
-      <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>Si la fenêtre se ferme et que le message « Popup window closed » s'affiche, rien n'est cassé : la fenêtre Google a simplement été fermée avant la fin. Appuyer de nouveau sur « Connecter Google Drive », cocher la case Drive, appuyer sur « Continuer » et ne rien fermer ni changer d'application jusqu'au retour dans l'application.</div>
-
-      <h3>17 ter.4 Réglages Google Cloud liés à l'adresse</h3>
-      <p>Google n'accepte la connexion que depuis les adresses déclarées dans le projet Google Cloud de l'école. Ces réglages sont à faire par le Fondateur ou la personne technique, avec le compte Google qui a créé le projet :</p>
-      <ul>
-        <li><b>Origine autorisée</b> : dans <code>console.cloud.google.com/apis/credentials</code>, ouvrir le client OAuth « Albert digital - web », section « Origines JavaScript autorisées », et y inscrire l'adresse du site <b>sans chemin</b> : <code>https://komah-albert-digital.github.io</code> (pas de « / » final, pas de nom de dépôt), puis « Enregistrer ». La prise en compte peut demander de quelques minutes à quelques heures.</li>
-        <li><b>Utilisateurs de test</b> : dans <code>console.cloud.google.com/auth/audience</code>, « Add users » pour chaque adresse Gmail qui doit se connecter (chapitre 10 bis.8).</li>
-        <li><b>Case « This client will be used by an AI-powered agent »</b> : à laisser <b>décochée</b>.</li>
-      </ul>
-      <div class="guide-callout info"><b class="gc-label">ℹ️ Si une autre adresse est utilisée un jour</b>Chaque nouvelle adresse d'hébergement (nouveau compte GitHub, autre école, nom de domaine personnalisé) doit être ajoutée aux origines JavaScript autorisées, sinon Google refuse la connexion (erreur « origin_mismatch »).</div>
-
-      <h3>17 ter.5 Sécurité du compte GitHub et du compte Google</h3>
-      <ul>
-        <li>Le dépôt GitHub est <b>public</b> (nécessaire à GitHub Pages avec un compte gratuit) : <b>tout ce qui est écrit dans index.html est lisible par n'importe qui</b>. Ne jamais y inscrire de mot de passe, de code de secours ni de clé secrète.</li>
-        <li>Activer la <b>double authentification</b> sur le compte GitHub (Paramètres → Password and authentication) et sur le compte Google (<code>g.co/2sv</code>). Google Cloud exige cette validation en deux étapes à partir du <b>10 octobre 2026</b>.</li>
-        <li>Télécharger et conserver, hors de l'appareil et hors de toute conversation, les <b>codes de secours</b> de chaque compte. Chaque code ne sert qu'une fois ; en générer de nouveaux sur <code>g.co/2sv</code> annule les anciens.</li>
-        <li>Noter, dans un endroit sûr, l'adresse e-mail et le mode de connexion de chaque compte (GitHub, Google Cloud, Orange Developer, Cloudflare) : l'oubli de l'adresse utilisée à la création a justifié ce changement de compte.</li>
-        <li>Garder une copie de tous les fichiers de l'application (index.html, manifest.json, sw.js, icônes) sur Google Drive ou sur le téléphone.</li>
-      </ul>
-
-      <h3>17 ter.6 Publier une mise à jour sur le nouveau dépôt</h3>
-      <ol>
-        <li>Se connecter à GitHub avec le compte propriétaire du dépôt.</li>
-        <li>Ouvrir le dépôt, puis <b>« + » → « Upload files »</b>, et envoyer le nouveau fichier <code>index.html</code> à la racine (même nom), puis « Commit changes ».</li>
-        <li>Attendre 1 à 2 minutes : GitHub Pages republie automatiquement (onglet « Actions » ou carte « Deployments » du dépôt, coche verte).</li>
-        <li>Rouvrir l'application et, si l'ancien affichage persiste, vider le cache du navigateur (sans effacer les données du site).</li>
-      </ol>
-      <p>Une mise à jour du fichier ne touche jamais aux données déjà saisies (chapitre 17 bis.4).</p>
-    </div>
-
     <div class="guide-chapter" id="g18">
       <h2>18. Foire aux questions et dépannage</h2>
       <h3>J'ai oublié le mot de passe, que faire ?</h3>
@@ -5850,9 +5908,6 @@ function renderGuide(container){
           <tr><td>Sauvegarder les données</td><td>« ⭳ Sauvegarder » (barre supérieure) ou Paramètres → « Télécharger une sauvegarde ».</td></tr>
           <tr><td>Changer d'année scolaire</td><td>Sélecteur d'année dans la barre latérale.</td></tr>
           <tr><td>Changer le mot de passe administrateur</td><td>Paramètres → section « Sécurité ».</td></tr>
-          <tr><td>Connaître l'adresse officielle de l'application</td><td>Chapitre 17 ter.1 : <code>komah-albert-digital.github.io/yombouno-app-digital/</code>.</td></tr>
-          <tr><td>Autoriser une nouvelle adresse auprès de Google</td><td>Google Cloud → Identifiants → client « Albert digital - web » → Origines JavaScript autorisées (chapitre 17 ter.4).</td></tr>
-          <tr><td>Publier une mise à jour</td><td>GitHub → dépôt → « + » → « Upload files » → index.html → « Commit changes » (chapitre 17 ter.6).</td></tr>
           <tr><td>Quitter l'application</td><td>Bouton rouge « Quitter » en haut à droite.</td></tr>
         </tbody>
       </table>
@@ -6094,87 +6149,9 @@ function techniqueContenuHTML(){
             <td style="white-space:nowrap;"><a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a></td>
             <td>Tableau de bord Cloudflare — pour vérifier l'état, redémarrer ou consulter les journaux (logs) du serveur relais de l'assistant IA, en cas de panne de ce dernier.</td>
           </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://github.com/Komah-Albert-Digital/yombouno-app-digital" target="_blank" rel="noopener">github.com/Komah-Albert-Digital/yombouno-app-digital</a></td>
-            <td>Le dépôt GitHub qui contient les fichiers de l'application (index.html, manifest.json, sw.js, icônes). On y envoie une nouvelle version avec « + » → « Upload files ». Réservé au propriétaire du dépôt.</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://github.com/Komah-Albert-Digital/yombouno-app-digital/settings/pages" target="_blank" rel="noopener">Réglages GitHub Pages</a></td>
-            <td>Vérifier que la publication est active (« Deploy from a branch », branche main, dossier / root) et lire l'adresse du site publié.</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://github.com/Komah-Albert-Digital/yombouno-app-digital/actions" target="_blank" rel="noopener">Onglet Actions du dépôt</a></td>
-            <td>Suivre la publication après l'envoi d'un fichier : une coche verte signifie que la nouvelle version est en ligne (1 à 2 minutes).</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://github.com/settings/security" target="_blank" rel="noopener">github.com/settings/security</a></td>
-            <td>Sécurité du compte GitHub : double authentification, codes de récupération, clés d'accès (passkeys).</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://github.com/settings/emails" target="_blank" rel="noopener">github.com/settings/emails</a></td>
-            <td>Voir ou changer l'adresse e-mail du compte GitHub — utile pour retrouver l'adresse de récupération.</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">console.cloud.google.com/auth/clients</a></td>
-            <td>Ouvrir le client OAuth « Albert digital - web » pour y ajouter l'adresse du site dans « Origines JavaScript autorisées » (nécessaire à chaque changement d'adresse).</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://g.co/2sv" target="_blank" rel="noopener">g.co/2sv</a></td>
-            <td>Validation en deux étapes du compte Google (exigée par Google Cloud à partir du 10 octobre 2026) et génération de codes de secours.</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://g.co/recover" target="_blank" rel="noopener">g.co/recover</a></td>
-            <td>Récupérer un compte Google dont le mot de passe est oublié.</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://developer.orange.com" target="_blank" rel="noopener">developer.orange.com</a></td>
-            <td>Compte Orange Developer : gérer l'application et les identifiants (Client ID / Client Secret) utilisés pour l'envoi des SMS de paiement et de rappel.</td>
-          </tr>
-          <tr>
-            <td style="white-space:nowrap;"><a href="https://support.github.com/contact" target="_blank" rel="noopener">support.github.com/contact</a></td>
-            <td>Contacter le support GitHub (récupération de compte, dépôt supprimé).</td>
-          </tr>
         </tbody>
       </table></div>
       <div class="guide-callout attention"><b class="gc-label">⚠️ Accès sensible</b>Ces pages permettent de modifier qui peut accéder aux données de l'école. Elles ne doivent être ouvertes que par le Fondateur ou une personne de confiance, connectée avec le compte Google qui a créé le projet.</div>
-
-      <div class="section-title"><h3><span class="bar"></span>8 bis. Hébergement, comptes et changement d'adresse (octobre 2026)</h3></div>
-      <div class="hint-box">Fiche de référence : où l'application est hébergée, quels comptes la font fonctionner, et que faire quand l'adresse change. Ne contient volontairement aucun mot de passe : le dépôt GitHub étant public, tout ce qui est écrit dans ce fichier est visible de tous.</div>
-      <div class="table-wrap"><table>
-        <thead><tr><th style="white-space:nowrap;">Élément</th><th>Rôle et où le gérer</th></tr></thead>
-        <tbody>
-          <tr><td style="white-space:nowrap;"><b>Adresse officielle</b></td><td><code>https://komah-albert-digital.github.io/yombouno-app-digital/</code> — c'est l'adresse à installer et à partager. L'ancienne adresse <code>tekoulo-centre.github.io/tekoulo-app</code> n'est plus à utiliser.</td></tr>
-          <tr><td style="white-space:nowrap;"><b>Compte GitHub</b></td><td>Compte « Komah-Albert-Digital » : héberge les fichiers de l'application via GitHub Pages (gratuit, dépôt public). Sécurisé par la double authentification et des codes de récupération.</td></tr>
-          <tr><td style="white-space:nowrap;"><b>Compte Google (projet Google Cloud)</b></td><td>Projet « My ALBERT DIGITAL GUINEE » : fournit l'identifiant client OAuth « Albert digital - web » et la liste des utilisateurs de test. La synchronisation Drive, l'envoi d'e-mails et la connexion Google en dépendent.</td></tr>
-          <tr><td style="white-space:nowrap;"><b>Dossier Google Drive</b></td><td>Dossier partagé de l'école, qui contient les fichiers .json synchronisés. Il ne change pas quand l'adresse du site change.</td></tr>
-          <tr><td style="white-space:nowrap;"><b>Compte Orange Developer</b></td><td>Fournit l'accès à l'API SMS (SMS de paiement des salaires, rappels de scolarité). Les identifiants se renseignent dans Paramètres, jamais dans les messages ni dans les documents partagés.</td></tr>
-          <tr><td style="white-space:nowrap;"><b>Cloudflare Worker</b></td><td>Petit serveur relais de l'assistant IA (chapitre 10 ter). Indépendant de GitHub et de Google Drive.</td></tr>
-        </tbody>
-      </table></div>
-
-      <p style="font-weight:700; font-size:13px; margin:14px 0 6px; color:var(--green-deep);">Procédure — changer l'adresse de l'application (nouveau compte GitHub, nouvelle école…)</p>
-      <ol style="font-size:12.6px; padding-left:20px; line-height:1.7;">
-        <li>Avant tout : vérifier qu'une synchronisation Google Drive ou une sauvegarde (⭳) récente existe sur l'ancienne adresse.</li>
-        <li>Créer le compte GitHub (avec une adresse e-mail dont l'accès est assuré), activer la double authentification et télécharger les codes de récupération.</li>
-        <li>Créer un dépôt <b>public</b>, y envoyer index.html, manifest.json, sw.js et les icônes à la racine (« Upload files »).</li>
-        <li>Dépôt → Settings → Pages → « Deploy from a branch », branche <b>main</b>, dossier <b>/ (root)</b> → Save. Attendre la coche verte.</li>
-        <li>Google Cloud → Identifiants → client OAuth → <b>Origines JavaScript autorisées</b> : ajouter <code>https://NOUVEAU-COMPTE.github.io</code> (sans chemin) → Enregistrer. Vérifier aussi les <b>utilisateurs de test</b> (Audience).</li>
-        <li>Sur chaque appareil : ouvrir la nouvelle adresse, installer l'application, supprimer l'ancienne icône, « Connecter Google Drive » (cocher la case Drive, ne rien fermer), puis récupérer les données (Restaurer ou synchronisation) <b>avant</b> toute sauvegarde.</li>
-        <li>Mettre à jour l'adresse dans ce fichier (module technique et chapitre 17 ter du guide) et republier.</li>
-      </ol>
-
-      <p style="font-weight:700; font-size:13px; margin:14px 0 6px; color:var(--green-deep);">Messages d'erreur fréquents liés à l'adresse et à la connexion</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th style="white-space:nowrap;">Message</th><th>Cause et solution</th></tr></thead>
-        <tbody>
-          <tr><td><b>404 sur GitHub</b></td><td>Adresse mal saisie (par exemple « IDENTIFIANT » laissé tel quel), dépôt privé consulté sans être connecté, ou dépôt renommé. Vérifier l'adresse exacte et la connexion au bon compte.</td></tr>
-          <tr><td><b>« This account does not support password sign-in »</b></td><td>Compte GitHub créé avec Google ou Apple : se connecter avec « Continue with Google » (ou Apple), ou avec une clé d'accès (passkey).</td></tr>
-          <tr><td><b>origin_mismatch</b></td><td>L'adresse du site n'est pas dans les origines JavaScript autorisées du client OAuth. Voir la procédure ci-dessus, étape 5.</td></tr>
-          <tr><td><b>« Popup window closed » (type popup_closed)</b></td><td>La fenêtre Google a été fermée avant la fin, ou n'a pas pu s'ouvrir. Autoriser les fenêtres pop-up pour le site (Chrome → Paramètres → Paramètres des sites → Pop-ups et redirections), puis réessayer sans rien fermer.</td></tr>
-          <tr><td><b>Application non validée / accès bloqué</b></td><td>Normal en mode Test. Ajouter l'adresse Gmail aux utilisateurs de test, puis « Avancé » → « Accéder à … ».</td></tr>
-        </tbody>
-      </table></div>
-      <div class="guide-callout attention"><b class="gc-label">⚠️ Dépôt public : aucun secret dans index.html</b>Tout le contenu de ce fichier est lisible par n'importe quel visiteur du dépôt GitHub. Les mots de passe, codes de secours et clés secrètes (par exemple le Client Secret Orange) ne doivent pas y figurer : les saisir dans Paramètres et les régénérer chez le fournisseur s'ils ont été exposés.</div>
 
       <div class="section-title"><h3><span class="bar"></span>9. Dictionnaire technique — mots et expressions fréquents</h3></div>
       <div class="hint-box">Petit lexique des mots que la personne technique (ou un message d'erreur) peut utiliser, expliqués simplement — pour comprendre sans avoir à demander à chaque fois.</div>
@@ -6376,6 +6353,7 @@ function renderParametres(container){
       </div>
       ${estFondateurActuel() ? `
       <div class="form-grid">
+        ${GOOGLE_DRIVE_FOLDER_ID ? '' : '<div class="guide-callout attention span-2"><b class="gc-label">⚠️ Aucun dossier Drive défini</b>La synchronisation Google Drive est bloquée tant qu\u2019un dossier propre à cette école n\u2019est pas enregistré ci-dessous.</div>'}
         <div class="field span-2"><label>Identifiant du dossier Drive</label><input id="drive-folder-id-input" type="text" value="${esc(GOOGLE_DRIVE_FOLDER_ID)}" placeholder="ex. 1u27j3ij5Qa2CUg3sW0O0SJXKBqRUMTjU"></div>
       </div>
       <div class="form-actions">
@@ -14702,7 +14680,7 @@ function certificatOfficielHeaderHTML(p, numeroDoc, personName){
           <div style="font-size:6.2pt; color:var(--ink-soft); margin-top:0.8mm; letter-spacing:.3px;">VÉRIFICATION</div>
         </div>
       </div>
-      <div class="center-badge"><img src="${logoEcoleActuel()}" alt="Logo Collège Tekoulo"></div>
+      <div class="center-badge"><img src="${logoEcoleActuel()}" alt="Logo de l'établissement"></div>
       <div class="side state-block">
         <div class="country">RÉPUBLIQUE DE GUINÉE</div>
         <div class="devise">Travail — Justice — Solidarité</div>
@@ -14751,7 +14729,7 @@ function printCertificatScolarite(id){
       ${signatureLigneHTML(p)}
     </div></div>
     <div class="badge">SANS RATURES, NI SURCHARGES</div>
-    <img class="bottom-left-logo" src="${COLLEGE_LOGO_TRANSPARENT_DATAURI}" alt="Collège Tekoulo">
+    <img class="bottom-left-logo" src="${COLLEGE_LOGO_TRANSPARENT_DATAURI}" alt="Logo de l'établissement">
     <div class="print-motto"><span class="orn">❧</span><span class="txt">Nul n'apprend sans désir, nul n'apprend sans effort</span><span class="orn">❧</span></div>
     ${tekouloBarreActions('eleves','Retour aux élèves')}
   </div>
@@ -14797,7 +14775,7 @@ function printAttestationNiveau(id){
       ${signatureLigneHTML(p)}
     </div></div>
     <div class="badge">SANS RATURES, NI SURCHARGES</div>
-    <img class="bottom-left-logo" src="${COLLEGE_LOGO_TRANSPARENT_DATAURI}" alt="Collège Tekoulo">
+    <img class="bottom-left-logo" src="${COLLEGE_LOGO_TRANSPARENT_DATAURI}" alt="Logo de l'établissement">
     <div class="print-motto"><span class="orn">❧</span><span class="txt">Nul n'apprend sans désir, nul n'apprend sans effort</span><span class="orn">❧</span></div>
     ${tekouloBarreActions('eleves','Retour aux élèves')}
   </div>
@@ -14875,7 +14853,7 @@ function attestationPriseServiceHTML(person, p, numeroDoc){
       ${signatureLigneHTML(p)}
     </div></div>
     <div class="badge">Emplacement du cachet de l'établissement</div>
-    <img class="bottom-left-logo" src="${COLLEGE_LOGO_TRANSPARENT_DATAURI}" alt="Collège Tekoulo">
+    <img class="bottom-left-logo" src="${COLLEGE_LOGO_TRANSPARENT_DATAURI}" alt="Logo de l'établissement">
     <div class="print-motto"><span class="orn">❧</span><span class="txt">Nul n'apprend sans désir, nul n'apprend sans effort</span><span class="orn">❧</span></div>
   </div>`;
 }
@@ -15064,7 +15042,7 @@ function certificatReconnaissanceHTML(person, p, extra){
     <div class="recon-corner recon-corner-br"></div>
     <div class="recon-frame"></div>
     <div class="recon-watermark" style="background-image:url('${logoEcoleActuel()}')"></div>
-    <div class="recon-corner-seal"><img src="${CERT_SEAL_IMAGE_DATAURI}" alt="Sceau du Collège Tekoulo"></div>
+    <div class="recon-corner-seal"><img src="${CERT_SEAL_IMAGE_DATAURI}" alt="Sceau de l'établissement"></div>
     <div class="recon-corner-seal-right"><img src="${MEDAL_HONNEUR_DATAURI}" alt="Médaille MENA-ETFP Honneur"></div>
     <div class="recon-content">
       <div class="recon-header">
@@ -17980,7 +17958,7 @@ function imprimerTexteAssistant(texte){
   const fenetre = tekouloOuvrirFenetre(); if(!fenetre) return;
   const CP = printCycleColors();
   fenetre.document.write(`
-    <html><head><meta charset="UTF-8"><title>Document — Collège Tekoulo Centre</title>
+    <html><head><meta charset="UTF-8"><title>Document — ${esc(nomEcoleAffiche())}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
@@ -18035,7 +18013,7 @@ function imprimerCoursAssistant(texte, meta){
     ? '<div class="sommaire"><h2>Sommaire</h2><ol>' + meta.sousTitres.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('') + '</ol></div>'
     : '';
   fenetre.document.write(`
-    <html><head><meta charset="UTF-8"><title>${esc(meta.titre)} — Collège Tekoulo Centre</title>
+    <html><head><meta charset="UTF-8"><title>${esc(meta.titre)} — ${esc(nomEcoleAffiche())}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
@@ -18084,7 +18062,7 @@ function imprimerCoursAssistant(texte, meta){
     </div>
     ${sommaireHtml}
     <div id="contenu-impression">${conteneurTemp.innerHTML}</div>
-    <div class="pied">Collège Tekoulo Centre — Document généré par l'Assistant IA</div>
+    <div class="pied">${esc(nomEcoleAffiche())} — Document généré par l'Assistant IA</div>
     <div style="margin-top:26px;">${qrSecurityBlock('DOCUMENT_ASSISTANT_IA', todayISO()+'-Cours', '', 'Assistant IA')}</div>
     ${tekouloBarreActions('dashboard')}
     <script>
@@ -18115,7 +18093,7 @@ function imprimerProjetAssistant(texte, meta){
   const CP = printCycleColors();
   const dateAujourdhui = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
   fenetre.document.write(`
-    <html><head><meta charset="UTF-8"><title>${esc(meta.titre)} — Collège Tekoulo Centre</title>
+    <html><head><meta charset="UTF-8"><title>${esc(meta.titre)} — ${esc(nomEcoleAffiche())}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
@@ -18163,7 +18141,7 @@ function imprimerProjetAssistant(texte, meta){
       </table>
     </div>
     <div id="contenu-impression">${conteneurTemp.innerHTML}</div>
-    <div class="pied">Collège Tekoulo Centre — Document généré par l'Assistant IA</div>
+    <div class="pied">${esc(nomEcoleAffiche())} — Document généré par l'Assistant IA</div>
     <div style="margin-top:26px;">${qrSecurityBlock('DOCUMENT_ASSISTANT_IA', todayISO()+'-Projet', '', 'Assistant IA')}</div>
     ${tekouloBarreActions('dashboard')}
     <script>
@@ -19039,7 +19017,7 @@ function figerColonnesPlanifier(root){
 
 <div id="assistant-panneau">
   <div class="ia-entete">
-    <span>🤖 Assistant Tekoulo</span>
+    <span>🤖 Assistant IA</span>
     <span class="ia-entete-actions">
       <button onclick="assistantOuvrirArchives()" title="Voir les réponses archivées">📦 Archives</button>
       <button onclick="assistantEffacerHistorique()" title="Effacer l'historique de la conversation">🗑️</button>
@@ -19230,6 +19208,193 @@ function figerColonnesPlanifier(root){
   if(document.readyState === 'complete'){ dismiss(); }
   else{ window.addEventListener('load', dismiss); }
   setTimeout(dismiss, MAX_WAIT_MS);
+})();
+</script>
+
+<script>
+/* Identité de l'école : le nom et la ville affichés (connexion, choix d'espace, barre latérale, onglet,
+   documents imprimés) proviennent de Paramètres → Établissement, jamais d'un nom écrit en dur. */
+function nomEcoleAffiche(){
+  try{
+    const brut = String((getParams().nomEcole)||'').trim();
+    if(!brut) return 'Base de Données de Gestion';
+    const petits = ['de','du','des','la','le','les','et','au','aux','en','sur','sous'];
+    return brut.toLowerCase().split(/\s+/).map((m,i)=>{
+      if(i>0 && petits.indexOf(m)>-1) return m;
+      return m.replace(/(^|['’-])([a-zàâäçéèêëîïôöùûüœ])/g,(x,a,b)=>a+b.toUpperCase());
+    }).join(' ');
+  }catch(e){ return ''; }
+}
+function appliquerIdentiteEcole(){
+  try{
+    const p = getParams(); const nom = nomEcoleAffiche(); const ville = String(p.ville||'').trim();
+    document.querySelectorAll('[data-ecole-nom]').forEach(el=>{ el.textContent = nom; });
+    document.querySelectorAll('[data-ecole-ville]').forEach(el=>{ el.textContent = ville || '—'; });
+    document.title = nom + ' — Base de Données de Gestion';
+    const m = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if(m) m.setAttribute('content', nom);
+  }catch(e){}
+}
+(function(){
+  if(typeof dbSet==='function'){
+    const _dbSetOrigine = dbSet;
+    dbSet = function(cle){ const r = _dbSetOrigine.apply(this, arguments); if(cle==='parametres') appliquerIdentiteEcole(); return r; };
+  }
+  appliquerIdentiteEcole();
+})();
+</script>
+
+<script>
+/* Recherche rapide d'un module : champ placé dans la barre latérale, sous l'année scolaire.
+   Cherche dans les modules RÉELLEMENT accessibles à l'utilisateur connecté (mêmes règles que le menu :
+   rôle, cycle, public/privé), en ignorant accents et majuscules, et reconnaît des mots usuels
+   (ex. « inscription » → Élèves, « paie » → Salaires, « mot de passe » → Paramètres). */
+(function(){
+  var SYN = {
+    dashboard:'accueil tableau de bord vue ensemble',
+    statsEtab:'statistiques effectifs quatre cycles',
+    bilanFinEtab:'bilan financier recettes depenses argent',
+    rapportGlobal:'rapport global etablissement',
+    eleves:'inscription inscrire reinscription nouvel eleve liste eleves matricule enregistrement',
+    notes:'bulletin bulletins moyenne classement saisie notes resultats evaluation',
+    orientation:'brevet orientation',
+    orientationChangementLycee:'serie option changement orientation lycee',
+    orientationBacLycee:'baccalaureat bac admis resultats orientation',
+    emploi:'emploi du temps horaire cours gp groupe pedagogique',
+    emploiGeneral:'emploi du temps general horaire',
+    evalplanning:'evaluations examens composition devoir calendrier',
+    programmeinfo:'informatique programme cours',
+    effectifs:'effectifs statistiques nombre eleves',
+    responsablesclasse:'responsable classe chef de classe delegue',
+    transferts:'transfert changement ecole sortie',
+    carteScolaire:'carte scolaire carte eleve identite',
+    bibliotheque:'livre livres catalogue bibliotheque',
+    livresscolaires:'manuels livres scolaires distribution classe',
+    personnel:'enseignant enseignants employe agent personnel enregistrement',
+    badgePersonnel:'badge carte personnel',
+    reconnaissancePersonnel:'certificat reconnaissance attestation personnel',
+    dossierspers:'dossier dossiers personnel',
+    mutations:'mutation mutations affectation',
+    actesnomination:'nomination acte decision arrete',
+    supervision:'supervision inspection visite enseignant',
+    groupestech:'chef groupe technique',
+    responsablesecole:'direction responsables etablissement',
+    discipline:'sanction discipline comportement',
+    comitediscipline:'comite discipline conseil',
+    remarques:'remarque remarques observation',
+    cassociaux:'cas social cas sociaux aide',
+    planning:'planning activites calendrier programme',
+    activitesHorsCours:'activites hors cours extra scolaires sortie',
+    presenceMensuelle:'presence absence appel assiduite mensuelle',
+    projets:'projet projets',
+    courriers:'courrier courriers lettre correspondance',
+    informations:'information informations communique annonce',
+    apeae:'apeae cotisation cotisations parents association',
+    bureauapeae:'bureau apeae parents association',
+    fraisscolarite:'frais scolarite paiement paiements recu recus versement ecolage inscription',
+    salaires:'salaire salaires paie paye bulletin de salaire remuneration prime retenue',
+    pretsscolaires:'pret prets avance emprunt',
+    depenses:'depense depenses charge charges sortie argent',
+    cotisationssociales:'cotisation cotisations sociales',
+    materiel:'materiel fournitures stock inventaire',
+    immobilier:'immobilier batiment batiments salle salles',
+    coordonneesgps:'gps coordonnees localisation position',
+    dons:'don dons donateur',
+    rapports:'rapport rapports mensuel mensuels',
+    bilanAnnuel:'bilan annuel fin annee',
+    guide:'guide aide manuel mode emploi utilisation',
+    dictionnaire:'dictionnaire correction orthographe francais',
+    biographie:'biographie auteur',
+    parametres:'parametres reglages configuration mot de passe comptes utilisateurs sauvegarde restauration google drive synchronisation etablissement logo securite'
+  };
+  function norm(s){
+    return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+      .replace(/[’']/g,' ').replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+  }
+  function modulesAccessibles(){
+    var out = [];
+    if(typeof NAV==='undefined' || typeof moduleEnabled!=='function') return out;
+    NAV.forEach(function(g){
+      g.items.forEach(function(it){
+        var ok = false; try{ ok = moduleEnabled(it.key); }catch(e){ ok = false; }
+        if(!ok) return;
+        var meta = (typeof PAGE_META!=='undefined' && PAGE_META[it.key]) || {};
+        out.push({ key:it.key, label:it.label, icon:it.icon, group:g.group,
+                   hay: norm([it.label, g.group, meta.title, meta.crumb, SYN[it.key]].join(' ')),
+                   lab: norm(it.label), order: out.length });
+      });
+    });
+    return out;
+  }
+  function chercher(q){
+    var mots = norm(q).split(' ').filter(Boolean);
+    if(!mots.length) return [];
+    var res = [];
+    modulesAccessibles().forEach(function(m){
+      var score = 0, tout = true;
+      mots.forEach(function(w){
+        if(m.hay.indexOf(w) === -1){ tout = false; return; }
+        score += 1;
+        if(m.lab.indexOf(w) === 0) score += 6;
+        else if((' '+m.lab).indexOf(' '+w) > -1) score += 4;
+        else if((' '+m.hay).indexOf(' '+w) > -1) score += 2;
+        if((' '+m.hay+' ').indexOf(' '+w+' ') > -1) score += 3; // mot exact : prioritaire sur un simple début de mot
+      });
+      if(tout){ m.score = score; res.push(m); }
+    });
+    res.sort(function(a,b){ return b.score - a.score || a.order - b.order; });
+    return res.slice(0, 10);
+  }
+  var inp, box, clr, sel = -1, liste = [];
+  function fermerTiroirMobile(){
+    if(window.innerWidth > 860) return;
+    var sb = document.getElementById('sidebar'), ov = document.getElementById('sidebar-overlay');
+    if(sb) sb.classList.remove('open'); if(ov) ov.classList.remove('show');
+  }
+  function effacer(){
+    inp.value = ''; liste = []; sel = -1; box.hidden = true; box.innerHTML = ''; clr.hidden = true;
+  }
+  function ouvrir(i){
+    var m = liste[i]; if(!m) return;
+    effacer(); fermerTiroirMobile();
+    if(typeof goTo==='function') goTo(m.key);
+  }
+  function marquer(){
+    var items = box.querySelectorAll('.ms-item');
+    items.forEach(function(el,i){ el.classList.toggle('sel', i===sel); });
+    if(items[sel] && items[sel].scrollIntoView) items[sel].scrollIntoView({block:'nearest'});
+  }
+  function afficher(){
+    var q = inp.value;
+    clr.hidden = !q;
+    if(!norm(q)){ liste = []; sel = -1; box.hidden = true; box.innerHTML = ''; return; }
+    liste = chercher(q); sel = liste.length ? 0 : -1;
+    if(!liste.length){
+      box.innerHTML = '<div class="ms-vide">Aucun module trouvé pour « ' + esc(q) + ' ». Essayez un autre mot (ex. élèves, salaire, notes, paramètres). Certains modules dépendent de votre rôle ou du type d\u2019établissement.</div>';
+    } else {
+      box.innerHTML = liste.map(function(m,i){
+        return '<div class="ms-item'+(i===0?' sel':'')+'" role="option" data-i="'+i+'"><span class="ms-ic">'+m.icon+'</span><span>'+esc(m.label)+'<small>'+esc(m.group)+'</small></span></div>';
+      }).join('');
+    }
+    box.hidden = false;
+  }
+  function init(){
+    inp = document.getElementById('module-search-input');
+    box = document.getElementById('module-search-results');
+    clr = document.getElementById('module-search-clear');
+    if(!inp || !box || !clr) return;
+    inp.addEventListener('input', afficher);
+    inp.addEventListener('keydown', function(e){
+      if(e.key==='ArrowDown'){ if(liste.length){ e.preventDefault(); sel = (sel+1)%liste.length; marquer(); } }
+      else if(e.key==='ArrowUp'){ if(liste.length){ e.preventDefault(); sel = (sel-1+liste.length)%liste.length; marquer(); } }
+      else if(e.key==='Enter'){ e.preventDefault(); if(liste.length) ouvrir(sel>=0?sel:0); }
+      else if(e.key==='Escape'){ effacer(); }
+    });
+    box.addEventListener('click', function(e){
+      var it = e.target.closest('.ms-item'); if(it) ouvrir(Number(it.getAttribute('data-i')));
+    });
+    clr.addEventListener('click', function(){ effacer(); inp.focus(); });
+  }
+  init();
 })();
 </script>
 
