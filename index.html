@@ -5099,6 +5099,10 @@ function renderBiographie(container){
   `;
 }
 
+/* Sceau de l'établissement utilisé dans le guide (fonction absente auparavant : le guide ne s'affichait pas). */
+function logoEcoleActuel(){
+  return (typeof TEKOULO_SEAL_DATAURI!=='undefined') ? TEKOULO_SEAL_DATAURI : '';
+}
 function renderGuide(container){
   container.innerHTML = `
     <div class="hint-box">📖 Ce guide décrit, étape par étape, l'utilisation complète de la base de données : de l'ouverture de l'application jusqu'à sa fermeture. Il est directement intégré au logiciel afin d'être toujours accessible, même hors-ligne.</div>
