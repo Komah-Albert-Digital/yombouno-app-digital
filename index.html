@@ -1644,8 +1644,8 @@ const ECOLE_CONFIG = {
   ville: 'Guéckédou',
   dossierDrive: '1u27j3ij5Qa2CUg3sW0O0SJXKBqRUMTjU',
   googleClientId: '169405877176-rka8kdjl9o5q6b7b8dlthifttm7qc8bj.apps.googleusercontent.com',
-  smsClientId: 'FJfkBQMwicxeyZFNz4mWOl06SElFZTTv',
-  smsClientSecret: '3vPM4C2Q0ZrzOlKiuc4Jt4xUpr3tFBSzNXJNva5SFDdx'
+  smsClientId: '',
+  smsClientSecret: ''
 };
 const DB_PREFIX = 'tekoulo_' + (ECOLE_CONFIG.id ? String(ECOLE_CONFIG.id).toLowerCase().replace(/[^a-z0-9]/g,'') + '_' : '');
 /* Clés qui restent communes à toutes les années scolaires (identité de l'école, mot de passe, liste des années) */
@@ -5037,7 +5037,7 @@ function bioNarrativeHTML(){
     <p>Je m'appelle Albert Yombouno. Je suis né le 08 mai 1989 à Faranah, en République de Guinée. Je suis originaire de Guéckédou, dans la sous-préfecture de Guélo, secteur Komah. Je porte avec fierté les racines de cette terre qui m'a transmis des valeurs, des souvenirs et l'espérance d'un avenir meilleur.</p>
     <p>Mon parcours scolaire commence à l'École primaire de Guendembou, où j'effectue ma scolarité de la 1re à la 6e année entre 2000 et 2005. Je poursuis ensuite mes études au Collège de Guendembou, de la 7e à la 9e année entre 2005 et 2008, puis en 10e année durant l'année 2008–2009.</p>
     <p>Animé par le désir d'apprendre et de construire patiemment mon avenir, je rejoins le Lycée Soundiata Keïta de Kissidougou. J'y suis le cycle allant de la 11e année à la Terminale en Sciences mathématiques, de 2009 à 2012. Mes efforts sont couronnés par mon admission au baccalauréat unique lors de la session 2012.</p>
-    <p>Cette réussite ouvre une nouvelle page de mon histoire. Je suis orienté au Centre Universitaire de Labé (CUBE), devenu par la suite l'Université de Labé, au sein de la Faculté des sciences techniques et de gestion. J'y poursuis une formation au département MIAGE — Méthodes Informatiques Appliquées à la Gestion des Entreprises — de 2012 à 2015. J'obtiens ensuite une Licence de sciences (Bac+3) en MIAGE en 2016.</p>
+    <p>Cette réussite ouvre une nouvelle page de mon histoire. Je suis orienté au Centre Universitaire de Labé (CUBE), devenu par la suite l'Université de Labé, au sein de la Faculté des sciences techniques et de gestion. J'y poursuis une formation au département MIAGE — Méthodes Informatiques Appliquées à la Gestion des Entreprises — de 2012 à 2015. J'obtiens ensuite une Licence de sciences (Bac+3) en MIAGE en 2015.</p>
     <p>Après ma formation universitaire, je commence mon parcours professionnel comme responsable chargé de cours au Complexe scolaire Lamarana de Labé. Je poursuis ensuite mon engagement dans l'enseignement en exerçant comme professeur de mathématiques, notamment dans les classes de 12e et de Terminale, en Sciences mathématiques et en Sciences expérimentales.</p>
     <p>De 2017 à 2024, je suis principal du Collège Ousmane Sanny Baldé de Labé. Dans le cadre de cette responsabilité, je suis également chargé des cours de mathématiques dans les classes de 9e et de 10e. Cette expérience me permet de développer davantage mon sens des responsabilités, de l'organisation, de l'encadrement et de la transmission des connaissances.</p>
     <p>Depuis 2020, je suis également engagé dans les activités de l'ONG MEDF (Ministère Des Enfants Dans la Foi), où j'assure des responsabilités liées à la logistique et à la formation.</p>
@@ -5051,7 +5051,7 @@ function bioRemerciementsHTML(){
     <p>Je rends grâce et j'adresse mes remerciements les plus sincères à toutes les personnes qui ont contribué, de près ou de loin, à mon parcours et à la réalisation de ce projet.</p>
     <p>Je remercie particulièrement mon père, Pascal Yombouno, et ma mère, Sia Catherine Bongono, pour leur amour, leurs sacrifices, leurs conseils et leur soutien qui ont accompagné chaque étape de ma vie.</p>
     <p>Je remercie également tous les amis, proches et personnes qui m'ont soutenu, de près ou de loin, par une parole, un conseil, un encouragement ou un geste de solidarité.</p>
-    <p>J'adresse une pensée particulière à ma chère famille et à ma chère épouse, Aïssata Mansaré, ainsi qu'à mes beaux-enfants Fiako, Sékou, Madeleine et Pascal, qui ont tous contribué à la réalisation de ce projet. Leur présence, leur patience et leur affection ont été pour moi une source de courage et de motivation.</p>
+    <p>J'adresse une pensée particulière à ma chère famille et à ma chère épouse, Aïssata Mansaré, ainsi qu'à mes beaux-enfants Siako, Sékou Présid, Madeleine et Pascal, qui ont tous contribué à la réalisation de ce projet. Leur présence, leur patience et leur affection ont été pour moi une source de courage et de motivation.</p>
     <p>À chacune et à chacun, j'exprime ma profonde gratitude. Je garde de ce chemin la reconnaissance des rencontres, la douceur des souvenirs et la force de continuer à avancer. Merci pour votre présence, votre confiance, votre affection et votre bienveillance.</p>
   `;
 }
@@ -5080,7 +5080,7 @@ function renderBiographie(container){
           <tr><td>Lycée</td><td>Lycée Soundiata Keïta de Kissidougou, 11e–Terminale, Sciences mathématiques, 2009–2012</td></tr>
           <tr><td>Baccalauréat</td><td>Admis au baccalauréat unique, session 2012</td></tr>
           <tr><td>Université</td><td>Centre Universitaire de Labé (CUBE), devenu Université de Labé — Faculté des sciences techniques et de gestion</td></tr>
-          <tr><td>Formation universitaire</td><td>Département MIAGE — Méthodes Informatiques Appliquées à la Gestion des Entreprises, 2012–2015 ; Licence (Bac+3) obtenue en 2016</td></tr>
+          <tr><td>Formation universitaire</td><td>Département MIAGE — Méthodes Informatiques Appliquées à la Gestion des Entreprises, 2012–2015 ; Licence (Bac+3) obtenue en 2015</td></tr>
         </tbody>
       </table>
 
@@ -5178,8 +5178,8 @@ function renderGuide(container){
       <h2>2. Ouverture de l'application et connexion</h2>
       <h3>2.1 Lancer l'application</h3>
       <ol>
-        <li>Repérez le fichier de l'application (fichier HTML) sur l'ordinateur ou le téléphone.</li>
-        <li>Ouvrez-le : il s'affiche dans le navigateur internet (Chrome, Edge, Firefox, Safari…).</li>
+        <li>Double-cliquez sur l'icône de l'application installée sur le bureau (ou appuyez sur l'icône sur l'écran d'accueil du téléphone). L'application s'ouvre dans sa propre fenêtre, sans barre d'adresse.</li>
+        <li>Si l'icône n'a pas encore été installée, ouvrez le fichier de l'application dans le navigateur (Chrome, Edge, Firefox, Safari…) puis installez-la depuis le menu ⋮ → « Installer l'application ».</li>
         <li>Patientez quelques secondes pendant le chargement de l'écran « Choisissez votre espace ».</li>
       </ol>
       <h3>2.2 Choisir son espace</h3>
@@ -5735,7 +5735,7 @@ function renderGuide(container){
         <li><b>12ème année et Terminale :</b> trois options — Sciences Expérimentales (SE), Sciences Sociales (SS) et Sciences Mathématiques (SM).</li>
       </ul>
       <h3>11.3 Les GP (Groupes Pédagogiques)</h3>
-      <p>Chaque niveau compte <b>4 GP : A1, A2, A3 et A4</b>. Au Lycée, ce sont la série ou l'option qui comptent 4 GP : chaque série (11ème) ou option (12ème, Terminale) a ses propres GP A1 à A4. La classe d'un élève s'écrit donc « 7EME A1 » hors Lycée, et « 12EME SE A1 » au Lycée (niveau + série/option + GP).</p>
+      <p>Chaque niveau compte par défaut <b>4 GP : A1, A2, A3 et A4</b>. Le nombre de GP de chaque niveau se règle dans <b>Paramètres → Établissement (Fondateur)</b> ; la valeur de 4 n'est que celle proposée au départ. Au Lycée, ce sont la série ou l'option qui comptent 4 GP : chaque série (11ème) ou option (12ème, Terminale) a ses propres GP A1 à A4. La classe d'un élève s'écrit donc « 7EME A1 » hors Lycée, et « 12EME SE A1 » au Lycée (niveau + série/option + GP).</p>
       <ul>
         <li>Dans la fiche d'un élève, on choisit le niveau, puis la classe (GP) parmi la liste des classes de l'espace. Au Lycée, le champ « Série » (11ème) ou « Option » (12ème, Terminale) est aligné automatiquement sur la classe choisie.</li>
         <li>Les statistiques d'effectifs, le bilan annuel et les emplois du temps utilisent cette organisation.</li>
