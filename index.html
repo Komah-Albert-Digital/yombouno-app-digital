@@ -19092,6 +19092,7 @@ function figerColonnesPlanifier(root){
     <button class="assistant-mode-btn" data-mode="cours" onclick="assistantChoisirMode('cours')">📘 Créer un cours</button>
     <button class="assistant-mode-btn" data-mode="projets" onclick="assistantChoisirMode('projets')">🏗️ Projets</button>
     <button class="assistant-mode-btn" data-mode="traduire" onclick="assistantChoisirMode('traduire')">🈯 Traduire un mot</button>
+    <button class="assistant-mode-btn" onclick="corrOuvrir()">📑 Corriger un document</button>
   </div>
   <div id="assistant-langue-ligne" style="display:flex; align-items:center; gap:6px; padding:6px 12px 0; font-size:12px;">
     <label for="assistant-langue" style="font-weight:600; color:var(--ink-soft,#666);">🌐 Répondre en :</label>
@@ -19476,5 +19477,252 @@ function appliquerIdentiteEcole(){
 })();
 </script>
 
+<script>
+/* ===================== CORRECTION ET MISE EN FORME DE DOCUMENT (assistant IA) =====================
+   Importer un document (Word, PDF, texte, HTML), le faire corriger et mettre en forme par l'assistant,
+   puis imprimer un document professionnel (page de garde, en-tête, pied de page). */
+let corrDocTexte = '', corrDocNom = '', corrDocHTML = '', corrDocTitre = '', corrDocPiece = null;
+function corrLireBase64(f){
+  return new Promise((ok, ko) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1]);
+    r.onerror = () => ko(new Error('Lecture du fichier impossible.'));
+    r.readAsDataURL(f);
+  });
+}
+const CORR_LIBS = {
+  mammoth: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js',
+  pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  pdfworker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+};
+function corrChargerScript(url){
+  return new Promise((ok, ko) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => ok();
+    s.onerror = () => ko(new Error('Bibliothèque de lecture non chargée : connexion internet nécessaire.'));
+    document.head.appendChild(s);
+  });
+}
+function corrCreerOverlay(){
+  if(document.getElementById('corr-overlay')) return;
+  const d = document.createElement('div');
+  d.id = 'corr-overlay';
+  d.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100000;align-items:center;justify-content:center;padding:14px;';
+  d.innerHTML = `
+    <div style="background:#fff;color:#20241F;border-radius:14px;max-width:580px;width:100%;max-height:92vh;overflow:auto;padding:18px;box-sizing:border-box;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <b style="font-size:16px;color:#0B4A32;">📑 Corriger et mettre en forme un document</b>
+        <button onclick="corrFermer()" style="border:0;background:none;font-size:18px;cursor:pointer;" title="Fermer">✕</button>
+      </div>
+      <p style="font-size:12.5px;line-height:1.5;color:#555;margin:0 0 10px;">Importez un document (Word, PDF, texte ou HTML). L'assistant corrige l'orthographe, la grammaire, la conjugaison et la structure, améliore les figures et les diagrammes, puis prépare un document professionnel prêt à imprimer. Le contenu d'origine est conservé.</p>
+      <input type="file" id="corr-fichier" accept=".docx,.pdf,.txt,.md,.html,.htm,.jpg,.jpeg,.png,.webp" onchange="corrFichierChoisi(this)" style="font-size:13px;margin-bottom:6px;">
+      <div id="corr-info" style="font-size:12px;color:#555;min-height:16px;margin-bottom:10px;"></div>
+      <label for="corr-type" style="font-size:12.5px;font-weight:600;">Type de document</label>
+      <select id="corr-type" style="width:100%;padding:7px;border-radius:8px;border:1px solid #ccc;margin:4px 0 12px;">
+        <option>Document général</option>
+        <option>Rapport</option>
+        <option>Cours</option>
+        <option>Lettre ou note officielle</option>
+        <option>Procès-verbal ou compte-rendu</option>
+      </select>
+      <button id="corr-lancer" onclick="corrLancer()" style="background:#0B4A32;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;">✨ Corriger et mettre en forme</button>
+      <div id="corr-statut" style="font-size:12.5px;margin:10px 0;min-height:16px;"></div>
+      <div id="corr-resultat" style="display:none;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px;">
+          <button onclick="corrImprimer()" style="background:#C9A227;color:#20241F;border:0;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;">🖨️ Imprimer / Enregistrer en PDF</button>
+          <button onclick="corrTelecharger()" style="background:#fff;color:#0B4A32;border:1px solid #0B4A32;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;">⬇️ Télécharger (.html)</button>
+        </div>
+        <div style="font-size:12px;color:#555;margin-bottom:4px;">Aperçu :</div>
+        <div id="corr-apercu" style="border:1px solid #ddd;border-radius:8px;padding:10px;max-height:260px;overflow:auto;font-size:13px;line-height:1.5;"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(d);
+}
+function corrOuvrir(){ corrCreerOverlay(); document.getElementById('corr-overlay').style.display = 'flex'; }
+function corrFermer(){ const o = document.getElementById('corr-overlay'); if(o) o.style.display = 'none'; }
+
+async function corrLireFichier(f){
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  if(ext === 'txt' || ext === 'md') return {texte: await f.text(), format: 'texte'};
+  if(ext === 'html' || ext === 'htm'){
+    const doc = new DOMParser().parseFromString(await f.text(), 'text/html');
+    return {texte: doc.body ? doc.body.innerText : '', format: 'texte'};
+  }
+  if(ext === 'docx'){
+    if(!window.mammoth) await corrChargerScript(CORR_LIBS.mammoth);
+    const r = await mammoth.convertToHtml({arrayBuffer: await f.arrayBuffer()});
+    return {texte: r.value, format: 'html'};
+  }
+  if(ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'webp'){
+    const mediaType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    return {texte: '', format: 'piece', piece: {nom: f.name, mediaType, base64: await corrLireBase64(f)}};
+  }
+  if(ext === 'pdf'){
+    if(!window.pdfjsLib) await corrChargerScript(CORR_LIBS.pdfjs);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = CORR_LIBS.pdfworker;
+    const pdf = await pdfjsLib.getDocument({data: await f.arrayBuffer()}).promise;
+    let t = '';
+    for(let i = 1; i <= pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const contenu = await page.getTextContent();
+      t += contenu.items.map(it => it.str).join(' ') + '\n\n';
+    }
+    if(t.trim().length >= 20) return {texte: t, format: 'texte'};
+    // PDF scanné : pas de texte, on envoie le fichier à l'assistant qui le lit lui-même
+    return {texte: '', format: 'piece', piece: {nom: f.name, mediaType: 'application/pdf', base64: await corrLireBase64(f)}};
+  }
+  throw new Error('Format non pris en charge. Utilisez .docx, .pdf, .txt, .md ou .html.');
+}
+async function corrFichierChoisi(input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  const info = document.getElementById('corr-info');
+  info.textContent = 'Lecture de « ' + f.name + ' »…';
+  try{
+    const r = await corrLireFichier(f);
+    if(r.format === 'piece'){
+      if(f.size > 12 * 1024 * 1024) throw new Error('Fichier trop lourd (12 Mo maximum).');
+      corrDocPiece = r.piece; corrDocTexte = 'piece'; corrDocNom = f.name;
+      info.textContent = '🖼️ ' + f.name + ' — document scanné ou photo : l\'assistant le lira et le transcrira.';
+      document.getElementById('corr-resultat').style.display = 'none';
+      document.getElementById('corr-statut').textContent = '';
+      return;
+    }
+    corrDocPiece = null;
+    let t = (r.texte || '').trim();
+    if(t.length < 20) throw new Error('Aucun texte lisible dans ce fichier.');
+    let note = '';
+    if(t.length > 40000){ t = t.slice(0, 40000); note = ' (document tronqué à 40 000 caractères)'; }
+    corrDocTexte = (r.format === 'html' ? '[Contenu HTML : conservez sa structure]\n' : '') + t;
+    corrDocNom = f.name;
+    info.textContent = '📄 ' + f.name + ' — ' + t.length + ' caractères lus' + note;
+    document.getElementById('corr-resultat').style.display = 'none';
+    document.getElementById('corr-statut').textContent = '';
+  }catch(e){
+    corrDocTexte = ''; corrDocPiece = null;
+    info.textContent = '❌ ' + e.message;
+  }
+}
+function corrPrompt(type, texte){
+  return `Tu es un correcteur et un metteur en page professionnel. Corrige le document ci-dessous : orthographe, grammaire, conjugaison, ponctuation et style. Améliore sa structure (titres, sous-titres, listes, tableaux, paragraphes bien construits). Ajoute des figures et diagrammes utiles en SVG intégré, simples et lisibles, aux couleurs vert #0B4A32 et or #C9A227, lorsque le texte décrit un processus, une répartition, une comparaison ou des données. Ne modifie jamais les faits, les noms, les dates, les chiffres ni le sens. N'ajoute aucune information inventée. Conserve la langue du document.
+Type de document : ${type}.
+Réponds UNIQUEMENT avec un fragment HTML du corps du document, sans <html>, <head> ni <body>, sans balises <script>, sans texte d'introduction ni commentaire. Utilise seulement : h2, h3, p, ul, ol, li, table, thead, tbody, tr, th, td, strong, em, div (class="encadre" pour un encadré), figure, figcaption, svg.
+Document à corriger :
+"""
+${texte}
+"""`;
+}
+async function corrAppeler(prompt, piece){
+  if(!TEKOULO_API_URL || !TEKOULO_TOKEN) throw new Error("L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter).");
+  let res;
+  try{
+    res = await fetch(TEKOULO_API_URL + '/api/assistant/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TEKOULO_TOKEN},
+      body: JSON.stringify(Object.assign({message: prompt, historique: [], mode: 'general'},
+        piece ? {piece_jointe: {nom: piece.nom, media_type: piece.mediaType, donnees_base64: piece.base64}} : {}))
+    });
+  }catch(e){ throw new Error('Serveur injoignable : ' + e.message); }
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.error || 'Erreur inconnue du serveur.');
+  return data.reponse || '';
+}
+function corrNettoyer(html){
+  const h = html.replace(/^\s*```(?:html)?\s*/i, '').replace(/```\s*$/, '');
+  const modele = document.createElement('template');
+  modele.innerHTML = h;
+  modele.content.querySelectorAll('script,iframe,object,embed,link,style,meta').forEach(e => e.remove());
+  modele.content.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(a => { if(/^on/i.test(a.name)) el.removeAttribute(a.name); });
+  });
+  const w = document.createElement('div');
+  w.appendChild(modele.content.cloneNode(true));
+  return w.innerHTML;
+}
+async function corrLancer(){
+  const bouton = document.getElementById('corr-lancer');
+  const statut = document.getElementById('corr-statut');
+  if(!corrDocTexte){ statut.textContent = 'Choisissez d\'abord un document.'; return; }
+  bouton.disabled = true;
+  statut.textContent = '⏳ Correction en cours… un long document peut prendre une à deux minutes.';
+  try{
+    const type = document.getElementById('corr-type').value;
+    const contenu = corrDocPiece
+      ? "(Le document est joint en pièce jointe : lis-le attentivement, transcris fidèlement tout son texte, puis applique la correction.)"
+      : corrDocTexte;
+    const reponse = await corrAppeler(corrPrompt(type, contenu), corrDocPiece);
+    corrDocHTML = corrNettoyer(reponse);
+    if(!corrDocHTML.trim()) throw new Error('La réponse de l\'assistant est vide. Réessayez.');
+    const h = (corrDocHTML.match(/<h[12][^>]*>([\s\S]*?)<\/h[12]>/i) || [])[1];
+    corrDocTitre = (h ? h.replace(/<[^>]+>/g, '').trim() : '') || corrDocNom.replace(/\.[^.]+$/, '') || 'Document corrigé';
+    document.getElementById('corr-apercu').innerHTML = corrDocHTML;
+    document.getElementById('corr-resultat').style.display = 'block';
+    statut.textContent = '✅ Correction terminée. Vérifiez l\'aperçu, puis imprimez ou téléchargez.';
+  }catch(e){
+    statut.textContent = '❌ ' + e.message;
+  }finally{
+    bouton.disabled = false;
+  }
+}
+function corrDocumentComplet(corps, titre){
+  const ecole = nomEcoleAffiche();
+  const logo = logoEcoleActuel();
+  const date = new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${esc(titre)}</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm 22mm 18mm; }
+  body { font-family: Georgia, 'Times New Roman', serif; color:#20241F; line-height:1.65; font-size:12pt; margin:0; }
+  .page-garde { min-height: 250mm; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; page-break-after:always; border:6px double #0B4A32; padding:20mm; box-sizing:border-box; background:linear-gradient(160deg,#FFFFFF 0%,#EEF5F0 100%); }
+  .page-garde img { width:110px; height:110px; object-fit:contain; margin-bottom:12px; }
+  .page-garde h1 { font-size:26pt; color:#0B4A32; margin:14px 0; }
+  .bande { height:6px; width:120px; margin:16px auto; background:linear-gradient(90deg,#CE1126 33%,#FCD116 33% 66%,#009460 66%); }
+  h2 { color:#0B4A32; border-bottom:2px solid #C9A227; padding-bottom:4px; margin-top:26px; page-break-after:avoid; }
+  h3 { color:#0B4A32; margin-top:18px; page-break-after:avoid; }
+  p { margin:0 0 10px; text-align:justify; }
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:11pt; page-break-inside:auto; }
+  tr { page-break-inside:avoid; }
+  th { background:#0B4A32; color:#fff; padding:6px 8px; text-align:left; }
+  td { border:1px solid #d9e2dc; padding:6px 8px; }
+  tr:nth-child(even) td { background:#F6FAF7; }
+  .encadre { border-left:5px solid #C9A227; background:#FDF8E7; padding:10px 14px; margin:14px 0; border-radius:6px; page-break-inside:avoid; }
+  figure { margin:14px 0; text-align:center; page-break-inside:avoid; }
+  figure svg, svg { max-width:100%; height:auto; }
+  figcaption { font-size:10pt; color:#555; font-style:italic; margin-top:4px; }
+  .corps { padding-bottom:12mm; }
+  .pied { position:fixed; bottom:0; left:0; right:0; text-align:center; font-size:9pt; color:#6b7a70; }
+</style></head><body>
+<div class="page-garde">
+  ${logo ? `<img src="${logo}" alt="">` : ''}
+  <div style="font-size:11pt;letter-spacing:2px;color:#0B4A32;font-weight:700;">RÉPUBLIQUE DE GUINÉE</div>
+  <div style="font-size:10pt;font-style:italic;color:#555;">Travail — Justice — Solidarité</div>
+  <div class="bande"></div>
+  <h1>${esc(titre)}</h1>
+  <div style="font-size:13pt;font-weight:600;">${esc(ecole)}</div>
+  <div class="bande"></div>
+  <div style="font-size:11pt;color:#555;">${esc(date)}</div>
+</div>
+<div class="corps">${corps}</div>
+<div class="pied">${esc(ecole)} · ${esc(titre)}</div>
+</body></html>`;
+}
+function corrImprimer(){
+  if(!corrDocHTML) return;
+  const fenetre = tekouloOuvrirFenetre(); if(!fenetre) return;
+  fenetre.document.open();
+  fenetre.document.write(corrDocumentComplet(corrDocHTML, corrDocTitre));
+  fenetre.document.close();
+  setTimeout(() => fenetre.print(), 400);
+}
+function corrTelecharger(){
+  if(!corrDocHTML) return;
+  const blob = new Blob([corrDocumentComplet(corrDocHTML, corrDocTitre)], {type: 'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (corrDocTitre || 'document-corrige').replace(/[^\w\-]+/g, '_') + '.html';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+</script>
 </body>
 </html>
