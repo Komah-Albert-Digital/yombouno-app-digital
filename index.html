@@ -5278,6 +5278,10 @@ function renderGuide(container){
       <ul><li>Courriers, Informations, APEAE (cotisations), Bureau de l'APEAE, Gestion des frais de scolarité (chapitre 15).</li></ul>
       <h3>Finances &amp; Matériel</h3>
       <ul><li>Dépenses, Cotisations sociales, Matériel &amp; fournitures, Gestion immobilière, Coordonnées GPS, Dons reçus.</li></ul>
+      <h3>Cantine</h3>
+      <p>Le module « Cantine : ventes et flux des élèves » enregistre chaque repas vendu, chaque passage au réfectoire et chaque paiement : montant facturé, montant payé, reste dû et mode de paiement. Le module « Cantine : approvisionnements » enregistre les achats de vivres : fournisseur, produit, quantité, prix, reçu et date de péremption. En haut de chaque page, un récapitulatif affiche les chiffres du jour pour les ventes et ceux du mois pour les approvisionnements. Accès : comptable, comptabilité et secrétaire général.</p>
+      <h3>Registre des retards et sorties</h3>
+      <p>Ce registre enregistre chaque retard, sortie anticipée ou absence : date, élève, type d'évènement, motif, justificatif, personne ayant autorisé la sortie et information des parents. Accès : surveillant général et surveillant.</p>
       <h3>Rapports</h3>
       <ul><li>Rapports mensuels, Bilan annuel.</li></ul>
       <h3>Système</h3>
@@ -5329,6 +5333,9 @@ function renderGuide(container){
     </div>
 
     <div class="guide-chapter" id="g7">
+      <h3>6.7 Champs ajoutés récemment</h3>
+      <p>Plusieurs formulaires ont reçu de nouveaux champs. La fiche élève comporte maintenant le lieu de résidence, le tuteur et son téléphone, la personne à prévenir en urgence, le numéro d'extrait de naissance, le statut de boursier, la mutuelle et les allergies. Le personnel a la date de fin de contrat, le numéro CNSS et les heures de service. Les frais de scolarité ont le mode de paiement, la date d'échéance et le reste à payer. Les dépenses, les dons, le matériel, la discipline, les transferts, l'APEAE, les projets, les courriers, l'immobilier, la bibliothèque et les livres scolaires ont aussi de nouveaux champs.</p>
+      <p>Les données déjà saisies sont conservées : les nouveaux champs restent vides jusqu'à ce que vous les remplissiez.</p>
       <h2>7. Recherche et filtres</h2>
       <h3>7.1 La barre de recherche</h3>
       <p>Dans les modules contenant une longue liste, une barre de recherche est disponible en haut du tableau, reconnaissable à son accent orange sur le bord gauche. La recherche filtre les résultats instantanément à chaque caractère saisi.</p>
@@ -5353,6 +5360,7 @@ function renderGuide(container){
         <li>Bilan annuel et situation financière · Fiche et synthèse d'orientation</li>
         <li>Emploi du temps des évaluations du mois · Rapports mensuels</li>
         <li>Statistiques, bilan financier et rapport global de l'établissement (bouton « ⎙ Imprimer » de ces pages)</li>
+        <li>Documents corrigés et mis en forme par l'assistant IA (chapitre 10 ter.5)</li>
       </ul>
       <h3>8.2 Procédure d'impression</h3>
       <ol>
@@ -5379,6 +5387,8 @@ function renderGuide(container){
       </ul>
       <div class="guide-callout attention"><b class="gc-label">⚠️ Attention</b>Pour que le nom et le téléphone s'affichent correctement, renseignez au préalable, dans Paramètres, les champs des responsables de chaque cycle (chapitre 10.1). Un champ laissé vide restera vide sur le document imprimé.</div>
       <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>Tous les documents imprimés (fiches, bulletins, certificats, attestations, listes, classement, résultats, bilans, reçus de paiement, pages « Établissement », emplois du temps et documents de l'assistant IA) comportent un en-tête administratif et un code de sécurité (QR code) généré localement, permettant de vérifier leur authenticité sans connexion internet.</div>
+      <h3>8.4 Logo et mise en page des documents</h3>
+      <p>Le logo de l'établissement affiché en bas à gauche des documents imprimés utilise une écriture bleu foncé, lisible sur une page blanche. Les documents corrigés par l'assistant (chapitre 10 ter.5) comportent une page de garde avec le sceau de l'école, un pied de page et une mise en page professionnelle, imprimables via « 🖨️ Imprimer / Enregistrer en PDF ».</p>
     </div>
 
     <div class="guide-chapter" id="g9">
@@ -5672,6 +5682,14 @@ function renderGuide(container){
     </div>
 
     <div class="guide-chapter" id="g10q">
+      <h3>10 ter.5 Corriger et mettre en forme un document</h3>
+      <p>Dans l'assistant IA, appuyez sur « 📑 Corriger un document ». Vous pouvez importer un fichier Word (.docx), un PDF, un texte (.txt, .md), une page HTML, ou une photo (.jpg, .png) de document.</p>
+      <ul>
+        <li>Choisissez le type de document, puis appuyez sur « Corriger et mettre en forme ».</li>
+        <li>L'assistant corrige l'orthographe, la grammaire, la conjugaison et la ponctuation, améliore la structure, et ajoute des figures ou des diagrammes simples quand le texte s'y prête.</li>
+        <li>Vérifiez l'aperçu, puis appuyez sur « Imprimer / Enregistrer en PDF » ou « Télécharger (.html) ».</li>
+      </ul>
+      <p>Le document final comporte une page de garde avec le sceau et le nom de l'école, une bande aux couleurs nationales et un pied de page. Pour une photo ou un PDF scanné, l'assistant commence par transcrire le texte : relisez-le avant d'imprimer, surtout les chiffres, les noms et les dates. Cette fonction nécessite une connexion internet.</p>
       <h2>10 quater. Utiliser l'application pour plusieurs écoles</h2>
       <p>Cette application peut servir à plusieurs écoles différentes, chacune avec ses propres données, totalement séparées et invisibles les unes des autres. Le principe retenu est volontairement simple : <b>une copie complète de l'application par école</b>, chacune reliée à son propre dossier Google Drive — plutôt qu'un système à comptes multiples partageant une seule base de données, plus complexe et plus risqué en cas d'erreur.</p>
 
@@ -5969,6 +5987,10 @@ function renderGuide(container){
           <tr><td>Changer d'année scolaire</td><td>Sélecteur d'année dans la barre latérale.</td></tr>
           <tr><td>Changer le mot de passe administrateur</td><td>Paramètres → section « Sécurité ».</td></tr>
           <tr><td>Quitter l'application</td><td>Bouton rouge « Quitter » en haut à droite.</td></tr>
+          <tr><td>Corriger ou mettre en forme un document</td><td>Assistant IA (bulle 💬) → « 📑 Corriger un document », puis choisir le fichier.</td></tr>
+          <tr><td>Voir les ventes de la cantine du jour</td><td>Cantine : ventes et flux → le récapitulatif s'affiche en haut de la page.</td></tr>
+          <tr><td>Enregistrer un achat de vivres</td><td>Cantine : approvisionnements → Ajouter.</td></tr>
+          <tr><td>Noter un retard ou une sortie</td><td>Vie scolaire → « Registre des retards et sorties » → Ajouter.</td></tr>
         </tbody>
       </table>
       <p style="text-align:center; font-style:italic; color:var(--ink-soft); border-top:2px solid var(--gold); padding-top:14px; margin-top:20px;">Collège Tekoulo Centre — Guéckédou, République de Guinée</p>
@@ -9156,7 +9178,7 @@ const ROLE_MODULES = {
   chef_etablissement: '*',
   secretariat: '*',   // rôles hérités du mode serveur, conservés tels quels (accès complet)
   consultation: '*',
-  secretaire_general: ['dashboard','statsEtab','rapportGlobal','eleves','effectifs','transferts','carteScolaire','courriers','informations','personnel','badgePersonnel','dossierspers','mutations','actesnomination','responsablesecole','rapports','bilanAnnuel','guide','biographie'],
+  secretaire_general: ['dashboard','cantine','cantineappro','statsEtab','rapportGlobal','eleves','effectifs','transferts','carteScolaire','courriers','informations','personnel','badgePersonnel','dossierspers','mutations','actesnomination','responsablesecole','rapports','bilanAnnuel','guide','biographie'],
   direction: '*',
   directeur: TOUS_LES_MODULES_ADMIN_CYCLE,
   principal: TOUS_LES_MODULES_ADMIN_CYCLE,
@@ -9164,12 +9186,12 @@ const ROLE_MODULES = {
   directeur_etudes: ['statsEtab','rapportGlobal','dashboard','eleves','notes','orientation','orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning','programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque','livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers','mutations','actesnomination','supervision','groupestech','responsablesecole','discipline','comitediscipline','remarques','cassociaux','planning','activitesHorsCours','projets','rapports','bilanAnnuel','guide','biographie'],
   directeur_adjoint: ['statsEtab','rapportGlobal','dashboard','eleves','notes','orientation','orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning','programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque','livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers','mutations','actesnomination','supervision','groupestech','responsablesecole','discipline','comitediscipline','remarques','cassociaux','planning','activitesHorsCours','projets','rapports','bilanAnnuel','guide','biographie'],
   censeur: ['statsEtab','rapportGlobal','dashboard','eleves','notes','orientation','orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning','programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque','livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers','mutations','actesnomination','supervision','groupestech','responsablesecole','discipline','comitediscipline','remarques','cassociaux','planning','activitesHorsCours','projets','rapports','bilanAnnuel','guide','biographie'],
-  comptable: ['statsEtab','bilanFinEtab','dashboard','apeae','bureauapeae','fraisscolarite','salaires','pretsscolaires','depenses','cotisationssociales','materiel','immobilier','coordonneesgps','dons','rapports','bilanAnnuel','guide','biographie'],
-  comptabilite: ['statsEtab','bilanFinEtab','dashboard','apeae','bureauapeae','fraisscolarite','salaires','pretsscolaires','depenses','cotisationssociales','materiel','immobilier','coordonneesgps','dons','rapports','bilanAnnuel','guide','biographie'],
+  comptable: ['statsEtab','cantine','cantineappro','bilanFinEtab','dashboard','apeae','bureauapeae','fraisscolarite','salaires','pretsscolaires','depenses','cotisationssociales','materiel','immobilier','coordonneesgps','dons','rapports','bilanAnnuel','guide','biographie'],
+  comptabilite: ['statsEtab','cantine','cantineappro','bilanFinEtab','dashboard','apeae','bureauapeae','fraisscolarite','salaires','pretsscolaires','depenses','cotisationssociales','materiel','immobilier','coordonneesgps','dons','rapports','bilanAnnuel','guide','biographie'],
   charge_orientation: ['dashboard','orientation','orientationChangementLycee','orientationBacLycee','eleves','effectifs','carteScolaire','guide','biographie'],
   conseiller_orientation: ['dashboard','orientation','orientationChangementLycee','orientationBacLycee','eleves','effectifs','carteScolaire','guide','biographie'],
-  surveillant_general: ['dashboard','eleves','discipline','comitediscipline','remarques','effectifs','responsablesclasse','planning','activitesHorsCours','guide','biographie'],
-  surveillant: ['dashboard','eleves','discipline','comitediscipline','remarques','effectifs','responsablesclasse','planning','activitesHorsCours','guide','biographie'],
+  surveillant_general: ['dashboard','retards','eleves','discipline','comitediscipline','remarques','effectifs','responsablesclasse','planning','activitesHorsCours','guide','biographie'],
+  surveillant: ['dashboard','retards','eleves','discipline','comitediscipline','remarques','effectifs','responsablesclasse','planning','activitesHorsCours','guide','biographie'],
   enseignant: ['dashboard','notes','emploi','emploiGeneral','evalplanning','guide','biographie'],
   enseignant_college: ['dashboard','notes','emploi','emploiGeneral','evalplanning','guide','biographie'],
   professeur_lycee: ['dashboard','notes','emploi','emploiGeneral','evalplanning','guide','biographie'],
@@ -9271,6 +9293,7 @@ const NAV = [
   ]},
   {group:'Vie scolaire', items:[
     {key:'discipline', label:'Discipline', icon:'🚩', badge:()=>dbGet('discipline').filter(cycleModuleVisible).length},
+{key:'retards', label:'Registre des retards et sorties', icon:'⏰', badge:()=>dbGet('retards').filter(cycleModuleVisible).length},
     {key:'comitediscipline', label:'Comité de discipline', icon:'⚖️', badge:()=>dbGet('comitediscipline').filter(cycleModuleVisible).length},
     {key:'remarques', label:'Remarques', icon:'📝', badge:()=>dbGet('remarques').filter(cycleModuleVisible).length},
     {key:'cassociaux', label:'Cas sociaux', icon:'❤️', badge:()=>dbGet('cassociaux').filter(cycleModuleVisible).length},
@@ -9285,6 +9308,8 @@ const NAV = [
     {key:'apeae', label:'APEAE (cotisations)', icon:'💰', badge:()=>dbGet('apeae').filter(cycleModuleVisible).length},
     {key:'bureauapeae', label:"Bureau de l'APEAE", icon:'🏛️', badge:()=>dbGet('bureauapeae').filter(cycleModuleVisible).length},
     {key:'fraisscolarite', label:'Gestion des frais de scolarité', icon:'💵', badge:()=>dbGet('fraisscolarite').filter(cycleModuleVisible).length},
+{key:'cantine', label:'Cantine : ventes et flux', icon:'🍽️', badge:()=>dbGet('cantine').filter(cycleModuleVisible).length},
+{key:'cantineappro', label:'Cantine : approvisionnements', icon:'🛒', badge:()=>dbGet('cantineappro').filter(cycleModuleVisible).length},
   ]},
   {group:'Finances & Matériel', items:[
     {key:'salaires', label:'Salaires', icon:'💰', badge:()=>dbGet('salaires').filter(cycleModuleVisible).length},
@@ -9356,6 +9381,9 @@ const PAGE_META = {
   badgePersonnel:{title:'Badge du personnel', crumb:'Personnel / Badge'},
   reconnaissancePersonnel:{title:'Certificat de reconnaissance du personnel', crumb:'Personnel / Certificat de reconnaissance'},
   dossierspers:{title:'Dossiers du personnel', crumb:'Personnel / Dossiers'},
+  retards:{title:'Registre des retards et sorties', crumb:'Vie scolaire / Retards et sorties'},
+  cantine:{title:'Cantine scolaire : ventes et flux des élèves', crumb:'Cantine / Ventes et flux'},
+  cantineappro:{title:'Cantine : approvisionnements en vivres', crumb:'Cantine / Approvisionnements'},
   mutations:{title:'Gestion des mutations', crumb:'Personnel / Mutations'},
   supervision:{title:'Supervision des enseignants', crumb:'Personnel / Supervision'},
   groupestech:{title:'Chefs de groupe technique', crumb:'Personnel / Groupes techniques'},
@@ -9487,7 +9515,7 @@ function renderView(key){
   }
   else if(key==='guide') renderGuide(target);
   else if(key==='biographie') renderBiographie(target);
-  else if(GENERIC_MODULES[key]) renderGenericModule(target, GENERIC_MODULES[key]);
+  else if(GENERIC_MODULES[key]){ renderGenericModule(target, GENERIC_MODULES[key]); if(key==='cantine'||key==='cantineappro') cantineRecapInserer(target, key); }
   else target.innerHTML = '<div class="empty-state">Module en construction.</div>';
 }
 
@@ -9734,6 +9762,9 @@ const GENERIC_MODULES = {
       {key:'dateMutation', label:'Date de mutation', type:'date'},
       {key:'grade', label:'Grade', type:'text'},
       {key:'appreciation', label:'Appréciation', type:'text', span:2},
+      {key:'dateFinContrat', label:'Date de fin de contrat', type:'date'},
+      {key:'numeroCnss', label:'Numéro CNSS', type:'text'},
+      {key:'nbHeuresService', label:'Nombre d\'heures de service par semaine', type:'number'},
     ],
     columns:['matricule','prenoms','nom','sexe','fonction','telephone','typeContrat'],
     // Fusionné directement dans la fiche Personnel (au lieu d'un module séparé) : le bouton
@@ -9978,6 +10009,12 @@ const GENERIC_MODULES = {
       {key:'resolutionFinale', label:'Résolution finale', type:'text', span:2},
       {key:'noDossier', label:'N° dossier', type:'text'},
       {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'dateIncident', label:'Date de l\'incident', type:'date'},
+      {key:'lieuIncident', label:'Lieu de l\'incident', type:'text'},
+      {key:'temoins', label:'Témoins', type:'textarea', span:2},
+      {key:'dureeSanction', label:'Durée de la sanction', type:'text'},
+      {key:'parentsInformes', label:'Parents informés', type:'select', options:['OUI','NON']},
+      {key:'dateInformationParents', label:'Date d\'information des parents', type:'date'},
     ],
     columns:['date','identifiant','prenoms','nom','classeFonction','fauteCommise','niveauGravite','sanction'],
   },
@@ -10054,6 +10091,7 @@ const GENERIC_MODULES = {
       {key:'montantUtilise', label:'Montant utilisé (GNF)', type:'number'},
       {key:'partenaires', label:'Partenaires', type:'text'},
       {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'statutProjet', label:'Statut du projet', type:'select', options:['PRÉVU','EN COURS','TERMINÉ','SUSPENDU']},
     ],
     columns:['nomProjet','statut','responsable','dateDebut','dateFin','budgetPrevu'],
   },
@@ -10071,6 +10109,11 @@ const GENERIC_MODULES = {
       {key:'date', label:'Date de traitement', type:'date'},
       {key:'responsable', label:'Responsable', type:'text'},
       {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'numeroCourrier', label:'N° d\'enregistrement', type:'text'},
+      {key:'dateCourrier', label:'Date du courrier', type:'date'},
+      {key:'expediteur', label:'Expéditeur', type:'text'},
+      {key:'destinataire', label:'Destinataire', type:'text'},
+      {key:'reponseRequise', label:'Réponse requise', type:'select', options:['OUI','NON']},
     ],
     columns:['codeCourrier','dateReception','typeCourrier','source','destination','objet','responsable'],
   },
@@ -10111,6 +10154,10 @@ const GENERIC_MODULES = {
       {key:'dateDecision', label:'Date de décision', type:'date'},
       {key:'type', label:'Type de transfert', type:'text'},
       {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'etablissementDestination', label:'Établissement de destination', type:'text'},
+      {key:'motifTransfert', label:'Motif du transfert', type:'textarea', span:2},
+      {key:'dateTransfert', label:'Date du transfert', type:'date'},
+      {key:'piecesFournies', label:'Pièces fournies', type:'textarea', span:2},
     ],
     columns:['dateReception','identifiantEleve','prenom','nom','classe','ecoleDestination','decisionFinale'],
   },
@@ -10175,6 +10222,9 @@ const GENERIC_MODULES = {
       {key:'noRecu2', label:'N° reçu 2e versement', type:'text'},
       {key:'persResponsable', label:'Personne resp. du versement', type:'text'},
       {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'dateAdhesion', label:'Date d\'adhésion', type:'date'},
+      {key:'cotisationAnnuelle', label:'Cotisation annuelle (GNF)', type:'number'},
+      {key:'statutMembre', label:'Statut du membre', type:'select', options:['À JOUR','EN RETARD','NON MEMBRE']},
     ],
     columns:['identifiantEleve','prenom','nom','classe','montantApeae','versement1','versement2'],
     computedLabels:{ reste1:'Reste 1er versement (GNF)', total:'Total versé (GNF)', resteTotal:'Reste total (GNF)' },
@@ -10204,6 +10254,66 @@ const GENERIC_MODULES = {
     columns:['fonction','prenoms','nom','telephone','dateDesignation'],
   },
 
+  cantine:{ label:'Cantine scolaire : ventes et flux des élèves', codePrefix:'CAN',
+    fields:[
+      {key:'date', label:'Date', type:'date'},
+      {key:'heureArrivee', label:'Heure d\'arrivée', type:'text', placeholder:'HH:MM'},
+      {key:'heureSortie', label:'Heure de sortie', type:'text', placeholder:'HH:MM'},
+      {key:'matricule', label:'Matricule élève', type:'text'},
+      {key:'nomEleve', label:'Nom et prénoms de l\'élève', type:'text'},
+      {key:'classe', label:'Classe', type:'text'},
+      {key:'typeOperation', label:'Type d\'opération', type:'select', options:['Vente de repas','Passage au réfectoire','Repas gratuit (bourse)','Remboursement','Annulation']},
+      {key:'typeRepas', label:'Type de repas', type:'select', options:['Repas complet','Demi-repas','Collation','Autre']},
+      {key:'nombreRepas', label:'Nombre de repas', type:'number'},
+      {key:'prixUnitaire', label:'Prix unitaire (GNF)', type:'number'},
+      {key:'montantTotal', label:'Montant total (GNF)', type:'number'},
+      {key:'montantPaye', label:'Montant payé (GNF)', type:'number'},
+      {key:'resteDu', label:'Reste dû (GNF)', type:'number'},
+      {key:'modePaiement', label:'Mode de paiement', type:'select', options:['Espèces','Orange Money','MTN Mobile Money','Carte prépayée (ticket)','Prise en charge','Crédit']},
+      {key:'statutPaiement', label:'Statut du paiement', type:'select', options:['Payé','Partiel','Impayé','Gratuit']},
+      {key:'agent', label:'Agent / cantinier', type:'text'},
+      {key:'observation', label:'Observation', type:'textarea', span:2},
+    ],
+    columns:['date','matricule','nomEleve','classe','typeOperation','nombreRepas','montantTotal','statutPaiement'],
+  },
+  cantineappro:{ label:'Cantine : approvisionnements en vivres', codePrefix:'CAA',
+    fields:[
+      {key:'date', label:'Date de livraison', type:'date'},
+      {key:'fournisseur', label:'Fournisseur', type:'text'},
+      {key:'contactFournisseur', label:'Contact du fournisseur', type:'text'},
+      {key:'produit', label:'Produit', type:'text'},
+      {key:'categorie', label:'Catégorie', type:'select', options:['Céréales','Légumineuses','Huile et condiments','Légumes','Fruits','Viande et poisson','Eau','Gaz / charbon','Autre']},
+      {key:'quantite', label:'Quantité', type:'number'},
+      {key:'unite', label:'Unité', type:'select', options:['kg','L','sac','carton','unité']},
+      {key:'prixUnitaire', label:'Prix unitaire (GNF)', type:'number'},
+      {key:'montantTotal', label:'Montant total (GNF)', type:'number'},
+      {key:'recu', label:'N° de facture / reçu', type:'text'},
+      {key:'dateExpiration', label:'Date de péremption', type:'date'},
+      {key:'stockRestant', label:'Stock restant', type:'number'},
+      {key:'observation', label:'Observation', type:'textarea', span:2},
+    ],
+    columns:['date','fournisseur','produit','quantite','montantTotal','recu'],
+  },
+  retards:{ label:'Registre des retards et sorties', codePrefix:'RET',
+    fields:[
+      {key:'date', label:'Date', type:'date'},
+      {key:'heure', label:'Heure', type:'text', placeholder:'HH:MM'},
+      {key:'matricule', label:'Matricule élève', type:'text'},
+      {key:'nomEleve', label:'Nom et prénoms de l\'élève', type:'text'},
+      {key:'classe', label:'Classe', type:'text'},
+      {key:'typeEvenement', label:'Type d\'évènement', type:'select', options:['Retard','Sortie anticipée','Absence non justifiée','Absence justifiée','Départ exceptionnel']},
+      {key:'dureeMinutes', label:'Durée (minutes)', type:'number'},
+      {key:'motif', label:'Motif', type:'textarea', span:2},
+      {key:'justificatif', label:'Justificatif fourni', type:'select', options:['Oui','Non']},
+      {key:'referenceJustificatif', label:'Référence du justificatif', type:'text'},
+      {key:'autorisePar', label:'Sortie autorisée par', type:'text'},
+      {key:'parentPrevenu', label:'Parents prévenus', type:'select', options:['Oui','Non']},
+      {key:'modeInformation', label:'Mode d\'information des parents', type:'select', options:['Téléphone','SMS','Convocation','Cahier de liaison','Autre']},
+      {key:'surveillant', label:'Surveillant / agent', type:'text'},
+      {key:'observation', label:'Observation', type:'textarea', span:2},
+    ],
+    columns:['date','matricule','nomEleve','classe','typeEvenement','motif','parentPrevenu'],
+  },
   fraisscolarite:{ label:'Gestion des frais de scolarité', codePrefix:'SCO',
     fields:[
       {key:'identifiantEleve', label:"Identifiant de l'élève", type:'text'},
@@ -10218,6 +10328,9 @@ const GENERIC_MODULES = {
       // versementTranche1/versementTranche2 : anciens champs conservés (lecture des données déjà
       // saisies avant cette mise à jour) mais retirés du formulaire — remplacés par l'historique de
       // paiements ci-dessous (voir scoPaiements). Ne jamais supprimer ces valeurs des dossiers existants.
+      {key:'modePaiement', label:'Mode de paiement', type:'select', options:['Espèces','Orange Money','MTN Mobile Money','Virement bancaire','Chèque']},
+      {key:'dateEcheance', label:'Date d\'échéance', type:'date'},
+      {key:'resteAPayer', label:'Reste à payer (GNF)', type:'number'},
     ],
     columns:['identifiantEleve','prenom','nom','niveau','classe','scolariteAnnuelle','montantVerse','montantReste'],
     computedLabels:{
@@ -10328,6 +10441,8 @@ const GENERIC_MODULES = {
       {key:'noActePreuve', label:"N° acte de preuve", type:'text'},
       {key:'date', label:'Date', type:'date'},
       {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'justificatif', label:'N° du justificatif / reçu', type:'text'},
+      {key:'approuvePar', label:'Approuvé par', type:'text'},
     ],
     columns:['codeDepense','date','typeDepense','budgetTotal','montantDepense'],
     computedLabels:{ montantRestant:'Budget restant (GNF)' },
@@ -10346,6 +10461,8 @@ const GENERIC_MODULES = {
       {key:'cadreUtilisation', label:"Cadre d'utilisation", type:'text'},
       {key:'responsableGestion', label:'Responsable de gestion', type:'text'},
       {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'donateurContact', label:'Contact du donateur', type:'text'},
+      {key:'modeReception', label:'Mode de réception', type:'select', options:['Espèces','Virement','Matériel en nature','Mobile money']},
     ],
     columns:['dateReception','typeMateriel','natureMateriel','quantiteRecu','nomDonateur'],
   },
@@ -10361,6 +10478,8 @@ const GENERIC_MODULES = {
       {key:'dateSortie', label:'Date de sortie', type:'date'},
       {key:'responsableGestion', label:'Responsable de gestion', type:'text'},
       {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'etatMateriel', label:'État du matériel', type:'select', options:['Neuf','Bon','Usé','Hors service']},
+      {key:'localisation', label:'Localisation (salle / bureau)', type:'text'},
     ],
     columns:['typeMateriel','natureMateriel','quantiteEntree','quantiteSortie','stockRestant'],
     computed:{ stockRestant:r=>(num(r.quantiteEntree)-num(r.quantiteSortie)) }
@@ -10380,6 +10499,8 @@ const GENERIC_MODULES = {
       {key:'etat', label:'État', type:'select', options:['BON','MOYEN','MAUVAIS']},
       {key:'emplacement', label:'Emplacement (rayon)', type:'text'},
       {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'isbn', label:'ISBN', type:'text'},
+      {key:'exemplaires', label:'Nombre d\'exemplaires', type:'number'},
     ],
     columns:['codeLivre','titre','matiere','niveauConcerne','quantiteTotal','quantiteDisponible','etat'],
   },
@@ -10395,6 +10516,9 @@ const GENERIC_MODULES = {
       {key:'livresRecu', label:'Livres reçus', type:'text', span:2},
       {key:'dateReception', label:'Date de réception', type:'date'},
       {key:'emargement', label:'Émargement', type:'select', options:['SIGNÉ','NON SIGNÉ']},
+      {key:'editeur', label:'Éditeur', type:'text'},
+      {key:'quantiteStock', label:'Quantité en stock', type:'number'},
+      {key:'prixUnitaire', label:'Prix unitaire (GNF)', type:'number'},
     ],
     columns:['session','classe','code','identifiantEleve','prenom','nom','livresRecu','dateReception','emargement'],
     groupPrintField:'classe',
@@ -10453,6 +10577,8 @@ const GENERIC_MODULES = {
       {key:'dateAcquisition', label:"Date d'acquisition", type:'date'},
       {key:'valeurEstimee', label:'Valeur estimée (GNF)', type:'number'},
       {key:'observation', label:'Observations', type:'text', span:2},
+      {key:'adresse', label:'Adresse / localisation', type:'text'},
+      {key:'etatBatiment', label:'État du bâtiment', type:'select', options:['BON','MOYEN','MAUVAIS','EN RÉNOVATION']},
     ],
     columns:['session','codeImmobilier','designation','typeBien','nombreTotal','bonEtat','mauvaisEtat'],
   },
@@ -11099,6 +11225,58 @@ function formatComputedValue(mod, c, r){
   const formatted = (typeof val==='number') ? val.toLocaleString('fr-FR') : val;
   const lbl = (mod.computedLabels && mod.computedLabels[c]) || '';
   return (/GNF/i.test(lbl)) ? formatted+' GNF' : formatted;
+}
+
+/* ===== Récapitulatif de la cantine (en haut de la page, pour la journée et le mois) ===== */
+function cantineRecapInserer(container, key){
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const iso = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  const mois = iso.slice(0, 7);
+  const toutes = dbGet(key).filter(cycleModuleVisible);
+  const num = v => Number(v) || 0;
+  const fmt = n => Number(n || 0).toLocaleString('fr-FR') + ' GNF';
+  const carte = (titre, valeur) => `<div style="flex:1 1 150px;background:#fff;border:1px solid #dfe8e2;border-left:4px solid #0B4A32;border-radius:10px;padding:10px 12px;">
+      <div style="font-size:11px;color:#5b6b62;">${esc(titre)}</div>
+      <div style="font-size:16px;font-weight:700;color:#0B4A32;">${esc(valeur)}</div></div>`;
+  let html = '';
+  if(key === 'cantine'){
+    const jour = toutes.filter(r => r.date === iso);
+    const repas = jour.reduce((a, r) => a + num(r.nombreRepas), 0);
+    const total = jour.reduce((a, r) => a + num(r.montantTotal), 0);
+    const paye = jour.reduce((a, r) => a + num(r.montantPaye), 0);
+    const reste = jour.reduce((a, r) => a + num(r.resteDu), 0);
+    const entrees = jour.filter(r => String(r.heureArrivee || '').trim()).length;
+    const sorties = jour.filter(r => String(r.heureSortie || '').trim()).length;
+    const parMode = {};
+    jour.forEach(r => { const m = r.modePaiement || 'Non renseigné'; parMode[m] = (parMode[m] || 0) + num(r.montantPaye); });
+    const lignes = Object.keys(parMode).map(m => `<tr><td style="padding:4px 6px;">${esc(m)}</td><td style="padding:4px 6px;text-align:right;">${fmt(parMode[m])}</td></tr>`).join('')
+      || '<tr><td colspan="2" style="padding:4px 6px;color:#5b6b62;">Aucune opération aujourd\'hui</td></tr>';
+    html = `<div style="font-weight:700;color:#0B4A32;margin-bottom:8px;">🍽️ Aujourd'hui (${esc(iso)})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        ${carte('Passages', String(jour.length))}
+        ${carte('Repas servis', String(repas))}
+        ${carte('Entrées / sorties', entrees + ' / ' + sorties)}
+        ${carte('Montant facturé', fmt(total))}
+        ${carte('Encaissé', fmt(paye))}
+        ${carte('Reste dû', fmt(reste))}
+      </div>
+      <table style="width:100%;max-width:420px;border-collapse:collapse;font-size:12.5px;">
+        <thead><tr><th style="text-align:left;padding:4px 6px;border-bottom:1px solid #dfe8e2;">Mode de paiement</th><th style="text-align:right;padding:4px 6px;border-bottom:1px solid #dfe8e2;">Encaissé</th></tr></thead>
+        <tbody>${lignes}</tbody></table>`;
+  } else if(key === 'cantineappro'){
+    const mensuel = toutes.filter(r => String(r.date || '').startsWith(mois));
+    const total = mensuel.reduce((a, r) => a + num(r.montantTotal), 0);
+    const livraisons = mensuel.length;
+    const expirent = toutes.filter(r => r.dateExpiration && r.dateExpiration >= iso && r.dateExpiration <= iso.slice(0, 8) + '31').length;
+    html = `<div style="font-weight:700;color:#0B4A32;margin-bottom:8px;">🛒 Ce mois-ci (${esc(mois)})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${carte('Livraisons', String(livraisons))}
+        ${carte('Dépense en vivres', fmt(total))}
+        ${carte('Péremptions ce mois', String(expirent))}
+      </div>`;
+  }
+  container.insertAdjacentHTML('afterbegin', `<div class="cantine-recap" style="background:#F6FAF7;border:1px solid #cfe0d5;border-radius:12px;padding:12px;margin-bottom:14px;">${html}</div>`);
 }
 
 function renderGenericModule(container, mod, filterFn){
@@ -13891,6 +14069,15 @@ const ELEVE_FIELDS = [
   {key:'professionPere', label:'Profession père', type:'text'},
   {key:'professionMere', label:'Profession mère', type:'text'},
   {key:'dateArrivee', label:"Date d'arrivée", type:'date'},
+      {key:'lieuResidence', label:'Lieu de résidence', type:'text'},
+      {key:'nomTuteur', label:'Nom du tuteur / responsable', type:'text'},
+      {key:'telTuteur', label:'Téléphone du tuteur', type:'text'},
+      {key:'personneUrgence', label:'Personne à prévenir en urgence', type:'text'},
+      {key:'telUrgence', label:'Téléphone d\'urgence', type:'text'},
+      {key:'numeroExtrait', label:'N° d\'extrait de naissance', type:'text'},
+      {key:'boursier', label:'Boursier', type:'select', options:['NON','OUI']},
+      {key:'mutuelle', label:'Assurance / mutuelle', type:'text'},
+      {key:'allergies', label:'Allergies / régime alimentaire (cantine)', type:'textarea', span:2},
   {key:'observation', label:'Observation', type:'text', span:2},
 ];
 // Champs du formulaire Élèves à afficher dans l'espace actif : dans l'espace Primaire/Élémentaire,
