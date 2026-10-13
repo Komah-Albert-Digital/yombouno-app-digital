@@ -17839,7 +17839,7 @@ const ASSISTANT_CONSIGNES = {
    dans le formulaire correspondant, avec les mêmes règles que la saisie manuelle : code automatique,
    espace (cycle) actif, pas de doublon (identifiant ou matricule, ou même nom + prénoms + date de
    naissance). L'import peut être annulé tant que la page est ouverte. */
-ASSISTANT_CONSIGNES.listes = "Choisis le type de liste, puis importe le fichier (CSV, PDF ou photo). L'assistant lit la liste et l'insère automatiquement dans le formulaire des élèves ou du personnel. Les doublons (même identifiant ou matricule) sont ignorés, et l'import peut être annulé.";
+ASSISTANT_CONSIGNES.listes = "Choisis le type de liste, puis importe le fichier (Word, Excel, PDF ou image). L'assistant lit la liste et l'insère automatiquement dans le formulaire des élèves ou du personnel. Les doublons (même identifiant ou matricule) sont ignorés, et l'import peut être annulé.";
 
 const LISTE_IMPORT_CIBLES = {
   eleves:    { cle:'eleves',    libelle:'élèves',    prefixe:'ELV', chiffres:4, unique:'identifiant', vue:'eleves' },
@@ -17982,6 +17982,58 @@ function listeImportFichierChoisi(input){
   listeStatut(f ? '📎 ' + f.name + ' prêt à être importé.' : '', false);
 }
 
+const LISTE_LIB_XLSX = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+
+// Word : si le document contient un tableau, on le lit comme une liste ; sinon on renvoie le texte brut
+async function listeLireWord(f){
+  if(!window.mammoth) await corrChargerScript(CORR_LIBS.mammoth);
+  const html = await mammoth.convertToHtml({arrayBuffer: await f.arrayBuffer()});
+  const doc = new DOMParser().parseFromString(html.value, 'text/html');
+  const table = doc.querySelector('table');
+  if(table){
+    const rows = Array.from(table.querySelectorAll('tr'))
+      .map(tr => Array.from(tr.children).map(td => td.textContent.replace(/\s+/g,' ').trim()))
+      .filter(r => r.some(c => c !== ''));
+    if(rows.length >= 2) return {rows: rows};
+  }
+  const brut = await mammoth.extractRawText({arrayBuffer: await f.arrayBuffer()});
+  return {texte: brut.value};
+}
+
+// Excel : première feuille contenant des lignes ; dates lues telles qu'affichées dans le classeur
+async function listeLireExcel(f){
+  if(!window.XLSX) await corrChargerScript(LISTE_LIB_XLSX);
+  const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'});
+  for(const nom of wb.SheetNames){
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[nom], {header: 1, defval: '', raw: false})
+      .map(r => r.map(c => String(c).trim()))
+      .filter(r => r.some(c => c !== ''));
+    if(rows.length >= 2) return rows;
+  }
+  return [];
+}
+
+// Lignes (la première = en-tête) → objets indexés par clé de champ
+function listeObjetsDepuisLignes(rows, cfg, champs){
+  const cles = rows[0].map(h => listeCleDepuisEntete(h, cfg, champs));
+  if(!cles.some(Boolean)) throw new Error("Aucune colonne reconnue. Vérifiez que la première ligne contient les titres (Nom, Prénoms, Sexe, Date de naissance...).");
+  return rows.slice(1).map(r => { const o = {}; cles.forEach((k,i) => { if(k) o[k] = r[i]; }); return o; });
+}
+
+// Document lu par l'assistant IA (PDF scanné, photo, ou texte d'un Word sans tableau)
+async function listeObjetsDepuisIA(cfg, champs, piece, texte){
+  const msg = listeConstruirePromptIA(cfg, champs) + (texte ? '\n\nTexte de la liste :\n' + texte : '');
+  const rep = await assistantAppelAPI(msg, piece, 'general', true);
+  if(!rep.ok) throw new Error(rep.error || "Erreur de l'assistant.");
+  const tab = listeExtraireTableau(rep.reponse);
+  if(!tab || !tab.length) throw new Error("L'assistant n'a pas pu extraire de liste claire de ce document. Essayez un fichier Excel ou CSV, ou une photo plus nette.");
+  return tab.map(o => {
+    const r = {};
+    Object.keys(o || {}).forEach(h => { const k = listeCleDepuisEntete(h, cfg, champs); if(k) r[k] = o[h]; });
+    return r;
+  });
+}
+
 async function listeImportLancer(){
   if(listeImportEnCours) return;
   const select = document.getElementById('liste-import-cible');
@@ -17989,7 +18041,7 @@ async function listeImportLancer(){
   const input = document.getElementById('liste-import-input');
   const f = input && input.files && input.files[0];
   if(!cfg) return;
-  if(!f){ listeStatut("⚠ Choisissez d'abord un fichier (CSV, PDF ou photo).", true); return; }
+  if(!f){ listeStatut("⚠ Choisissez d'abord un fichier (Word, Excel, PDF ou image).", true); return; }
   const ext = (f.name.split('.').pop() || '').toLowerCase();
   const champs = listeChamps(cfg);
   const btn = document.getElementById('liste-import-lancer');
@@ -17997,28 +18049,33 @@ async function listeImportLancer(){
   if(btn) btn.disabled = true;
   try{
     let objets = [];
-    if(ext==='csv' || ext==='txt'){
+    if(ext === 'csv' || ext === 'txt'){
       listeStatut('Lecture du fichier...');
       const rows = listeLireCSV(await f.text());
       if(rows.length < 2) throw new Error("Le fichier ne contient pas de lignes exploitables : il faut une ligne d'en-tête puis les personnes.");
-      const cles = rows[0].map(h=>listeCleDepuisEntete(h, cfg, champs));
-      if(!cles.some(Boolean)) throw new Error("Aucune colonne reconnue. Vérifiez que la première ligne contient les titres (Nom, Prénoms, Sexe, Date de naissance...).");
-      objets = rows.slice(1).map(r=>{ const o = {}; cles.forEach((k,i)=>{ if(k) o[k] = r[i]; }); return o; });
+      objets = listeObjetsDepuisLignes(rows, cfg, champs);
+    } else if(ext === 'xlsx' || ext === 'xls'){
+      listeStatut('Lecture du tableau Excel...');
+      const rows = await listeLireExcel(f);
+      if(rows.length < 2) throw new Error("Le classeur ne contient pas de lignes exploitables : il faut une ligne d'en-tête puis les personnes.");
+      objets = listeObjetsDepuisLignes(rows, cfg, champs);
+    } else if(ext === 'docx'){
+      listeStatut('Lecture du document Word...');
+      const lu = await listeLireWord(f);
+      if(lu.rows){
+        objets = listeObjetsDepuisLignes(lu.rows, cfg, champs);
+      } else {
+        if(!lu.texte || !lu.texte.trim()) throw new Error("Le document Word ne contient pas de texte exploitable.");
+        listeStatut("L'assistant lit la liste... (cela peut prendre quelques instants)");
+        objets = await listeObjetsDepuisIA(cfg, champs, null, lu.texte);
+      }
     } else if(['pdf','jpg','jpeg','png','webp'].indexOf(ext) !== -1){
       listeStatut("L'assistant lit la liste... (cela peut prendre quelques instants)");
-      const mediaType = ext==='pdf' ? 'application/pdf' : ext==='png' ? 'image/png' : ext==='webp' ? 'image/webp' : 'image/jpeg';
+      const mediaType = ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
       const piece = {nom: f.name, mediaType: mediaType, base64: await corrLireBase64(f)};
-      const rep = await assistantAppelAPI(listeConstruirePromptIA(cfg, champs), piece, 'general', true);
-      if(!rep.ok) throw new Error(rep.error || "Erreur de l'assistant.");
-      const tab = listeExtraireTableau(rep.reponse);
-      if(!tab || !tab.length) throw new Error("L'assistant n'a pas pu extraire de liste claire de ce document. Essayez un CSV ou une photo plus nette.");
-      objets = tab.map(o=>{
-        const r = {};
-        Object.keys(o||{}).forEach(h=>{ const k = listeCleDepuisEntete(h, cfg, champs); if(k) r[k] = o[h]; });
-        return r;
-      });
+      objets = await listeObjetsDepuisIA(cfg, champs, piece, '');
     } else {
-      throw new Error("Format non pris en charge : utilisez .csv, .pdf, .jpg ou .png. Pour Excel, enregistrez d'abord le fichier au format CSV.");
+      throw new Error("Format non pris en charge : utilisez Word (.docx), Excel (.xlsx), PDF, ou une image (.jpg, .png, .webp). Les fichiers .csv et .txt sont aussi acceptés.");
     }
     listeInsererObjets(cfg, champs, objets);
   }catch(e){
@@ -19572,8 +19629,8 @@ function figerColonnesPlanifier(root){
       </select>
     </div>
     <div class="ia-champ">
-      <label for="liste-import-input">Fichier de la liste (CSV, PDF ou photo)</label>
-      <input type="file" id="liste-import-input" accept=".csv,.txt,.pdf,.jpg,.jpeg,.png,.webp" onchange="listeImportFichierChoisi(this)">
+      <label for="liste-import-input">Fichier de la liste (Word, Excel, PDF ou image)</label>
+      <input type="file" id="liste-import-input" accept=".docx,.xlsx,.xls,.csv,.txt,.pdf,.jpg,.jpeg,.png,.webp" onchange="listeImportFichierChoisi(this)">
     </div>
     <button type="button" class="ia-btn-principal" id="liste-import-lancer" onclick="listeImportLancer()">⚡ Importer et insérer dans le formulaire</button>
     <div id="liste-import-statut" style="margin-top:8px; font-size:13px;"></div>
