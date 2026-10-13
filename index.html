@@ -17833,8 +17833,274 @@ const ASSISTANT_CONSIGNES = {
   traduire: "Tape un mot ou une expression — dans une autre langue, ou en français compliqué (administratif, juridique, technique...) — l'assistant le traduit et l'explique en français facile, avec un exemple. (Ce mode répond toujours en français facile, quel que soit le choix fait dans « 🌐 Répondre en ».)",
 };
 
+/* ===================== IMPORT DE LISTES → FORMULAIRES ÉLÈVES / PERSONNEL =====================
+   Depuis l'assistant IA (mode « 👥 Importer une liste ») : fichier CSV (lu localement) ou PDF /
+   photo de liste (lu par l'assistant IA). Chaque ligne devient une fiche insérée automatiquement
+   dans le formulaire correspondant, avec les mêmes règles que la saisie manuelle : code automatique,
+   espace (cycle) actif, pas de doublon (identifiant ou matricule, ou même nom + prénoms + date de
+   naissance). L'import peut être annulé tant que la page est ouverte. */
+ASSISTANT_CONSIGNES.listes = "Choisis le type de liste, puis importe le fichier (CSV, PDF ou photo). L'assistant lit la liste et l'insère automatiquement dans le formulaire des élèves ou du personnel. Les doublons (même identifiant ou matricule) sont ignorés, et l'import peut être annulé.";
+
+const LISTE_IMPORT_CIBLES = {
+  eleves:    { cle:'eleves',    libelle:'élèves',    prefixe:'ELV', chiffres:4, unique:'identifiant', vue:'eleves' },
+  personnel: { cle:'personnel', libelle:'personnel', prefixe:'PER', chiffres:3, unique:'matricule',   vue:'personnel' }
+};
+// En-têtes courants des listes (normalisés : sans accents, minuscules) → clé de champ du formulaire
+const LISTE_SYNONYMES = {
+  'prenom':'prenoms', 'date naissance':'dateNaissance', 'naissance':'dateNaissance',
+  'lieu naissance':'lieuNaissance', 'tel':'telephone', 'portable':'telephone', 'mail':'email', 'e mail':'email',
+  'genre':'sexe', 'gp':'classe', 'groupe pedagogique':'classe',
+  'nom du pere':'pere', 'nom de la mere':'mere', 'tuteur':'nomTuteur'
+};
+
+function listeNorm(s){
+  return String(s===undefined||s===null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+function listeChamps(cfg){
+  if(cfg.cle==='eleves') return champsEleves().filter(f=>f.type!=='photo');
+  return GENERIC_MODULES.personnel.fields.filter(f=>f.type!=='photo');
+}
+function listeCleDepuisEntete(entete, cfg, champs){
+  const n = listeNorm(entete);
+  if(!n) return null;
+  if(n==='matricule' || n==='identifiant' || n==='id') return cfg.unique;
+  if(LISTE_SYNONYMES[n] && champs.some(f=>f.key===LISTE_SYNONYMES[n])) return LISTE_SYNONYMES[n];
+  const f = champs.find(f=> listeNorm(f.label)===n || listeNorm(f.key)===n);
+  return f ? f.key : null;
+}
+function listePad2(s){ return String(s).padStart(2,'0'); }
+function listeDateISO(v){
+  const s = String(v||'').trim();
+  let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(m) return m[1]+'-'+listePad2(m[2])+'-'+listePad2(m[3]);
+  m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/);
+  if(m){
+    let a = m[3]; if(a.length===2) a = (parseInt(a,10)>30 ? '19' : '20') + a;
+    return a+'-'+listePad2(m[2])+'-'+listePad2(m[1]);
+  }
+  return '';
+}
+function listeValeurSelect(f, v){
+  const n = listeNorm(v);
+  if(!n) return '';
+  const opts = (f.options||[]).filter(o=>o);
+  let hit = opts.find(o=>listeNorm(o)===n);
+  if(!hit && f.key==='sexe'){
+    if(/^(m|masc|masculin|h|homme|garcon|g)$/.test(n)) hit = 'MASCULIN';
+    else if(/^(f|fem|feminin|femme|fille)$/.test(n)) hit = 'FEMININ';
+  }
+  if(!hit && n.length>=3) hit = opts.find(o=>listeNorm(o).indexOf(n)===0);
+  return hit || '';
+}
+// Convertit un objet {clé de champ: valeur brute} en fiche propre ; signale les valeurs non reconnues
+function listeConstruireFiche(brut, champs){
+  const fiche = {};
+  const nonReconnus = [];
+  champs.forEach(f=>{
+    let v = brut[f.key];
+    if(v===undefined || v===null) return;
+    v = String(v).trim();
+    if(!v) return;
+    if(f.type==='date'){
+      const d = listeDateISO(v);
+      if(!d){ nonReconnus.push(f.label); return; }
+      v = d;
+    } else if(f.type==='select'){
+      const s = listeValeurSelect(f, v);
+      if(!s){ nonReconnus.push(f.label); return; }
+      v = s;
+    } else if(f.type==='number'){
+      v = v.replace(',', '.').replace(/[^0-9.\-]/g,'');
+      if(!v) return;
+    }
+    fiche[f.key] = v;
+  });
+  return {fiche, nonReconnus};
+}
+// Détecte le séparateur d'un CSV (point-virgule, tabulation ou virgule)
+function listeSepararCSV(texte){
+  const premiere = (texte.split(/\r?\n/).find(l=>l.trim()) || '');
+  const candidats = [[';', premiere.split(';').length-1], ['\t', premiere.split('\t').length-1], [',', premiere.split(',').length-1]];
+  candidats.sort((a,b)=>b[1]-a[1]);
+  return candidats[0][1]>0 ? candidats[0][0] : ',';
+}
+// Lit un CSV en gérant les guillemets, les retours à la ligne dans les cellules et le BOM Excel
+function listeLireCSV(texte){
+  texte = texte.replace(/^\uFEFF/,'');
+  const sep = listeSepararCSV(texte);
+  const lignes = [];
+  let ligne = [], champ = '', guille = false;
+  for(let i=0; i<texte.length; i++){
+    const c = texte[i];
+    if(guille){
+      if(c==='"'){ if(texte[i+1]==='"'){ champ += '"'; i++; } else { guille = false; } }
+      else champ += c;
+    } else if(c==='"'){ guille = true; }
+    else if(c===sep){ ligne.push(champ); champ = ''; }
+    else if(c==='\n' || c==='\r'){
+      if(c==='\r' && texte[i+1]==='\n') i++;
+      ligne.push(champ); lignes.push(ligne); ligne = []; champ = '';
+    } else champ += c;
+  }
+  if(champ!=='' || ligne.length){ ligne.push(champ); lignes.push(ligne); }
+  return lignes.filter(l=>l.some(x=>String(x).trim()!==''));
+}
+function listeConstruirePromptIA(cfg, champs){
+  const detail = champs.map(f=>{
+    let t = '"' + f.key + '" (' + f.label;
+    if(f.type==='date') t += ' ; format AAAA-MM-JJ';
+    if(f.type==='select' && f.options && f.options.length<=12) t += ' ; valeurs possibles : ' + f.options.filter(Boolean).join(' / ');
+    return t + ')';
+  }).join('\n- ');
+  return "Voici, en pièce jointe, une liste de " + cfg.libelle + " (tableau, registre ou liste d'inscription). " +
+    "Lis TOUTES les lignes et restitue-les sous forme de tableau JSON strict : un objet par personne, " +
+    "sans aucun texte avant ni après, sans balises de code.\n" +
+    "Utilise uniquement ces clés :\n- " + detail + "\n" +
+    "Règles : recopie les valeurs telles qu'écrites, n'invente aucune donnée ; mets une chaîne vide \"\" pour une information absente ; " +
+    "pour les champs à valeurs possibles, choisis la valeur la plus proche de la liste donnée.";
+}
+function listeExtraireTableau(texte){
+  if(!texte) return null;
+  const brut = String(texte).trim().replace(/^```(json)?/i,'').replace(/```$/,'').trim();
+  const d = brut.indexOf('['), f = brut.lastIndexOf(']');
+  if(d===-1 || f<d) return null;
+  try{ const arr = JSON.parse(brut.slice(d, f+1)); return Array.isArray(arr) ? arr : null; }
+  catch(e){ return null; }
+}
+
+let listeDernierImport = null; // {cfg, ids} : fiches ajoutées par le dernier import, pour pouvoir l'annuler
+let listeImportEnCours = false;
+
+function listeStatut(texte, estErreur){
+  const z = document.getElementById('liste-import-statut');
+  if(!z) return;
+  z.textContent = texte;
+  z.style.color = estErreur ? '#B3231C' : 'var(--ink-soft,#555)';
+}
+function listeImportFichierChoisi(input){
+  const f = input.files && input.files[0];
+  listeStatut(f ? '📎 ' + f.name + ' prêt à être importé.' : '', false);
+}
+
+async function listeImportLancer(){
+  if(listeImportEnCours) return;
+  const select = document.getElementById('liste-import-cible');
+  const cfg = select ? LISTE_IMPORT_CIBLES[select.value] : null;
+  const input = document.getElementById('liste-import-input');
+  const f = input && input.files && input.files[0];
+  if(!cfg) return;
+  if(!f){ listeStatut("⚠ Choisissez d'abord un fichier (CSV, PDF ou photo).", true); return; }
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  const champs = listeChamps(cfg);
+  const btn = document.getElementById('liste-import-lancer');
+  listeImportEnCours = true;
+  if(btn) btn.disabled = true;
+  try{
+    let objets = [];
+    if(ext==='csv' || ext==='txt'){
+      listeStatut('Lecture du fichier...');
+      const rows = listeLireCSV(await f.text());
+      if(rows.length < 2) throw new Error("Le fichier ne contient pas de lignes exploitables : il faut une ligne d'en-tête puis les personnes.");
+      const cles = rows[0].map(h=>listeCleDepuisEntete(h, cfg, champs));
+      if(!cles.some(Boolean)) throw new Error("Aucune colonne reconnue. Vérifiez que la première ligne contient les titres (Nom, Prénoms, Sexe, Date de naissance...).");
+      objets = rows.slice(1).map(r=>{ const o = {}; cles.forEach((k,i)=>{ if(k) o[k] = r[i]; }); return o; });
+    } else if(['pdf','jpg','jpeg','png','webp'].indexOf(ext) !== -1){
+      listeStatut("L'assistant lit la liste... (cela peut prendre quelques instants)");
+      const mediaType = ext==='pdf' ? 'application/pdf' : ext==='png' ? 'image/png' : ext==='webp' ? 'image/webp' : 'image/jpeg';
+      const piece = {nom: f.name, mediaType: mediaType, base64: await corrLireBase64(f)};
+      const rep = await assistantAppelAPI(listeConstruirePromptIA(cfg, champs), piece, 'general', true);
+      if(!rep.ok) throw new Error(rep.error || "Erreur de l'assistant.");
+      const tab = listeExtraireTableau(rep.reponse);
+      if(!tab || !tab.length) throw new Error("L'assistant n'a pas pu extraire de liste claire de ce document. Essayez un CSV ou une photo plus nette.");
+      objets = tab.map(o=>{
+        const r = {};
+        Object.keys(o||{}).forEach(h=>{ const k = listeCleDepuisEntete(h, cfg, champs); if(k) r[k] = o[h]; });
+        return r;
+      });
+    } else {
+      throw new Error("Format non pris en charge : utilisez .csv, .pdf, .jpg ou .png. Pour Excel, enregistrez d'abord le fichier au format CSV.");
+    }
+    listeInsererObjets(cfg, champs, objets);
+  }catch(e){
+    listeStatut('⚠ ' + (e && e.message ? e.message : e), true);
+  }finally{
+    listeImportEnCours = false;
+    if(btn) btn.disabled = false;
+  }
+}
+
+// Insère les fiches dans le formulaire (même stockage que la saisie manuelle), en ignorant les doublons
+function listeInsererObjets(cfg, champs, objets){
+  const items = dbGet(cfg.cle);
+  const uniques = new Set(items.map(r=>listeNorm(r[cfg.unique])).filter(Boolean));
+  const cleIdentite = r => (r.nom && r.prenoms) ? listeNorm(r.nom + ' ' + r.prenoms + ' ' + (r.dateNaissance||'')) : '';
+  const identites = new Set(items.map(cleIdentite).filter(Boolean));
+  const ids = [];
+  let doublons = 0, incomplets = 0;
+  const nonReconnus = {};
+  objets.forEach(brut=>{
+    const res = listeConstruireFiche(brut, champs);
+    res.nonReconnus.forEach(l=>{ nonReconnus[l] = (nonReconnus[l]||0) + 1; });
+    const fiche = res.fiche;
+    if(!fiche.nom && !fiche.prenoms) return; // ligne vide ou sans nom
+    if(!fiche.nom || !fiche.prenoms){ incomplets++; return; }
+    const u = listeNorm(fiche[cfg.unique]);
+    const identite = cleIdentite(fiche);
+    if((u && uniques.has(u)) || (identite && identites.has(identite))){ doublons++; return; }
+    fiche.__id = uid();
+    fiche.__code = nextCode(items, cfg.prefixe, cfg.chiffres);
+    if(!fiche.cycle) fiche.cycle = TEKOULO_CYCLE_ACTIF;
+    items.push(fiche);
+    if(u) uniques.add(u);
+    if(identite) identites.add(identite);
+    ids.push(fiche.__id);
+  });
+  if(ids.length){
+    if(dbSet(cfg.cle, items)===false){ listeStatut("⚠ Stockage du navigateur plein : rien n'a été inséré.", true); return; }
+    listeDernierImport = {cfg: cfg, ids: ids};
+    buildNav();
+    if(CURRENT_VIEW===cfg.vue) renderView(cfg.vue);
+    toast(ids.length + ' fiche(s) insérée(s) dans le formulaire ' + cfg.libelle + '.');
+  }
+  listeStatut('');
+  listeAfficherResultat(cfg, ids.length, doublons, incomplets, nonReconnus);
+}
+
+function listeAfficherResultat(cfg, nbAjoutes, nbDoublons, nbIncomplets, nonReconnus){
+  const z = document.getElementById('liste-import-resultat');
+  if(!z) return;
+  const pluriel = n => n>1 ? 's' : '';
+  let html = '<div class="liste-import-bilan" style="margin-top:8px; font-size:13px; line-height:1.5;">';
+  html += nbAjoutes
+    ? '<b>✅ ' + nbAjoutes + ' fiche' + pluriel(nbAjoutes) + ' insérée' + pluriel(nbAjoutes) + ' dans le formulaire ' + esc(cfg.libelle) + '.</b>'
+    : '<b>Aucune nouvelle fiche à insérer.</b>';
+  if(nbDoublons) html += '<div>↪ ' + nbDoublons + ' doublon' + pluriel(nbDoublons) + ' ignoré' + pluriel(nbDoublons) + ' (même identifiant, ou même nom, prénoms et date de naissance).</div>';
+  if(nbIncomplets) html += '<div>⚠ ' + nbIncomplets + ' ligne' + pluriel(nbIncomplets) + ' ignorée' + pluriel(nbIncomplets) + ' : nom ou prénoms manquant.</div>';
+  const libelles = Object.keys(nonReconnus).map(l=>esc(l) + ' (' + nonReconnus[l] + ')');
+  if(libelles.length) html += '<div>⚠ Valeurs non reconnues, laissées vides à compléter : ' + libelles.join(', ') + '.</div>';
+  if(nbAjoutes) html += '<button type="button" class="ia-btn-secondaire" style="margin-top:6px;" onclick="listeImportAnnuler()">↩ Annuler cet import</button>';
+  html += '</div>';
+  z.innerHTML = html;
+}
+
+function listeImportAnnuler(){
+  if(!listeDernierImport) return;
+  const cfg = listeDernierImport.cfg, ids = listeDernierImport.ids;
+  if(!confirm('Annuler le dernier import ? Les ' + ids.length + ' fiche(s) ajoutée(s) seront retirées. Les autres fiches ne sont pas modifiées.')) return;
+  const items = dbGet(cfg.cle).filter(r=>ids.indexOf(r.__id)===-1);
+  if(dbSet(cfg.cle, items)===false) return;
+  listeDernierImport = null;
+  buildNav();
+  if(CURRENT_VIEW===cfg.vue) renderView(cfg.vue);
+  const z = document.getElementById('liste-import-resultat');
+  if(z) z.innerHTML = '<div class="liste-import-bilan" style="margin-top:8px; font-size:13px;">↩ Import annulé : ' + ids.length + ' fiche(s) retirée(s).</div>';
+  toast('Import annulé.');
+}
+
 function assistantChoisirMode(mode){
   assistantMode = mode;
+  var formListe = document.getElementById('liste-import-form');
+  if(formListe) formListe.style.display = (mode==='listes') ? 'block' : 'none';
   document.querySelectorAll('.assistant-mode-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.mode===mode);
   });
@@ -17855,7 +18121,7 @@ function assistantChoisirMode(mode){
   } else {
     if(formCours) formCours.style.display = 'none';
     if(formProjet) formProjet.style.display = 'none';
-    if(ligneInput) ligneInput.style.display = 'flex';
+    if(ligneInput) ligneInput.style.display = (mode==='listes') ? 'none' : 'flex';
     if(champ) champ.placeholder = (mode==='traduire') ? 'Ex : "predicament", "in medias res", ou une expression administrative compliquée...' : "Pose ta question, ou choisis un mode ci-dessus...";
     if(ASSISTANT_MODELES[mode] && !champ.value){
       champ.value = ASSISTANT_MODELES[mode];
@@ -18475,7 +18741,7 @@ async function assistantEnvoyer(){
 }
 // Appel API bas niveau, réutilisé par la conversation normale et par l'analyse/génération
 // automatique depuis la répartition. Renvoie toujours {ok, reponse|error}.
-async function assistantAppelAPI(message, pieceJointe, mode){
+async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique){
   if(!TEKOULO_API_URL || !TEKOULO_TOKEN){
     return {ok:false, error:"L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter)."};
   }
@@ -18484,7 +18750,7 @@ async function assistantAppelAPI(message, pieceJointe, mode){
   // (toutes les instructions nécessaires y sont déjà incluses) : on ne leur mélange pas
   // l'historique d'une conversation libre sans rapport, pour éviter des réponses
   // incohérentes et pour ne pas alourdir inutilement la requête envoyée à l'IA.
-  const historiquePertinent = (modeEffectif==='cours' || modeEffectif==='projets') ? [] : assistantHistorique;
+  const historiquePertinent = (modeEffectif==='cours' || modeEffectif==='projets' || sansHistorique) ? [] : assistantHistorique;
   // Mode « Traduire un mot » : le champ de saisie sert à taper le mot/l'expression ; on
   // reformule ici la consigne complète envoyée à l'IA, qui répond toujours en français facile.
   let messageEnvoye = message;
@@ -18495,7 +18761,7 @@ async function assistantAppelAPI(message, pieceJointe, mode){
     // déroulant « 🌐 Répondre en » (le français reste la langue par défaut, sans consigne ajoutée).
     const selectLangue = document.getElementById('assistant-langue');
     const langueChoisie = selectLangue ? selectLangue.value : 'Français';
-    if(langueChoisie && langueChoisie !== 'Français' && (modeEffectif==='general' || modeEffectif==='reunion' || modeEffectif==='lettre' || modeEffectif==='notes')){
+    if(!sansHistorique && langueChoisie && langueChoisie !== 'Français' && (modeEffectif==='general' || modeEffectif==='reunion' || modeEffectif==='lettre' || modeEffectif==='notes')){
       messageEnvoye = `Réponds uniquement en ${langueChoisie}. ${message}`;
     }
   }
@@ -19279,6 +19545,7 @@ function figerColonnesPlanifier(root){
     <button class="assistant-mode-btn" data-mode="cours" onclick="assistantChoisirMode('cours')">📘 Créer un cours</button>
     <button class="assistant-mode-btn" data-mode="projets" onclick="assistantChoisirMode('projets')">🏗️ Projets</button>
     <button class="assistant-mode-btn" data-mode="traduire" onclick="assistantChoisirMode('traduire')">🈯 Traduire un mot</button>
+    <button class="assistant-mode-btn" data-mode="listes" onclick="assistantChoisirMode('listes')">👥 Importer une liste</button>
     <button class="assistant-mode-btn" onclick="corrOuvrir()">📑 Corriger un document</button>
   </div>
   <div id="assistant-langue-ligne" style="display:flex; align-items:center; gap:6px; padding:6px 12px 0; font-size:12px;">
@@ -19296,6 +19563,22 @@ function figerColonnesPlanifier(root){
   <div id="assistant-consigne">Pose n'importe quelle question : administration, calcul, rédaction, programmation...</div>
 
   <div id="assistant-corps">
+  <div id="liste-import-form" style="display:none; padding:10px 12px;">
+    <div class="ia-champ">
+      <label for="liste-import-cible">Type de liste</label>
+      <select id="liste-import-cible">
+        <option value="eleves">👨‍🎓 Élèves → formulaire d'inscription des élèves</option>
+        <option value="personnel">👩‍🏫 Personnel → formulaire du personnel</option>
+      </select>
+    </div>
+    <div class="ia-champ">
+      <label for="liste-import-input">Fichier de la liste (CSV, PDF ou photo)</label>
+      <input type="file" id="liste-import-input" accept=".csv,.txt,.pdf,.jpg,.jpeg,.png,.webp" onchange="listeImportFichierChoisi(this)">
+    </div>
+    <button type="button" class="ia-btn-principal" id="liste-import-lancer" onclick="listeImportLancer()">⚡ Importer et insérer dans le formulaire</button>
+    <div id="liste-import-statut" style="margin-top:8px; font-size:13px;"></div>
+    <div id="liste-import-resultat"></div>
+  </div>
   <div id="assistant-cours-form" style="display:none;">
     <div class="ia-champ">
       <label>📎 Méthode 1 — Importer la répartition annuelle (PDF ou image) pour générer automatiquement</label>
