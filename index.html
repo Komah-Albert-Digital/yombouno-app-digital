@@ -1267,6 +1267,68 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<style id="style-ui-accueil-nuit">
+  /* Mode de connexion (accueil) */
+  .mode-choix{ margin:0 0 14px; }
+  .mode-choix-titre{ margin:0 0 8px; font-size:13.5px; color:var(--ink-soft); }
+  .mode-choix-btns{ display:flex; gap:10px; flex-wrap:wrap; }
+  .mode-btn{ flex:1 1 220px; padding:12px 14px; border-radius:var(--radius,12px); border:2px solid var(--line,#DCD5C2);
+    background:var(--paper,#fff); color:var(--ink,#20241F); font-weight:700; font-size:14px; cursor:pointer; }
+  .mode-btn.actif{ border-color:var(--green,#0F6B45); background:var(--green,#0F6B45); color:#fff; }
+  /* Mode nuit : fond noir (renforcé pour l'emporter sur les thèmes de cycle et les couleurs personnalisées) */
+  html body.mode-nuit{ --cream:#000000; --paper:#121212; --ink:#EDEDED; --ink-soft:#A9A9A9; --line:#2E2E2E; --line-soft:#1E1E1E;
+    --shadow:none; --shadow-lift:none; --shadow-modal:none; background:#000000 !important; color:var(--ink); }
+  html body.mode-nuit #main, html body.mode-nuit #content{ background:#000000; }
+  html body.mode-nuit .card{ background:#121212; border-color:#2E2E2E; color:var(--ink); }
+  /* Paramètres : sélection des couleurs */
+  .cp-carte h3{ margin:0 0 6px; }
+  .cp-aide{ font-size:12.5px; color:var(--ink-soft); margin:0 0 12px; }
+  .cp-ligne{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 0; border-bottom:1px solid var(--line-soft,#EBE6D8); }
+  .cp-choix{ display:flex; align-items:center; gap:8px; }
+  .cp-pastille{ width:26px; height:26px; border-radius:6px; border:1px solid var(--line,#DCD5C2); display:inline-block; }
+  .cp-actions{ margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; }
+</style>
+<style id="style-couleurs-ronds">
+  .cp-ligne{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:10px 0; border-bottom:1px solid var(--line-soft,#EBE6D8); }
+  .cp-titre{ font-weight:600; font-size:13.5px; }
+  .cp-ronds{ display:flex; flex-wrap:wrap; gap:8px; }
+  .cp-rond{ width:30px; height:30px; border-radius:50%; border:2px solid var(--line,#DCD5C2); padding:0; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); }
+  .cp-rond:focus-visible{ outline:2px solid var(--green,#0F6B45); outline-offset:2px; }
+  .cp-rond.actif{ box-shadow:0 0 0 2px var(--paper,#fff), 0 0 0 4px var(--green,#0F6B45); }
+  .cp-rond.actif::after{ content:'✓'; color:#fff; font-size:15px; font-weight:700; text-shadow:0 0 2px #000, 0 0 3px #000; line-height:1; }
+</style>
+<style id="style-choix-ia">
+  #assistant-ia-ligne{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:6px 12px 0; font-size:12px; }
+  #assistant-ia-ligne label{ font-weight:600; color:var(--ink-soft,#666); }
+  #assistant-ia-ligne select{ flex:0 1 auto; max-width:100%; padding:3px 6px; border-radius:6px; border:1px solid var(--line,#ccc); font-size:12px; background:#fff; }
+  #assistant-ia-statut{ flex-basis:100%; font-size:11.5px; color:var(--ink-soft,#666); }
+  .ia-cle-ligne{ display:flex; flex-wrap:wrap; gap:6px; width:100%; }
+  .ia-cle-ligne input{ flex:1 1 180px; padding:7px 9px; border:1px solid var(--line,#DCD5C2); border-radius:8px; font-size:13px; }
+  .ia-cle-aide{ font-size:12px; color:var(--ink-soft,#5B6259); }
+</style>
+<style id="style-horloge">
+  .horloge-ligne{ display:flex; align-items:center; justify-content:center; gap:22px; flex-wrap:wrap; }
+  .horloge-carte > .horloge-ligne > div:last-child{ text-align:center; }
+  .horloge-cadran{ width:150px; height:150px; flex:0 0 auto; }
+  .hc-fond{ fill:var(--paper,#fff); stroke:var(--green-deep,#0B4A32); stroke-width:4; }
+  .hc-tick{ stroke:var(--ink-soft,#5B6259); stroke-width:3; }
+  .hc-tick-fin{ stroke-width:1.2; }
+  .hc-num{ font-size:13px; font-weight:700; fill:var(--ink,#20241F); text-anchor:middle; dominant-baseline:central; }
+  .hc-h{ stroke:var(--ink,#20241F); stroke-width:6; stroke-linecap:round; }
+  .hc-m{ stroke:var(--ink,#20241F); stroke-width:4; stroke-linecap:round; }
+  .hc-s{ stroke:var(--red,#B3231C); stroke-width:2; stroke-linecap:round; }
+  .hc-centre{ fill:var(--red,#B3231C); }
+  .horloge-heure{ font-size:40px; font-weight:800; letter-spacing:1px; font-variant-numeric:tabular-nums; color:var(--green-deep,#0B4A32); line-height:1.1; }
+  .horloge-date{ font-size:14px; color:var(--ink-soft,#5B6259); margin-top:6px; }
+  .horloge-meteo{ font-size:13px; color:var(--ink-soft,#5B6259); margin-top:8px; }
+  html body.mode-nuit .horloge-heure{ color:#EDEDED; }
+  html body.mode-nuit .hc-num, html body.mode-nuit .hc-h, html body.mode-nuit .hc-m{ fill:#EDEDED; stroke:#EDEDED; }
+  @media (max-width:520px){ .horloge-heure{ font-size:32px; } .horloge-cadran{ width:120px; height:120px; } }
+</style>
+<style id="style-nuit-texte-degrade">
+  html body.mode-nuit .stat-value{ background-image:linear-gradient(135deg,#8EE3B5 0%,#4CC68E 100%) !important; }
+</style>
 </head>
 <body>
 
@@ -1367,6 +1429,13 @@
       <div class="cycle-select-body">
         <h2>Choisissez votre espace</h2>
         <p class="sub">Chaque espace a sa propre connexion, son menu, son tableau de bord et ses formulaires.</p>
+        <div class="mode-choix">
+          <p class="mode-choix-titre">Choisissez le mode de travail :</p>
+          <div class="mode-choix-btns">
+            <button type="button" class="mode-btn" id="mode-btn-internet" aria-pressed="false" onclick="choisirModeConnexion('internet')">🌐 Mode connexion Internet</button>
+            <button type="button" class="mode-btn" id="mode-btn-hors" aria-pressed="false" onclick="choisirModeConnexion('hors')">📴 Mode hors connexion Internet</button>
+          </div>
+        </div>
         <div class="cycle-cards">
           <button type="button" class="cycle-card cycle-card-elementaire" onclick="choisirCycleConnexion('ELEMENTAIRE')">
             <span class="cc-ic">🧸</span><span class="cc-label">Élémentaire</span><span class="cc-sub">Petite — Grande section</span>
@@ -2091,6 +2160,7 @@ function googleDriveSyncDesactiveeParUtilisateur(){
 }
 let _googleReconnexionAutoEnCours = false; // vrai uniquement pendant la tentative silencieuse au chargement — évite d'alarmer l'utilisateur avec une alerte technique s'il n'y a personne pour cliquer sur "réessayer"
 function initGoogleDriveAuth(){
+  if(modeHorsConnexion()){ majStatutGoogleDrive('📴 Mode hors connexion Internet : synchronisation Google Drive désactivée.'); return; }
   if(!GOOGLE_CLIENT_ID){ majStatutGoogleDrive('⚠️ Compte Google non configuré. Contactez la personne technique pour renseigner le nouveau Client ID.', true); return; }
   if(typeof google==='undefined' || !google.accounts || !google.accounts.oauth2){ setTimeout(initGoogleDriveAuth, 400); return; }
   googleTokenClient = google.accounts.oauth2.initTokenClient({
@@ -2426,6 +2496,7 @@ const _chaineCle = {};
 function _enFile(cle, fn){ const p = (_chaineCle[cle]||Promise.resolve()).catch(()=>{}).then(fn); _chaineCle[cle] = p; return p; }
 function synchroniserCle(cle, opts){ return _enFile(cle, ()=>_synchroniserCleCore(cle, opts||{})); }
 async function _synchroniserCleCore(cle, opts){
+  if(modeHorsConnexion()) return {ok:true, changed:false, horsConnexion:true};
   if(!SYNC_BACKEND_ACTIF || !googleDriveConnecte || !googleAccessToken) return {ok:false, changed:false};
   try{
     const entree = opts.liste ? (opts.liste.get(driveFileName(cle)) || null) : await driveTrouverEntree(driveFileName(cle));
@@ -2703,6 +2774,7 @@ let _syncAutoIntervalId = null;
 let _majAppIntervalId = null;
 let _syncAutoDemarree = false;
 function demarrerSynchronisationAutomatique(){
+  if(modeHorsConnexion()) return;
   installerDeclencheursSync();
   if(_syncAutoDemarree) return; // évite les doublons d'intervalles si la fonction est appelée plusieurs fois
   _syncAutoDemarree = true;
@@ -4158,6 +4230,560 @@ async function recupererTokenAssistant(identifiant, pass){
 /* ---------- Choix de l'espace (cycle) PUIS connexion propre à ce cycle ---------- */
 let CYCLE_CONNEXION = null;
 // Étape 1 : l'écran « Choisissez votre espace » s'affiche en premier ; un clic ouvre la page de connexion de ce cycle.
+/* ===================== MODE CONNEXION, MODE NUIT, COULEURS PERSONNALISÉES ===================== */
+const COULEURS_PALETTE = [
+  {nom:'Vert forêt', hex:'#0B4A32'}, {nom:'Vert', hex:'#0F6B45'}, {nom:'Vert clair', hex:'#149D63'},
+  {nom:'Émeraude', hex:'#12855A'}, {nom:'Sarcelle', hex:'#0E7C7B'},
+  {nom:'Or', hex:'#E4B426'}, {nom:'Or clair', hex:'#F4C948'}, {nom:'Or foncé', hex:'#B98A12'},
+  {nom:'Rouge', hex:'#B3231C'}, {nom:'Crème', hex:'#F6F3EA'}, {nom:'Blanc', hex:'#FFFFFF'},
+  {nom:'Gris ardoise', hex:'#5B6259'}, {nom:'Vert très foncé', hex:'#20241F'},
+  {nom:'Beige', hex:'#DCD5C2'}, {nom:'Beige clair', hex:'#EBE6D8'},
+  {nom:'Brun', hex:'#7C2D12'}, {nom:'Orange', hex:'#C2410C'}, {nom:'Orange vif', hex:'#EA580C'}, {nom:'Pêche', hex:'#FBF1E8'},
+  {nom:'Bleu nuit', hex:'#0F2C63'}, {nom:'Bleu', hex:'#1B4B9E'}, {nom:'Bleu vif', hex:'#2F6FD6'}, {nom:'Bleu pâle', hex:'#EEF3FB'},
+  {nom:'Violet', hex:'#3B1A6B'}, {nom:'Violet moyen', hex:'#5B2C9E'}, {nom:'Violet vif', hex:'#7C4DDB'}, {nom:'Lavande', hex:'#F3EFFA'},
+  {nom:'Noir', hex:'#000000'}, {nom:'Gris très foncé', hex:'#121212'}, {nom:'Gris clair', hex:'#EDEDED'}
+];
+const ROLES_COULEURS = [
+  {cle:'texte',       label:'Couleur du texte',                      variable:'--ink',       defaut:'#20241F'},
+  {cle:'texteDoux',   label:'Couleur du texte secondaire',           variable:'--ink-soft',  defaut:'#5B6259'},
+  {cle:'fond',        label:"Couleur de fond de l'application",      variable:'--cream',     defaut:'#F6F3EA'},
+  {cle:'fondCartes',  label:'Couleur de fond des cartes',            variable:'--paper',     defaut:'#FFFFFF'},
+  {cle:'principale',  label:'Couleur principale (boutons, titres)',  variable:'--green',     defaut:'#0F6B45'},
+  {cle:'foncee',      label:'Couleur foncée (menu, en-têtes)',       variable:'--green-deep',defaut:'#0B4A32'},
+  {cle:'accent',      label:"Couleur d'accent",                      variable:'--gold',      defaut:'#E4B426'},
+  {cle:'bordure',     label:'Couleur des bordures',                  variable:'--line',      defaut:'#DCD5C2'},
+  {cle:'alerte',      label:"Couleur des alertes",                   variable:'--red',       defaut:'#B3231C'}
+];
+
+/* ---- Couleurs personnalisées (Paramètres) : enregistrées sur cet appareil ---- */
+function lireCouleursPerso(){
+  try{ const raw = localStorage.getItem(DB_PREFIX+'couleurs_perso'); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+function appliquerCouleursPerso(){
+  let st = document.getElementById('style-couleurs-perso');
+  if(!st){ st = document.createElement('style'); st.id = 'style-couleurs-perso'; document.head.appendChild(st); }
+  const c = lireCouleursPerso();
+  if(!c){ st.textContent = ''; document.body.classList.remove('couleurs-perso'); return; }
+  const decl = ROLES_COULEURS.filter(r=>c[r.cle]).map(r=>r.variable+':'+c[r.cle]).join(';');
+  st.textContent = 'body.couleurs-perso{' + decl + '}';
+  document.body.classList.add('couleurs-perso');
+}
+function choisirCouleurPerso(cle, hex){
+  const inp = document.getElementById('cp-'+cle);
+  if(inp) inp.value = hex;
+  document.querySelectorAll('#cp-pastilles-'+cle+' .cp-rond').forEach(b=>{
+    const on = b.dataset.hex.toUpperCase() === hex.toUpperCase();
+    b.classList.toggle('actif', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+function htmlSectionCouleurs(){
+  const c = lireCouleursPerso() || {};
+  const lignes = ROLES_COULEURS.map(r=>{
+    const v = String(c[r.cle] || r.defaut).toUpperCase();
+    const ronds = COULEURS_PALETTE.map(p=>{
+      const on = p.hex.toUpperCase() === v;
+      return '<button type="button" class="cp-rond'+(on?' actif':'')+'" data-hex="'+p.hex+'" title="'+p.nom+'" aria-label="'+p.nom+'" aria-pressed="'+on+'" style="background:'+p.hex+'" onclick="choisirCouleurPerso(\''+r.cle+'\',\''+p.hex+'\')"></button>';
+    }).join('');
+    return '<div class="cp-ligne"><div class="cp-titre">'+r.label+'</div>'+
+      '<input type="hidden" id="cp-'+r.cle+'" value="'+v+'">'+
+      '<div class="cp-ronds" id="cp-pastilles-'+r.cle+'">'+ronds+'</div></div>';
+  }).join('');
+  return '<div class="card pad cp-carte"><h3>🎨 Couleurs de l\'application</h3>'+
+    '<p class="cp-aide">Touchez une pastille pour choisir la couleur, puis cliquez sur Valider. Ce choix est enregistré sur cet appareil.</p>'+
+    lignes+
+    '<div class="cp-actions"><button type="button" class="btn" onclick="validerCouleursPerso()">✅ Valider</button> '+
+    '<button type="button" class="btn ghost" onclick="reinitialiserCouleursPerso()">↺ Réinitialiser</button></div></div>';
+}
+function validerCouleursPerso(){
+  const c = {};
+  ROLES_COULEURS.forEach(r=>{ const sel = document.getElementById('cp-'+r.cle); if(sel) c[r.cle] = sel.value; });
+  try{ localStorage.setItem(DB_PREFIX+'couleurs_perso', JSON.stringify(c)); }catch(e){}
+  appliquerCouleursPerso();
+  toast('🎨 Couleurs enregistrées.');
+}
+function reinitialiserCouleursPerso(){
+  try{ localStorage.removeItem(DB_PREFIX+'couleurs_perso'); }catch(e){}
+  appliquerCouleursPerso();
+  if(typeof renderParametres==='function' && document.getElementById('content')) renderView('parametres');
+  toast('Couleurs remises par défaut.');
+}
+
+/* ---- Mode de connexion (accueil) : Internet ou hors connexion Internet ---- */
+function modeHorsConnexion(){
+  try{ return localStorage.getItem(DB_PREFIX+'mode_connexion')==='hors'; }catch(e){ return false; }
+}
+function choisirModeConnexion(mode){
+  try{ localStorage.setItem(DB_PREFIX+'mode_connexion', mode==='hors' ? 'hors' : 'internet'); }catch(e){}
+  majBoutonsModeConnexion();
+  toast(mode==='hors' ? '📴 Mode hors connexion Internet choisi.' : '🌐 Mode connexion Internet choisi.');
+}
+function majBoutonsModeConnexion(){
+  const hors = modeHorsConnexion();
+  const bInt = document.getElementById('mode-btn-internet'), bHors = document.getElementById('mode-btn-hors');
+  if(bInt){ bInt.classList.toggle('actif', !hors); bInt.setAttribute('aria-pressed', String(!hors)); }
+  if(bHors){ bHors.classList.toggle('actif', hors); bHors.setAttribute('aria-pressed', String(hors)); }
+}
+
+/* ---- Mode nuit (tableau de bord) ---- */
+function modeNuitActif(){
+  try{ return localStorage.getItem(DB_PREFIX+'mode_nuit')==='1'; }catch(e){ return false; }
+}
+function basculerModeNuit(){
+  const on = !document.body.classList.contains('mode-nuit');
+  document.body.classList.toggle('mode-nuit', on);
+  try{ localStorage.setItem(DB_PREFIX+'mode_nuit', on ? '1' : '0'); }catch(e){}
+  if(on) corrigerContrasteNuit(); else annulerContrasteNuit();
+  const b = document.getElementById('dash-nuit-btn');
+  if(b) b.textContent = on ? '☀️ Mode jour' : '🌙 Mode nuit';
+}
+
+function initPreferencesAffichage(){
+  demarrerHorloge();
+  demarrerContrasteNuit();
+  appliquerCouleursPerso();
+  if(modeNuitActif()) document.body.classList.add('mode-nuit');
+  majBoutonsModeConnexion();
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPreferencesAffichage);
+else initPreferencesAffichage();
+
+/* ===================== ASSISTANT : CHOIX DE L'IA, SPÉCIALITÉS, CLÉS PERSONNELLES ===================== */
+const IA_FOURNISSEURS = {
+  tekoulo:    {nom:'Assistant Tekoulo', mode:'serveur'},
+  anthropic:  {nom:'Claude (Anthropic)', mode:'api', modele:'claude-sonnet-5-5', lienCle:'https://console.anthropic.com/settings/keys'},
+  openai:     {nom:'ChatGPT (OpenAI)', mode:'api', modele:'gpt-4o-mini', lienCle:'https://platform.openai.com/api-keys'},
+  gemini:     {nom:'Gemini (Google)', mode:'api', modele:'gemini-2.5-flash', lienCle:'https://aistudio.google.com/apikey'},
+  mistral:    {nom:'Mistral (Le Chat)', mode:'api', modele:'mistral-large-latest', lienCle:'https://console.mistral.ai/api-keys'},
+  deepseek:   {nom:'DeepSeek', mode:'api', modele:'deepseek-chat', lienCle:'https://platform.deepseek.com/api_keys'},
+  perplexity: {nom:'Perplexity (recherche)', mode:'web', site:'https://www.perplexity.ai/'},
+  copilot:    {nom:'Microsoft Copilot', mode:'web', site:'https://copilot.microsoft.com/'},
+  grok:       {nom:'Grok (xAI)', mode:'web', site:'https://grok.com/'}
+};
+// Tâche → IA conseillée (modifiable librement dans la liste « IA »)
+const IA_TACHES = {
+  general:   {label:'Question générale', ia:'tekoulo'},
+  texte:     {label:'Traitement de texte', ia:'anthropic'},
+  cours:     {label:'Génération de cours', ia:'anthropic'},
+  recherche: {label:'Recherche sur internet', ia:'perplexity'},
+  traduction:{label:'Traduction', ia:'gemini'},
+  maths:     {label:'Mathématiques et calculs', ia:'openai'},
+  document:  {label:'Analyse de document ou image', ia:'gemini'}
+};
+const IA_URLS = {
+  openai:   'https://api.openai.com/v1/chat/completions',
+  mistral:  'https://api.mistral.ai/v1/chat/completions',
+  deepseek: 'https://api.deepseek.com/chat/completions'
+};
+const IA_SYSTEME = "Tu es l'assistant pédagogique et administratif du Collège Tekoulo Centre (Guéckédou, Guinée). Réponds de façon claire, structurée et adaptée à des enseignants. Pour les mathématiques et les calculs, présente les étapes.";
+
+/* ---- Clés personnelles : stockées uniquement sur cet appareil (jamais envoyées à Tekoulo ni à Drive) ---- */
+function iaCles(){ try{ return JSON.parse(localStorage.getItem(DB_PREFIX+'ia_cles') || '{}') || {}; }catch(e){ return {}; } }
+function iaSauverCles(c){ try{ localStorage.setItem(DB_PREFIX+'ia_cles', JSON.stringify(c)); }catch(e){} }
+function iaCleEnregistree(f){ const c = iaCles()[f]; return !!(c && c.cle); }
+function iaModele(f){ const c = iaCles()[f] || {}; return c.modele || IA_FOURNISSEURS[f].modele; }
+function iaPeutAppeler(f){
+  const cfg = IA_FOURNISSEURS[f];
+  if(!cfg) return false;
+  if(cfg.mode === 'web') return true;
+  return cfg.mode === 'api' && iaCleEnregistree(f);
+}
+function assistantFournisseurChoisi(){ const s = document.getElementById('assistant-ia'); return s ? s.value : 'tekoulo'; }
+
+function iaMettreAJourStatut(){
+  const f = assistantFournisseurChoisi();
+  const cfg = IA_FOURNISSEURS[f];
+  const z = document.getElementById('assistant-ia-statut');
+  if(!z || !cfg) return;
+  if(assistantComparerActif()){ z.textContent = '⚖️ Comparaison : les deux IA choisies répondent à la même question, côte à côte.'; return; }
+  let t;
+  if(f === 'tekoulo') t = "Assistant Tekoulo : réponses dans l'application, sans clé personnelle.";
+  else if(cfg.mode === 'web') t = cfg.nom + " n'est pas branché à l'application : votre demande sera copiée, puis collez-la sur " + cfg.site + ".";
+  else if(iaCleEnregistree(f)) t = '✅ ' + cfg.nom + ' répondra directement (clé enregistrée sur cet appareil).';
+  else t = "⚠ Pas de clé pour " + cfg.nom + " : l'assistant Tekoulo répondra. Ajoutez la clé dans Paramètres › Clés des IA.";
+  z.textContent = t;
+}
+function assistantChoisirIA(){
+  try{ localStorage.setItem(DB_PREFIX+'ia_choix', assistantFournisseurChoisi()); }catch(e){}
+  iaMettreAJourStatut();
+}
+function assistantChoisirTache(){
+  const t = document.getElementById('assistant-tache');
+  const tache = IA_TACHES[t ? t.value : 'general'] || IA_TACHES.general;
+  const s = document.getElementById('assistant-ia');
+  if(s) s.value = tache.ia;
+  try{ localStorage.setItem(DB_PREFIX+'ia_choix', tache.ia); }catch(e){}
+  iaMettreAJourStatut();
+}
+function initChoixIA(){
+  let choix = 'tekoulo';
+  try{ choix = localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(e){}
+  const s = document.getElementById('assistant-ia');
+  if(s && IA_FOURNISSEURS[choix]) s.value = choix;
+  iaMettreAJourStatut();
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initChoixIA);
+else initChoixIA();
+
+/* ---- Appel direct des IA choisies (même question, même pièce jointe, même historique) ---- */
+function iaPieceMedia(piece){
+  return {mime: piece.mediaType, data: piece.base64, pdf: piece.mediaType === 'application/pdf', image: /^image\//.test(piece.mediaType)};
+}
+function iaHistoriqueSansDoublon(historique, message){
+  const h = (historique || []).slice();
+  if(h.length && h[h.length-1].role === 'user' && h[h.length-1].texte === message) h.pop();
+  return h.slice(-12).map(x=>({role: x.role === 'assistant' ? 'assistant' : 'user', texte: x.texte}));
+}
+async function iaAnthropic(cle, modele, message, piece, hist){
+  const msgs = hist.map(h=>({role: h.role, content: h.texte}));
+  const contenu = [];
+  if(piece){
+    const p = iaPieceMedia(piece);
+    if(p.pdf) contenu.push({type:'document', source:{type:'base64', media_type:'application/pdf', data:p.data}});
+    else contenu.push({type:'image', source:{type:'base64', media_type:p.mime, data:p.data}});
+  }
+  contenu.push({type:'text', text: message});
+  msgs.push({role:'user', content: contenu});
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'content-type':'application/json','x-api-key':cle,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body: JSON.stringify({model: modele, max_tokens: 4096, system: IA_SYSTEME, messages: msgs})
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error((data.error && data.error.message) || ('erreur ' + res.status));
+  return (data.content || []).filter(b=>b.type === 'text').map(b=>b.text).join('\n');
+}
+async function iaGemini(cle, modele, message, piece, hist){
+  const contents = hist.map(h=>({role: h.role === 'assistant' ? 'model' : 'user', parts:[{text: h.texte}]}));
+  const parts = [{text: message}];
+  if(piece){ const p = iaPieceMedia(piece); parts.unshift({inline_data:{mime_type: p.mime, data: p.data}}); }
+  contents.push({role:'user', parts: parts});
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modele) + ':generateContent?key=' + encodeURIComponent(cle);
+  const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({systemInstruction:{parts:[{text: IA_SYSTEME}]}, contents: contents})});
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error((data.error && data.error.message) || ('erreur ' + res.status));
+  const cand = data.candidates && data.candidates[0];
+  return cand && cand.content ? cand.content.parts.map(p=>p.text || '').join('') : '';
+}
+async function iaCompatible(f, cle, modele, message, piece, hist){
+  if(piece){
+    const p = iaPieceMedia(piece);
+    if(p.pdf) throw new Error('ce fournisseur ne lit pas les PDF : choisissez Claude ou Gemini.');
+    if(f !== 'openai') throw new Error('ce fournisseur ne lit pas les images : choisissez Claude, ChatGPT ou Gemini.');
+  }
+  const msgs = [{role:'system', content: IA_SYSTEME}].concat(hist.map(h=>({role: h.role, content: h.texte})));
+  let contenu = message;
+  if(piece) contenu = [{type:'text', text: message}, {type:'image_url', image_url:{url:'data:' + piece.mediaType + ';base64,' + piece.base64}}];
+  msgs.push({role:'user', content: contenu});
+  const res = await fetch(IA_URLS[f], {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer ' + cle},
+    body: JSON.stringify({model: modele, messages: msgs})});
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error((data.error && data.error.message) || ('erreur ' + res.status));
+  return data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '';
+}
+async function assistantAppelFournisseur(f, message, piece, historique){
+  const cfg = IA_FOURNISSEURS[f];
+  if(cfg.mode === 'web'){
+    try{ await navigator.clipboard.writeText(message); }catch(e){}
+    return {ok:true, reponse: '🌐 ' + cfg.nom + " n'est pas branché directement à l'application. Votre demande a été copiée : ouvrez " + cfg.site + ', collez-la (Ctrl+V), puis copiez ici la réponse si vous voulez la garder.'};
+  }
+  const cle = (iaCles()[f] || {}).cle;
+  const modele = iaModele(f);
+  const hist = iaHistoriqueSansDoublon(historique, message);
+  try{
+    let texte;
+    if(f === 'anthropic') texte = await iaAnthropic(cle, modele, message, piece, hist);
+    else if(f === 'gemini') texte = await iaGemini(cle, modele, message, piece, hist);
+    else texte = await iaCompatible(f, cle, modele, message, piece, hist);
+    return {ok:true, reponse: texte || '(réponse vide)'};
+  }catch(e){
+    return {ok:false, error: cfg.nom + ' : ' + (e && e.message ? e.message : e)};
+  }
+}
+
+/* ---- Paramètres : saisie des clés ---- */
+function htmlSectionClesIA(){
+  const cles = iaCles();
+  const lignes = Object.keys(IA_FOURNISSEURS).filter(f=>IA_FOURNISSEURS[f].mode === 'api').map(f=>{
+    const cfg = IA_FOURNISSEURS[f];
+    const enr = iaCleEnregistree(f);
+    return '<div class="cp-ligne"><div class="cp-titre">' + cfg.nom + '</div>' +
+      '<div class="ia-cle-ligne">' +
+      '<input type="password" id="ia-cle-' + f + '" placeholder="' + (enr ? '•••••• clé enregistrée' : 'Coller la clé API ici') + '" autocomplete="off" spellcheck="false">' +
+      '<input type="text" id="ia-modele-' + f + '" value="' + esc((cles[f] || {}).modele || '') + '" placeholder="Modèle conseillé : ' + cfg.modele + '">' +
+      '<button type="button" class="btn sm" onclick="enregistrerCleIA(\'' + f + '\')">Enregistrer</button>' +
+      '<button type="button" class="btn ghost sm" onclick="effacerCleIA(\'' + f + '\')">Effacer</button>' +
+      '</div>' +
+      '<div class="ia-cle-aide"><span id="ia-statut-' + f + '">' + (enr ? '✅ Clé enregistrée' : 'Aucune clé') + '</span> · <a href="' + cfg.lienCle + '" target="_blank" rel="noopener">Obtenir une clé</a></div></div>';
+  }).join('');
+  return '<div class="card pad cp-carte"><h3>🔑 Clés des IA (facultatif)</h3>' +
+    '<p class="cp-aide">Avec une clé, Claude, ChatGPT, Gemini, Mistral ou DeepSeek répondent directement dans l\'assistant. La clé reste sur cet appareil : elle n\'est ni envoyée à Tekoulo ni synchronisée sur Google Drive. Le modèle est facultatif.</p>' +
+    lignes + '</div>';
+}
+function enregistrerCleIA(f){
+  const k = (document.getElementById('ia-cle-' + f) || {}).value || '';
+  const m = (document.getElementById('ia-modele-' + f) || {}).value || '';
+  const cles = iaCles();
+  const cle = k.trim() || (cles[f] || {}).cle || '';
+  if(!cle){ toast("Collez d'abord la clé API."); return; }
+  cles[f] = {cle: cle, modele: m.trim()};
+  iaSauverCles(cles);
+  const st = document.getElementById('ia-statut-' + f);
+  if(st) st.textContent = '✅ Clé enregistrée';
+  const inp = document.getElementById('ia-cle-' + f);
+  if(inp){ inp.value = ''; inp.placeholder = '•••••• clé enregistrée'; }
+  iaMettreAJourStatut();
+  toast('🔑 Clé enregistrée sur cet appareil.');
+}
+function effacerCleIA(f){
+  const cles = iaCles();
+  delete cles[f];
+  iaSauverCles(cles);
+  const st = document.getElementById('ia-statut-' + f);
+  if(st) st.textContent = 'Aucune clé';
+  const inp = document.getElementById('ia-cle-' + f);
+  if(inp){ inp.value = ''; inp.placeholder = 'Coller la clé API ici'; }
+  iaMettreAJourStatut();
+  toast('Clé effacée.');
+}
+
+/* ===================== COMPARAISON DE DEUX IA ===================== */
+function assistantComparerActif(){ const c = document.getElementById('assistant-comparer'); return !!(c && c.checked); }
+function assistantToggleComparaison(){
+  const on = assistantComparerActif();
+  const s2 = document.getElementById('assistant-ia-2');
+  const syn = document.getElementById('assistant-synthese-ligne');
+  if(s2) s2.style.display = on ? '' : 'none';
+  if(syn) syn.style.display = on ? '' : 'none';
+  iaMettreAJourStatut();
+}
+async function iaRepondreA(f, message, piece, historique, sansHistorique){
+  if(f === 'tekoulo') return assistantAppelAPI(message, piece, undefined, !!sansHistorique, 'tekoulo');
+  if(!iaPeutAppeler(f)) return {ok:false, error: IA_FOURNISSEURS[f].nom + " : pas de clé enregistrée (Paramètres › Clés des IA)."};
+  return assistantAppelFournisseur(f, message, piece, historique);
+}
+async function assistantEnvoyerComparaison(message, messageAffiche, pieceJointe){
+  const a = document.getElementById('assistant-ia').value;
+  const b = document.getElementById('assistant-ia-2').value;
+  const synth = !!(document.getElementById('assistant-synthese') && document.getElementById('assistant-synthese').checked);
+  if(a === b){ assistantAjouterMessage('assistant', 'Choisissez deux IA différentes pour la comparaison.'); return; }
+  assistantAjouterMessage('user', messageAffiche || message);
+  const zone = document.getElementById('assistant-messages');
+  const att = document.createElement('div');
+  att.id = 'assistant-attente';
+  att.className = 'ia-attente';
+  att.textContent = 'Les deux IA réfléchissent...';
+  zone.appendChild(att);
+  const hist = iaHistoriqueSansDoublon(assistantHistorique, message);
+  const [ra, rb] = await Promise.all([
+    iaRepondreA(a, message, pieceJointe, hist, false),
+    iaRepondreA(b, message, pieceJointe, hist, false)
+  ]);
+  const bloc = (f, r) => '🔹 ' + IA_FOURNISSEURS[f].nom + ' :\n' + (r.ok ? r.reponse : '⚠ ' + r.error);
+  document.getElementById('assistant-attente')?.remove();
+  assistantAjouterMessage('assistant', bloc(a, ra));
+  assistantAjouterMessage('assistant', bloc(b, rb));
+  if(synth && ra.ok && rb.ok){
+    const att2 = document.createElement('div');
+    att2.id = 'assistant-attente';
+    att2.className = 'ia-attente';
+    att2.textContent = 'Synthèse en cours...';
+    zone.appendChild(att2);
+    const demande = "Voici deux réponses à la même question. Fais une synthèse courte : points communs, différences, et erreurs éventuelles à vérifier.\n\nQuestion : " + message +
+      "\n\nRéponse 1 (" + IA_FOURNISSEURS[a].nom + ") :\n" + ra.reponse +
+      "\n\nRéponse 2 (" + IA_FOURNISSEURS[b].nom + ") :\n" + rb.reponse;
+    const rs = await iaRepondreA(a, demande, null, [], true);
+    document.getElementById('assistant-attente')?.remove();
+    assistantAjouterMessage('assistant', '🧭 Synthèse :\n' + (rs.ok ? rs.reponse : '⚠ ' + rs.error));
+  }
+  // Mémoire de conversation : on garde la question et la première réponse disponible
+  const reponsePrincipale = ra.ok ? ra.reponse : (rb.ok ? rb.reponse : null);
+  if(reponsePrincipale !== null){
+    assistantHistorique.push({role:'user', texte: message});
+    assistantHistorique.push({role:'assistant', texte: reponsePrincipale});
+    if(assistantHistorique.length > 20) assistantHistorique = assistantHistorique.slice(-20);
+  }
+  const corps = document.getElementById('assistant-corps');
+  if(corps) corps.scrollTop = corps.scrollHeight;
+}
+
+/* ===================== HORLOGE DU TABLEAU DE BORD : CADRAN, HEURE, MÉTÉO ===================== */
+const METEO_LIEU = {nom:'Guéckédou', lat:8.5667, lon:-10.1333};
+const METEO_CODES = {
+  0:['☀️','Ciel dégagé'], 1:['🌤️','Peu nuageux'], 2:['⛅','Partiellement nuageux'], 3:['☁️','Couvert'],
+  45:['🌫️','Brouillard'], 48:['🌫️','Brouillard givrant'],
+  51:['🌦️','Bruine légère'], 53:['🌦️','Bruine'], 55:['🌧️','Bruine forte'],
+  61:['🌦️','Pluie légère'], 63:['🌧️','Pluie'], 65:['🌧️','Pluie forte'],
+  80:['🌦️','Averses légères'], 81:['🌧️','Averses'], 82:['⛈️','Fortes averses'],
+  95:['⛈️','Orage'], 96:['⛈️','Orage avec grêle'], 99:['⛈️','Orage violent']
+};
+let _meteoCache = null, _meteoDernier = 0, _meteoEnCours = false;
+
+function formatHeure(d){ return d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
+function formatDateLongue(d){
+  const t = d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+// Angles (en degrés) des aiguilles pour une heure donnée ; pur, donc testable
+function horlogeAngles(d){
+  const s = d.getSeconds() + d.getMilliseconds() / 1000;
+  const m = d.getMinutes() + s / 60;
+  const h = (d.getHours() % 12) + m / 60;
+  return {h: h * 30, m: m * 6, s: s * 6};
+}
+function htmlCadran(){
+  let svg = '<svg class="horloge-cadran" viewBox="0 0 200 200" role="img" aria-label="Horloge analogique">';
+  svg += '<circle cx="100" cy="100" r="96" class="hc-fond"/>';
+  for(let i = 0; i < 60; i++){
+    const long = i % 5 === 0;
+    svg += '<line x1="100" y1="' + (long ? 8 : 12) + '" x2="100" y2="' + (long ? 20 : 17) + '" transform="rotate(' + (i * 6) + ' 100 100)" class="' + (long ? 'hc-tick' : 'hc-tick hc-tick-fin') + '"/>';
+  }
+  for(let n = 1; n <= 12; n++){
+    const a = (n * 30) * Math.PI / 180;
+    const x = 100 + 70 * Math.sin(a), y = 100 - 70 * Math.cos(a);
+    svg += '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" class="hc-num">' + n + '</text>';
+  }
+  svg += '<g id="aig-h" transform="rotate(0 100 100)"><line x1="100" y1="108" x2="100" y2="55" class="hc-h"/></g>';
+  svg += '<g id="aig-m" transform="rotate(0 100 100)"><line x1="100" y1="112" x2="100" y2="30" class="hc-m"/></g>';
+  svg += '<g id="aig-s" transform="rotate(0 100 100)"><line x1="100" y1="120" x2="100" y2="16" class="hc-s"/></g>';
+  svg += '<circle cx="100" cy="100" r="5" class="hc-centre"/>';
+  return svg + '</svg>';
+}
+function htmlHorloge(){
+  const d = new Date();
+  return '<div class="card pad horloge-carte"><div class="horloge-ligne">' + htmlCadran() +
+    '<div><div class="horloge-heure" id="horloge-heure">' + formatHeure(d) + '</div>' +
+    '<div class="horloge-date" id="horloge-date">' + formatDateLongue(d) + '</div>' +
+    '<div class="horloge-meteo" id="horloge-meteo">🌡️ Météo en cours…</div><div id="horloge-meteo-action"></div></div></div></div>';
+}
+function majAiguilles(d){
+  const a = horlogeAngles(d);
+  const set = (id, deg) => { const g = document.getElementById(id); if(g) g.setAttribute('transform', 'rotate(' + deg.toFixed(3) + ' 100 100)'); };
+  set('aig-h', a.h); set('aig-m', a.m); set('aig-s', a.s);
+}
+function majHorloge(){
+  const h = document.getElementById('horloge-heure');
+  if(!h) return; // la carte n'existe que sur le tableau de bord
+  const d = new Date();
+  h.textContent = formatHeure(d);
+  const dt = document.getElementById('horloge-date');
+  if(dt) dt.textContent = formatDateLongue(d);
+  majAiguilles(d);
+  const z = document.getElementById('horloge-meteo');
+  if(z && !_meteoEnCours && (!z.dataset.charge || Date.now() - _meteoDernier > 15 * 60 * 1000)) majMeteo();
+}
+function afficherMeteo(z, c, label){
+  const code = METEO_CODES[c.weather_code] || ['🌡️', 'Conditions variables'];
+  z.textContent = code[0] + ' ' + Math.round(c.temperature_2m) + ' °C · ' + code[1] +
+    ' · humidité ' + c.relative_humidity_2m + ' % · vent ' + Math.round(c.wind_speed_10m) + ' km/h · ' + label;
+}
+// Demande la position de l'appareil. Si l'accès est refusé ou indisponible, on utilise Guéckédou.
+function obtenirPositionAppareil(){
+  return new Promise(resolve=>{
+    const defaut = {lat: METEO_LIEU.lat, lon: METEO_LIEU.lon, label: METEO_LIEU.nom + ' (position par défaut)', refus: false};
+    if(!navigator.geolocation){ resolve(Object.assign({}, defaut, {refus: true})); return; }
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({lat: p.coords.latitude, lon: p.coords.longitude, label: 'Votre position', refus: false}),
+      err => resolve(Object.assign({}, defaut, {refus: !!(err && err.code === 1)})), // code 1 = accès refusé
+      {enableHighAccuracy: false, timeout: 10000, maximumAge: 600000}
+    );
+  });
+}
+async function majMeteo(forcer){
+  const z = document.getElementById('horloge-meteo');
+  const action = document.getElementById('horloge-meteo-action');
+  if(!z) return;
+  _meteoEnCours = true;
+  try{
+    if(modeHorsConnexion()){
+      z.textContent = '📴 Météo indisponible en mode hors connexion';
+      if(action) action.innerHTML = '';
+    } else {
+      const pos = await obtenirPositionAppareil();
+      const cle = pos.lat.toFixed(2) + ',' + pos.lon.toFixed(2);
+      const frais = Date.now() - _meteoDernier < 15 * 60 * 1000;
+      if(forcer || !_meteoCache || _meteoCache.cle !== cle || !frais){
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + pos.lat.toFixed(4) + '&longitude=' + pos.lon.toFixed(4) +
+          '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto';
+        const r = await fetch(url);
+        if(!r.ok) throw new Error('météo');
+        const data = await r.json();
+        _meteoCache = {cle: cle, data: data.current, label: pos.label};
+        _meteoDernier = Date.now();
+      }
+      afficherMeteo(z, _meteoCache.data, _meteoCache.label);
+      if(action){
+        action.innerHTML = pos.refus
+          ? '<button type="button" class="btn ghost sm" onclick="majMeteo(true)">📍 Utiliser ma position</button>'
+          : '';
+      }
+    }
+  }catch(e){
+    z.textContent = '🌡️ Météo indisponible (connexion Internet nécessaire)';
+    if(action) action.innerHTML = '';
+  }finally{
+    z.dataset.charge = '1';
+    _meteoEnCours = false;
+  }
+}
+let _horlogeIntervalId = null;
+function demarrerHorloge(){
+  if(_horlogeIntervalId) return;
+  _horlogeIntervalId = setInterval(majHorloge, 1000);
+}
+
+/* ---- Mode nuit : lisibilité des textes sombres posés sur fond sombre ---- */
+const _NUIT_TEXTE_CLAIR = '#EDEDED';
+const _nuitCorriges = new Set();
+function _luminanceRVB(rgb){
+  const f = v => { v = v/255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
+  return 0.2126*f(rgb[0]) + 0.7152*f(rgb[1]) + 0.0722*f(rgb[2]);
+}
+function _couleurRVB(css){
+  const m = String(css).match(/[\d.]+/g);
+  return m ? m.slice(0,3).map(Number) : null;
+}
+function _fondEffectif(el){
+  let e = el;
+  while(e && e !== document.documentElement){
+    const cs = getComputedStyle(e);
+    const m = cs.backgroundColor.match(/[\d.]+/g);
+    if(m && (m.length < 4 || Number(m[3]) > 0.5)) return m.slice(0,3).map(Number);
+    if(cs.backgroundImage && cs.backgroundImage !== 'none') return [30,30,30]; // dégradé : on considère un fond sombre
+    e = e.parentElement;
+  }
+  return [0,0,0];
+}
+function corrigerContrasteNuit(){
+  if(!document.body.classList.contains('mode-nuit')) return;
+  const racine = document.getElementById('main') || document.body;
+  racine.querySelectorAll('*').forEach(el => {
+    if(!Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim())) return;
+    const texte = _couleurRVB(getComputedStyle(el).color);
+    if(!texte || _luminanceRVB(texte) >= 0.12) return;      // déjà clair
+    const fond = _fondEffectif(el);
+    if(_luminanceRVB(fond) >= 0.2) return;                   // texte foncé sur fond clair : on ne touche pas
+    el.style.setProperty('color', _NUIT_TEXTE_CLAIR, 'important');
+    _nuitCorriges.add(el);
+  });
+}
+function annulerContrasteNuit(){
+  _nuitCorriges.forEach(el => { el.style.removeProperty('color'); });
+  _nuitCorriges.clear();
+}
+let _nuitObserveur = null, _nuitTempo = null;
+function demarrerContrasteNuit(){
+  if(_nuitObserveur) return;
+  const racine = document.getElementById('main') || document.body;
+  _nuitObserveur = new MutationObserver(() => {
+    clearTimeout(_nuitTempo);
+    _nuitTempo = setTimeout(corrigerContrasteNuit, 80);
+  });
+  _nuitObserveur.observe(racine, {childList: true, subtree: true, characterData: true});
+  corrigerContrasteNuit();
+}
+
 function choisirCycleConnexion(cycle){
   if(!CYCLES_TEKOULO[cycle]) return;
   CYCLE_CONNEXION = cycle;
@@ -6297,6 +6923,8 @@ function renderParametres(container){
   let lastTab = (function(){ try{ return sessionStorage.getItem('tekoulo_param_tab')||'etab'; }catch(e){ return 'etab'; } })();
   if(!fondateurConnecte && PARAM_TABS_RESERVES_FONDATEUR.includes(lastTab)) lastTab = 'securite';
   container.innerHTML = `
+    ${htmlSectionCouleurs()}
+    ${htmlSectionClesIA()}
     <div class="hint-box">Ces réglages personnalisent automatiquement les en-têtes des documents imprimés (bulletins, fiches individuelles, listes complètes, statistiques) ainsi que la sécurité d'accès. Ils sont enregistrés localement et pourront être ajustés à tout moment selon les besoins de l'établissement.<br><br>⚙️ <b>Type d'établissement</b> : si vous choisissez <b>Privé</b>, les modules « APEAE (cotisations) » et « Bureau de l'APEAE » sont automatiquement désactivés et remplacés, au tableau de bord et dans le menu, par le module « Gestion des frais de scolarité ». Si vous choisissez <b>Public</b>, c'est l'inverse : le module « Gestion des frais de scolarité » est désactivé et les modules APEAE restent actifs.</div>
 
     <div class="params-tabs no-print">
@@ -13854,6 +14482,7 @@ function renderDashboard(container){
   ];
 
   container.innerHTML = `
+    ${htmlHorloge()}
     ${buildWelcomeMessage()}
     ${buildEtablissementKpis()}
     <div class="section-title"><h3><span class="bar"></span>Espace ${esc(CYCLES_TEKOULO[TEKOULO_CYCLE_ACTIF]?.label||'')}</h3></div>
@@ -13892,6 +14521,11 @@ function renderDashboard(container){
     </div>
 
     <div class="section-title" style="margin-top:22px;"><h3><span class="bar"></span>Synchronisation Google Drive</h3></div>
+    <div class="card pad" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <div><div style="font-weight:700; font-size:13.5px;">🌙 Affichage</div>
+        <div style="font-size:11.8px; color:var(--ink-soft); margin-top:3px;">Passez en mode nuit (fond noir) ou revenez au mode jour. Ce choix est mémorisé sur cet appareil.</div></div>
+      <button type="button" class="btn ghost sm" id="dash-nuit-btn" onclick="basculerModeNuit()">${modeNuitActif() ? '☀️ Mode jour' : '🌙 Mode nuit'}</button>
+    </div>
     <div class="card pad" id="dash-drive-sync-card">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div>
@@ -18088,6 +18722,7 @@ async function listeImportLancer(){
 
 // Insère les fiches dans le formulaire (même stockage que la saisie manuelle), en ignorant les doublons
 function listeInsererObjets(cfg, champs, objets){
+  listeDernierImport = null; // seul le dernier import peut être annulé
   const items = dbGet(cfg.cle);
   const uniques = new Set(items.map(r=>listeNorm(r[cfg.unique])).filter(Boolean));
   const cleIdentite = r => (r.nom && r.prenoms) ? listeNorm(r.nom + ' ' + r.prenoms + ' ' + (r.dateNaissance||'')) : '';
@@ -18798,8 +19433,11 @@ async function assistantEnvoyer(){
 }
 // Appel API bas niveau, réutilisé par la conversation normale et par l'analyse/génération
 // automatique depuis la répartition. Renvoie toujours {ok, reponse|error}.
-async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique){
-  if(!TEKOULO_API_URL || !TEKOULO_TOKEN){
+async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique, fournisseurForce){
+  // Le serveur Tekoulo n'est requis que si l'IA choisie est l'assistant Tekoulo : une IA directe avec clé peut répondre sans lui
+  const _fournisseurPrevu = fournisseurForce || assistantFournisseurChoisi();
+  const _directe = _fournisseurPrevu !== 'tekoulo' && iaPeutAppeler(_fournisseurPrevu);
+  if((!TEKOULO_API_URL || !TEKOULO_TOKEN) && !_directe){
     return {ok:false, error:"L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter)."};
   }
   const modeEffectif = mode || assistantMode;
@@ -18822,6 +19460,8 @@ async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique){
       messageEnvoye = `Réponds uniquement en ${langueChoisie}. ${message}`;
     }
   }
+  const fournisseurIA = fournisseurForce || assistantFournisseurChoisi();
+  if(fournisseurIA !== 'tekoulo' && iaPeutAppeler(fournisseurIA)) return assistantAppelFournisseur(fournisseurIA, messageEnvoye, pieceJointe, historiquePertinent);
   const corpsRequete = {message: messageEnvoye, historique: historiquePertinent, mode: modeEffectif};
   if(pieceJointe){
     corpsRequete.piece_jointe = {
@@ -18851,6 +19491,7 @@ async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique){
 // programme importée — transmise telle quelle à l'API pour que l'IA puisse la lire.
 async function assistantEnvoyerMessage(message, messageAffiche, pieceJointe){
   if(!message) return;
+  if(assistantComparerActif()) return assistantEnvoyerComparaison(message, messageAffiche, pieceJointe);
   const metaCours = (assistantMode==='cours') ? assistantDernierCoursMeta : null;
   const metaProjet = (assistantMode==='projets') ? assistantDernierProjetMeta : null;
   // Une génération de cours/projet est autonome et souvent très longue : elle n'est pas
@@ -19616,6 +20257,45 @@ function figerColonnesPlanifier(root){
       <option value="Poular">Poular (Peul)</option>
       <option value="Maninka">Maninka (Malinké)</option>
     </select>
+  </div>
+  <div id="assistant-ia-ligne">
+    <label for="assistant-tache">🎯 Tâche :</label>
+    <select id="assistant-tache" onchange="assistantChoisirTache()">
+      <option value="general">Question générale</option>
+      <option value="texte">Traitement de texte</option>
+      <option value="cours">Génération de cours</option>
+      <option value="recherche">Recherche sur internet</option>
+      <option value="traduction">Traduction</option>
+      <option value="maths">Mathématiques et calculs</option>
+      <option value="document">Analyse de document ou image</option>
+    </select>
+    <label for="assistant-ia">🤖 IA :</label>
+    <select id="assistant-ia" onchange="assistantChoisirIA()">
+      <option value="tekoulo" selected>Assistant Tekoulo (par défaut)</option>
+      <optgroup label="Avec clé personnelle (Paramètres)">
+        <option value="anthropic">Claude (Anthropic)</option>
+        <option value="openai">ChatGPT (OpenAI)</option>
+        <option value="gemini">Gemini (Google)</option>
+        <option value="mistral">Mistral (Le Chat)</option>
+        <option value="deepseek">DeepSeek</option>
+      </optgroup>
+      <optgroup label="Sites web (texte copié)">
+        <option value="perplexity">Perplexity (recherche)</option>
+        <option value="copilot">Microsoft Copilot</option>
+        <option value="grok">Grok (xAI)</option>
+      </optgroup>
+    </select>
+    <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" id="assistant-comparer" onchange="assistantToggleComparaison()"> ⚖️ Comparer</label>
+    <select id="assistant-ia-2" onchange="iaMettreAJourStatut()" style="display:none;" aria-label="Deuxième IA pour la comparaison">
+      <option value="tekoulo" selected>Assistant Tekoulo</option>
+      <option value="anthropic">Claude (Anthropic)</option>
+      <option value="openai">ChatGPT (OpenAI)</option>
+      <option value="gemini">Gemini (Google)</option>
+      <option value="mistral">Mistral (Le Chat)</option>
+      <option value="deepseek">DeepSeek</option>
+    </select>
+    <label id="assistant-synthese-ligne" style="display:none; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" id="assistant-synthese"> 🧭 Ajouter une synthèse</label>
+    <span id="assistant-ia-statut"></span>
   </div>
   <div id="assistant-consigne">Pose n'importe quelle question : administration, calcul, rédaction, programmation...</div>
 
