@@ -2444,6 +2444,31 @@ async function driveSupprimerFichier(fileId){ // mise à la corbeille (récupér
   return res.ok;
 }
 
+/* ---------- Fichiers binaires (répartitions originales) dans le dossier Drive de l'école ---------- */
+// Nom différent de « tekoulo__…json » : la synchronisation des données ne prend en compte que les fichiers JSON,
+// ces fichiers PDF/images ne se mélangent donc jamais aux données.
+async function driveCreerFichierBinaire(nomFichier, mimeType, base64){
+  driveVerifierDossier();
+  const metadata = {name: nomFichier, parents:[GOOGLE_DRIVE_FOLDER_ID], mimeType: mimeType};
+  const frontiere = 'tekoulo_bin_'+Date.now();
+  const octets = Uint8Array.from(atob(base64), function(c){ return c.charCodeAt(0); });
+  const encodeur = new TextEncoder();
+  const entete = encodeur.encode('--'+frontiere+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n--'+frontiere+'\r\nContent-Type: '+mimeType+'\r\n\r\n');
+  const fin = encodeur.encode('\r\n--'+frontiere+'--');
+  const corps = new Blob([entete, octets, fin]);
+  const res = await driveRequete('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime', {
+    method:'POST', headers:{'Content-Type':'multipart/related; boundary='+frontiere}, body: corps
+  });
+  if(!res.ok) throw new Error('drive_create_failed:'+res.status);
+  const data = await res.json();
+  return { id:data.id, modifiedTime:data.modifiedTime };
+}
+async function driveLireFichierBinaire(fileId){
+  const res = await driveRequete('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media', {});
+  if(!res.ok) throw new Error('drive_read_failed:'+res.status);
+  return await res.blob();
+}
+
 /* ---------- File d'attente des modifications non confirmées ---------- */
 /* Clés modifiées localement dont l'envoi au serveur n'est pas (encore) confirmé. Elles sont conservées
    sur l'appareil (même hors connexion, même après fermeture) et renvoyées dès que la connexion revient. */
@@ -2617,7 +2642,7 @@ async function synchroniserAnnees(liste, force){
    toute donnée écrite sur cet appareil, et tout fichier présent sur Drive pour l'année active, est synchronisé. */
 const CLES_SYNCHRONISEES = [
   'activitesHorsCours','actesnomination','apeae','bibliotheque','bureauapeae','cassociaux','comitediscipline',
-  'coordonneesgps','coursGeneres','cotisationssociales','courriers','depenses','discipline','dons',
+  'coordonneesgps','coursGeneres','sujetsGeneres','repartitionsProgramme','repartitionActiveId','cotisationssociales','courriers','depenses','discipline','dons',
   'dossierspers','mutations','eleves','evaluations','fraisscolarite','groupestech','immobilier',
   'informations','livresscolaires','materiel','notes','orientations','personnel','planning',
   'presenceMensuelle','programmeinfo','projets','projetsGeneres','rapports','remarques',
@@ -6293,6 +6318,20 @@ function renderGuide(container){
       </ol>
       <p>Dans les deux méthodes, l'assistant génère automatiquement des <b>figures, cartes, formules et schémas adaptés à la matière</b> : cartes et frises chronologiques en géographie/histoire, formules et graphiques en mathématiques, schémas de montages ou de molécules en physique/chimie, figures anatomiques en sciences de la vie — toujours légendés clairement, jamais décoratifs.</p>
       <div class="guide-callout astuce"><b class="gc-label">💡 Banque de cours</b>Chaque cours généré (par l'une ou l'autre méthode) est automatiquement enregistré dans la section <b>« Cours enregistrés »</b> en bas du panneau de l'assistant, avec un aperçu complet, une impression PDF et un téléchargement disponibles à tout moment, sans avoir à le régénérer.</div>
+
+      <h3>10 ter.2 bis Répartitions enregistrées</h3>
+      <p>Chaque répartition du programme analysée est <b>enregistrée dans l'application</b> (bloc « 📚 Répartitions du programme enregistrées » en haut du formulaire « Créer un cours »). Il n'est donc plus nécessaire de la réimporter : la répartition active sert automatiquement à situer les cours et à établir les sujets. Le menu permet de changer de répartition, et le bouton « 🗑️ » de la supprimer.</p>
+      <div class="guide-callout info"><b class="gc-label">ℹ️ Ce qui est conservé</b>L'application garde la liste des cours, leur ordre et leurs notions, avec le nom du fichier et l'année scolaire. Le fichier PDF ou image d'origine est envoyé dans le dossier Google Drive de l'école lors de l'analyse (si Drive est connecté) et peut être retéléchargé avec le bouton « ⬇️ Télécharger l'original (Drive) ». Sans connexion à Drive, seule la structure est conservée.</div>
+
+      <h3>10 ter.2 ter Sujets d'évaluation par matière</h3>
+      <p>Une fois la répartition annuelle analysée (méthode 1 ci-dessus), le bouton <b>« 📝 Générer les sujets de chaque matière »</b> apparaît sous la liste des cours détectés. L'assistant prépare alors, pour chaque matière et chaque niveau de la répartition, un <b>sujet d'évaluation</b> qui couvre l'ensemble des chapitres prévus pour cette matière.</p>
+      <ul>
+        <li><b>Barème</b> : sur 10 en Élémentaire et Primaire, sur 20 au Collège et au Lycée, comme dans le reste de l'application (chapitre 12.1). Le total des points du sujet correspond exactement à ce barème.</li>
+        <li><b>Coefficient</b> : indiqué lorsque la matière figure dans les coefficients de Paramètres (sauf au Lycée, où il dépend de la série).</li>
+        <li><b>Contenu</b> : les exercices numérotés avec les points de chaque question, une grille de notation, un corrigé détaillé avec la répartition des points par étape, et les modalités de notation.</li>
+      </ul>
+      <p>Chaque sujet est enregistré dans la section <b>« Sujets enregistrés »</b> du panneau de l'assistant, avec aperçu, impression PDF et téléchargement. Les sujets sont générés l'un après l'autre, ce qui peut prendre plusieurs minutes.</p>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Vérifier avant d'utiliser</b>Les sujets et corrigés sont des propositions : relisez-les et adaptez-les au cours réellement dispensé avant de les faire composer.</div>
 
       <h3>10 ter.3 Récupérer le résultat : télécharger ou imprimer</h3>
       <p>Sous chaque réponse de l'assistant, des boutons d'action sont proposés :</p>
@@ -17957,7 +17996,7 @@ let assistantDernierProjetMeta = null; // {titre, type, beneficiaires, duree, bu
 let coursProgrammeFichier = null; // {nom, mediaType, base64} du fichier de répartition du programme importé pour le mode "cours"
 let coursRepartitionDetectee = []; // liste des cours {matiere, niveau, chapitre, titre, sousTitres} extraits automatiquement de la répartition importée
 let _assistantDerniereQuestion = ''; // dernière question affichée dans le fil (pour l'archivage d'une réponse)
-const ASSISTANT_MODE_LABELS = {general:'💬 Question libre', reunion:'📝 Compte-rendu', lettre:'📄 Lettre officielle', notes:'🗒️ Organiser des notes', traduire:'🈯 Traduire un mot'};
+const ASSISTANT_MODE_LABELS = {general:'💬 Question libre', reunion:'📝 Compte-rendu', lettre:'📄 Lettre officielle', notes:'🗒️ Organiser des notes', traduire:'🈯 Traduire un mot', sujets:'📝 Sujets d’évaluation'};
 
 /* ---------- Archives des réponses de l'assistant (Question libre, Compte-rendu, Lettre, Notes, Traduction) ----------
    Chaque réponse archivée par l'utilisateur (bouton « 📦 Archiver » sous la réponse) est enregistrée ici avec
@@ -18218,14 +18257,12 @@ function handleCoursProgrammeUpload(input){
 }
 function retirerCoursProgramme(){
   coursProgrammeFichier = null;
-  coursRepartitionDetectee = [];
   const input = document.getElementById('cours-programme-input');
   if(input) input.value = '';
   const apercu = document.getElementById('cours-programme-apercu');
   if(apercu) apercu.style.display = 'none';
-  const blocAnalyse = document.getElementById('cours-repartition-bloc');
-  if(blocAnalyse) blocAnalyse.style.display = 'none';
-  coursRepartitionMajAffichage();
+  // Le fichier importé est retiré, mais la répartition enregistrée reste utilisable.
+  repartitionChargerActive();
 }
 
 /* ---------- Analyse automatique de la répartition importée ---------- */
@@ -18269,9 +18306,14 @@ async function coursRepartitionAnalyser(){
       coursRepartitionStatut('⚠ Impossible d\'extraire une liste de cours claire de ce document. Vous pouvez remplir les champs manuellement.', true);
       return;
     }
-    coursRepartitionDetectee = parsed;
-    coursRepartitionStatut('✅ ' + parsed.length + ' cours détecté' + (parsed.length>1?'s':'') + ' dans la répartition.');
+    // La répartition analysée est enregistrée dans l'application : elle reste disponible ensuite
+    // pour la génération des cours et des sujets, sans avoir à réimporter le fichier.
+    const rec = repartitionEnregistrer(coursProgrammeFichier.nom, parsed);
+    coursRepartitionDetectee = rec.cours.slice();
+    coursRepartitionStatut('✅ ' + parsed.length + ' cours détecté' + (parsed.length>1?'s':'') + ' dans la répartition, enregistrée dans l’application.');
+    renderRepartitionBanque();
     coursRepartitionMajAffichage();
+    repartitionEnvoyerOriginalDrive(rec.id, coursProgrammeFichier); // envoi sur Drive en arrière-plan
   }catch(e){
     coursRepartitionStatut('⚠ Serveur injoignable : ' + e.message, true);
   }finally{
@@ -18353,7 +18395,10 @@ async function coursRepartitionGenererTous(){
     const e = coursRepartitionDetectee[i];
     coursRepartitionStatut('Génération ' + (i+1) + '/' + total + ' : ' + (e.titre||'...'));
     try{
-      const prompt = coursConstruirePrompt(e, "Le document de répartition importé situe précisément ce cours dans la progression annuelle : respecte l'ordre, le rythme et les objectifs qui y sont indiqués.\n\n");
+      const consigneRep = coursProgrammeFichier
+        ? "Le document de répartition importé situe précisément ce cours dans la progression annuelle : respecte l'ordre, le rythme et les objectifs qui y sont indiqués.\n\n"
+        : repartitionConsigne(e.matiere, e.niveau);
+      const prompt = coursConstruirePrompt(e, consigneRep);
       const data = await assistantAppelAPI(prompt, coursProgrammeFichier, 'cours');
       if(data.ok){
         coursGeneresAjouter({matiere:e.matiere, niveau:e.niveau, chapitre:e.chapitre, titre:e.titre, sousTitres:e.sousTitres, contenu:data.reponse, dateGeneration:new Date().toISOString(), source:'repartition'});
@@ -18368,6 +18413,329 @@ async function coursRepartitionGenererTous(){
   if(btn) btn.disabled = false;
   toast(reussis + ' cours ont été générés et enregistrés depuis la répartition.');
 }
+
+/* ---------- Répartitions du programme enregistrées dans l'application ---------- */
+// Chaque répartition analysée est conservée (liste des cours, ordre et notions) avec le nom du fichier
+// et l'année scolaire. Elle reste disponible pour générer les cours et les sujets, sans réimportation.
+// Seule la structure extraite est conservée (le fichier PDF/image d'origine ne l'est pas, pour rester
+// dans la limite de stockage du navigateur et ne pas alourdir la synchronisation).
+function repartitionsListe(){ return dbGet('repartitionsProgramme', []); }
+function repartitionActiveId(){ return dbGet('repartitionActiveId', null); }
+function repartitionActiveRec(){
+  const id = repartitionActiveId();
+  return id ? (repartitionsListe().find(r=>r.id===id) || null) : null;
+}
+function repartitionNorm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function repartitionEnregistrer(nom, cours){
+  const annee = (getParams().anneeScolaire||'').trim();
+  // Une répartition déjà enregistrée sous le même nom pour la même année est remplacée (pas de doublon).
+  const anciens = repartitionsListe().filter(r=>r.nom===nom && (r.annee||'')===annee);
+  const autres = repartitionsListe().filter(r=>!(r.nom===nom && (r.annee||'')===annee));
+  // L'original envoyé sur Drive pour l'ancienne version est mis à la corbeille (récupérable), pour éviter les doublons.
+  anciens.forEach(function(r){ if(r.fichierDrive && googleDriveConnecte) driveSupprimerFichier(r.fichierDrive.id).catch(function(){}); });
+  const rec = {
+    id: 'r'+Date.now()+Math.random().toString(36).slice(2,7),
+    nom: nom || 'Répartition',
+    annee: annee,
+    dateImport: new Date().toISOString(),
+    cours: cours.map(function(e){ return {matiere:e.matiere, niveau:e.niveau, chapitre:e.chapitre, titre:e.titre, sousTitres:(e.sousTitres||[]).slice()}; })
+  };
+  dbSet('repartitionsProgramme', [rec].concat(autres));
+  dbSet('repartitionActiveId', rec.id);
+  return rec;
+}
+// Met à jour un champ d'une répartition enregistrée (et donc sa synchronisation).
+function repartitionMettreAJour(id, patch){
+  dbSet('repartitionsProgramme', repartitionsListe().map(function(r){ return r.id===id ? Object.assign({}, r, patch) : r; }));
+}
+// Envoie le fichier original de la répartition dans le dossier Google Drive de l'école (si Drive est connecté).
+async function repartitionEnvoyerOriginalDrive(recId, fichier){
+  if(!fichier || !fichier.base64) return;
+  if(!googleDriveConnecte || !GOOGLE_DRIVE_FOLDER_ID){
+    coursRepartitionStatut('ℹ️ Répartition enregistrée dans l’application. Son original n’a pas été envoyé sur Google Drive (Drive non connecté).');
+    return;
+  }
+  try{
+    const nomSur = 'tekoulo_fichiers__repartition__' + recId + '__' + String(fichier.nom||'repartition').replace(/[^a-zA-Z0-9._-]+/g,'_');
+    const envoi = await driveCreerFichierBinaire(nomSur, fichier.mediaType || 'application/octet-stream', fichier.base64);
+    repartitionMettreAJour(recId, {fichierDrive: {id: envoi.id, nom: fichier.nom, mediaType: fichier.mediaType||'', dateEnvoi: new Date().toISOString()}});
+    coursRepartitionStatut('✅ Répartition enregistrée dans l’application, et son original envoyé sur Google Drive.');
+  }catch(e){
+    coursRepartitionStatut('⚠ Répartition enregistrée dans l’application, mais l’envoi sur Google Drive a échoué (' + e.message + ').', true);
+  }
+  renderRepartitionBanque();
+}
+// Récupère depuis Google Drive le fichier original de la répartition active et le télécharge.
+async function repartitionTelechargerOriginal(){
+  const rec = repartitionActiveRec();
+  if(!rec){ toast('Aucune répartition sélectionnée.', true); return; }
+  if(!rec.fichierDrive){ toast('Le fichier original de cette répartition n’est pas enregistré sur Google Drive.', true); return; }
+  if(!googleDriveConnecte){ toast('Connectez Google Drive pour récupérer le fichier original.', true); return; }
+  try{
+    const blob = await driveLireFichierBinaire(rec.fichierDrive.id);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = rec.fichierDrive.nom || 'repartition';
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  }catch(e){ toast('Téléchargement impossible : ' + e.message, true); }
+}
+function repartitionChoisir(id){
+  dbSet('repartitionActiveId', id || null);
+  repartitionChargerActive();
+}
+// Charge la répartition active dans l'affichage et dans la génération (cours et sujets).
+function repartitionChargerActive(){
+  const rec = repartitionActiveRec();
+  coursRepartitionDetectee = rec ? rec.cours.slice() : [];
+  renderRepartitionBanque();
+  coursRepartitionMajAffichage();
+}
+function repartitionSupprimer(id){
+  if(!id) return;
+  if(!confirm('Supprimer cette répartition enregistrée ?\nLes cours et sujets déjà générés ne sont pas supprimés.')) return;
+  const cible = repartitionsListe().find(function(r){ return r.id===id; });
+  if(cible && cible.fichierDrive && googleDriveConnecte) driveSupprimerFichier(cible.fichierDrive.id).catch(function(){});
+  dbSet('repartitionsProgramme', repartitionsListe().filter(r=>r.id!==id));
+  if(repartitionActiveId()===id) dbSet('repartitionActiveId', null);
+  repartitionChargerActive();
+  toast('Répartition supprimée.');
+}
+function repartitionSupprimerActive(){
+  const rec = repartitionActiveRec();
+  if(rec) repartitionSupprimer(rec.id);
+  else toast('Aucune répartition sélectionnée.', true);
+}
+function repartitionBanqueChoisirDepuisSelect(){
+  const select = document.getElementById('repartition-banque-select');
+  repartitionChoisir(select ? (select.value || null) : null);
+}
+// Affiche la liste des répartitions enregistrées et la répartition active.
+function renderRepartitionBanque(){
+  const select = document.getElementById('repartition-banque-select');
+  const info = document.getElementById('repartition-banque-info');
+  const bloc = document.getElementById('cours-repartition-bloc');
+  const banque = document.getElementById('repartition-banque');
+  const active = repartitionActiveRec();
+  const liste = repartitionsListe();
+  if(bloc) bloc.style.display = (coursProgrammeFichier || active) ? 'block' : 'none';
+  if(banque) banque.style.display = liste.length ? 'block' : 'none';
+  if(select){
+    select.innerHTML = liste.map(function(r){
+      return '<option value="'+esc(r.id)+'"'+(active && r.id===active.id ? ' selected' : '')+'>'
+        + esc(r.nom + (r.annee ? ' · ' + r.annee : '')) + ' (' + r.cours.length + ' cours)</option>';
+    }).join('');
+  }
+  if(info){
+    info.textContent = active
+      ? 'Répartition active : ' + active.nom + ' — ' + active.cours.length + ' cours. L’assistant s’y réfère pour générer les cours et les sujets.' + (active.fichierDrive ? ' Original sauvegardé sur Google Drive.' : ' Original non enregistré sur Google Drive.')
+      : '';
+  }
+}
+// Consigne donnée à l'IA : la progression enregistrée pour une matière et un niveau (vide si aucune).
+function repartitionConsigne(matiere, niveau){
+  const rec = repartitionActiveRec();
+  if(!rec) return '';
+  const m = repartitionNorm(matiere), n = repartitionNorm(niveau);
+  const liste = rec.cours.filter(function(e){ return repartitionNorm(e.matiere)===m && repartitionNorm(e.niveau)===n; });
+  if(!liste.length) return '';
+  return "Progression annuelle enregistrée dans l'application (répartition « " + rec.nom + " ») pour cette matière et ce niveau, dans l'ordre :\n" +
+    liste.map(function(e){
+      return '- ' + [e.chapitre, e.titre].filter(Boolean).join(' — ') + (e.sousTitres && e.sousTitres.length ? ' (notions : ' + e.sousTitres.join(' ; ') + ')' : '');
+    }).join('\n') +
+    "\nSitue précisément ce cours dans cette progression : respecte l'ordre, le rythme et les objectifs indiqués.\n\n";
+}
+
+/* ---------- Sujets d'évaluation par matière (barème, notation, corrigé) à partir de la répartition ---------- */
+// Pour chaque couple (matière, niveau) détecté dans la répartition importée, l'IA rédige un sujet
+// d'évaluation qui couvre l'ensemble des chapitres prévus pour cette matière : barème de l'application
+// (10 ou 20 selon le cycle), répartition des points, grille de notation et corrigé détaillé.
+// Chaque sujet est enregistré dans la banque « Sujets enregistrés » du panneau de l'assistant.
+let sujetsGenerationEnCours = false;
+function sujetsGeneresListe(){ return dbGet('sujetsGeneres', []); }
+function sujetsGeneresAjouter(rec){
+  const liste = sujetsGeneresListe();
+  liste.unshift(Object.assign({id: 's'+Date.now()+Math.random().toString(36).slice(2,7)}, rec));
+  dbSet('sujetsGeneres', liste);
+  renderSujetsGeneresListe();
+}
+function sujetsGeneresSupprimer(id){
+  if(!confirm("Supprimer ce sujet enregistré ?")) return;
+  dbSet('sujetsGeneres', sujetsGeneresListe().filter(s=>s.id!==id));
+  renderSujetsGeneresListe();
+}
+function sujetsGeneresTrouver(id){ return sujetsGeneresListe().find(s=>s.id===id); }
+function sujetsGeneresApercu(id){
+  const rec = sujetsGeneresTrouver(id);
+  if(rec) coursApercuOuvrir(rec.contenu, Object.assign({sujet:true}, rec));
+}
+function sujetsGeneresImprimer(id){ const rec = sujetsGeneresTrouver(id); if(rec) imprimerCoursAssistant(rec.contenu, Object.assign({sujet:true}, rec)); }
+function sujetsGeneresTelecharger(id){ const rec = sujetsGeneresTrouver(id); if(rec) telechargerTexteCommeFichier(rec.contenu, Object.assign({sujet:true}, rec)); }
+
+// Retrouve le niveau officiel de l'application à partir du texte libre de la répartition
+// (ex. « 7ème » → « 7EME », « 1ère année » → « 1ERE ANNEE »). Renvoie null si aucun ne correspond.
+function sujetsCleNiveau(texte){
+  const norm = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const cible = norm(texte);
+  if(!cible) return null;
+  for(const cycle of Object.values(CYCLES_TEKOULO)){
+    for(const n of cycle.niveaux){ if(norm(n)===cible) return n; }
+  }
+  return null;
+}
+// Barème : celui du niveau s'il est reconnu, sinon celui du cycle de l'espace actif (10 en Élémentaire/Primaire, 20 sinon).
+function sujetsBaremeNiveau(niveauTexte){
+  const cle = sujetsCleNiveau(niveauTexte);
+  if(cle) return baremeDuNiveau(cle);
+  return (TEKOULO_CYCLE_ACTIF==='ELEMENTAIRE' || TEKOULO_CYCLE_ACTIF==='PRIMAIRE') ? 10 : 20;
+}
+// Coefficient de la matière tel que défini dans Paramètres. Null si non reconnu, ou au Lycée (il dépend de la série).
+function sujetsCoefficient(matiere, niveauTexte){
+  const cle = sujetsCleNiveau(niveauTexte);
+  if(!cle || cyclePourNiveau(cle)==='LYCEE') return null;
+  const cible = String(matiere||'').trim().toLowerCase();
+  const m = matieresPourNiveau(cle).find(x=>String(x.label||'').trim().toLowerCase()===cible);
+  return m ? m.coef : null;
+}
+// Regroupe les cours détectés par (matière, niveau) : un seul sujet par matière et par niveau.
+function sujetsGroupesDepuisRepartition(){
+  const groupes = [];
+  const index = {};
+  coursRepartitionDetectee.forEach(function(e){
+    const matiere = (e.matiere||'').trim() || 'Autres';
+    const niveau = (e.niveau||'').trim();
+    const cle = matiere.toLowerCase() + '||' + niveau.toLowerCase();
+    if(!index[cle]){ index[cle] = {matiere: matiere, niveau: niveau, cours: []}; groupes.push(index[cle]); }
+    index[cle].cours.push(e);
+  });
+  return groupes;
+}
+// Consigne complète pour un sujet d'évaluation : barème exact, structure, grille et corrigé.
+function sujetsConstruirePrompt(groupe){
+  const bareme = sujetsBaremeNiveau(groupe.niveau);
+  const coef = sujetsCoefficient(groupe.matiere, groupe.niveau);
+  const contenus = groupe.cours.map(function(e){
+    let ligne = '- ' + [e.chapitre, e.titre].filter(Boolean).join(' — ');
+    if(e.sousTitres && e.sousTitres.length) ligne += ' (notions : ' + e.sousTitres.join(' ; ') + ')';
+    return ligne;
+  }).join('\n');
+  return "Prépare un SUJET D'ÉVALUATION sommative (composition) complet, avec son barème de notation et sa correction détaillée, prêt à être imprimé pour les élèves et utilisé par l'enseignant pour noter.\n" +
+    "Matière : " + groupe.matiere + "\n" +
+    "Niveau : " + groupe.niveau + "\n" +
+    "Barème : sur " + bareme + " points (moyenne : " + (bareme/2) + "/" + bareme + "). Le total des points du sujet doit être EXACTEMENT " + bareme + ".\n" +
+    (coef!==null ? "Coefficient de la matière : " + coef + "\n" : "") +
+    "\nContenus à évaluer, tels que prévus par la répartition annuelle du programme :\n" + contenus + "\n\n" +
+    "Structure obligatoire, avec des titres de section en \"## \" dans cet ordre :\n" +
+    "## Sujet\n## Barème et grille de notation\n## Corrigé détaillé\n## Modalités de notation\n\n" +
+    "Consignes de rédaction (toutes obligatoires) :\n" +
+    "- Dans « Sujet » : consignes générales (durée indicative adaptée au niveau, présentation attendue), puis des exercices numérotés (Exercice 1, Exercice 2…), chaque question suivie de son nombre de points entre parenthèses, par exemple « (1,5 pt) ».\n" +
+    "- Couvre TOUS les contenus listés ci-dessus, de façon équilibrée, sans jamais sortir de ces contenus. Varie les types de questions (restitution du cours, application, raisonnement ou problème) et adapte la difficulté au niveau scolaire indiqué.\n" +
+    "- Dans « Barème et grille de notation » : un tableau markdown (colonnes : Exercice / question | Points | Critères de notation), avec une ligne de total égale à " + bareme + " points.\n" +
+    "- Dans « Corrigé détaillé » : pour chaque question, la réponse attendue, les étapes de résolution et la répartition des points entre ces étapes.\n" +
+    "- Dans « Modalités de notation » : ce qui est compté, comment attribuer les demi-points, et ce qui est pénalisé.\n" +
+    "- Additionne les points de toutes les questions et vérifie que le total est exactement " + bareme + " avant de répondre.\n" +
+    "- N'invente aucun fait ni donnée chiffrée absent du programme ; si un énoncé a besoin d'une donnée, donne-la de façon cohérente et exacte.\n" +
+    coursConsignesVisuelles(groupe.matiere) +
+    "- Écris les formules et expressions avec $...$ ou $$...$$ lorsque la matière s'y prête.";
+}
+function sujetsStatut(texte, estErreur){
+  const zone = document.getElementById('sujets-statut');
+  if(!zone) return;
+  zone.textContent = texte || '';
+  zone.style.color = estErreur ? '#B00020' : 'var(--ink-soft,#666)';
+}
+// Génère puis enregistre, l'un après l'autre, un sujet par matière et par niveau détectés dans la répartition.
+async function sujetsGenererTousParMatiere(){
+  if(sujetsGenerationEnCours) return;
+  if(!coursRepartitionDetectee.length){ toast("Importez et analysez une répartition, ou choisissez-en une enregistrée.", true); return; }
+  if(!TEKOULO_API_URL || !TEKOULO_TOKEN){ toast("L'assistant IA est indisponible pour le moment (voir Guide, chapitre 10 ter).", true); return; }
+  const groupes = sujetsGroupesDepuisRepartition();
+  if(!confirm("Générer un sujet d'évaluation avec barème et corrigé pour chacune des " + groupes.length + " matière(s) détectée(s) ?\nCela peut prendre plusieurs minutes.")) return;
+  sujetsGenerationEnCours = true;
+  const btn = document.getElementById('sujets-generer-btn');
+  if(btn) btn.disabled = true;
+  let reussis = 0, echoues = 0;
+  for(let i=0; i<groupes.length; i++){
+    const g = groupes[i];
+    sujetsStatut('Sujet ' + (i+1) + '/' + groupes.length + ' : ' + g.matiere + (g.niveau ? ' — ' + g.niveau : ''));
+    try{
+      const data = await assistantAppelAPI(sujetsConstruirePrompt(g), null, 'cours');
+      if(data.ok){
+        const rec = {
+          titre: 'Sujet — ' + g.matiere + (g.niveau ? ' · ' + g.niveau : ''),
+          matiere: g.matiere,
+          niveau: g.niveau,
+          bareme: sujetsBaremeNiveau(g.niveau),
+          coefficient: sujetsCoefficient(g.matiere, g.niveau),
+          chapitres: g.cours.map(function(e){ return [e.chapitre, e.titre].filter(Boolean).join(' — '); }),
+          contenu: data.reponse,
+          dateGeneration: new Date().toISOString()
+        };
+        sujetsGeneresAjouter(rec);
+        assistantAjouterResumeSujetGenere(rec);
+        reussis++;
+      } else {
+        echoues++;
+      }
+    }catch(err){ echoues++; }
+    // Courte pause entre deux requêtes : l'API gratuite limite le nombre de requêtes par minute.
+    if(i < groupes.length-1) await new Promise(function(r){ setTimeout(r, 1500); });
+  }
+  sujetsGenerationEnCours = false;
+  if(btn) btn.disabled = false;
+  sujetsStatut('✅ Terminé : ' + reussis + ' sujet' + (reussis>1?'s':'') + ' généré' + (reussis>1?'s':'') + ' et enregistré' + (reussis>1?'s':'') + (echoues?(' · ⚠ '+echoues+' échec(s)'):'') + '.', !reussis && echoues>0);
+  toast(reussis + ' sujet(s) généré(s) et enregistré(s).');
+}
+// Affiche dans le fil de l'assistant un résumé du sujet généré, avec aperçu, impression et téléchargement.
+function assistantAjouterResumeSujetGenere(rec){
+  const zone = document.getElementById('assistant-messages');
+  if(!zone) return;
+  const div = document.createElement('div');
+  div.className = 'ia-msg ia-msg-assistant ia-msg-resume';
+  div.innerHTML = '<div class="ia-resume-titre">📝 ' + esc(rec.titre) + '</div>'
+    + '<div class="ia-resume-meta">' + esc('Notation sur ' + rec.bareme + (rec.coefficient!==null ? ' · coefficient ' + rec.coefficient : '')) + '</div>'
+    + '<div class="ia-msg-actions">'
+    +   '<button data-act="apercu">👁️ Aperçu complet</button>'
+    +   '<button data-act="print">🖨️ PDF du sujet</button>'
+    +   '<button data-act="dl">⭳ Télécharger</button>'
+    + '</div>';
+  const metaSujet = Object.assign({sujet:true}, rec);
+  div.querySelector('[data-act="apercu"]').onclick = function(){ coursApercuOuvrir(rec.contenu, metaSujet); };
+  div.querySelector('[data-act="print"]').onclick = function(){ imprimerCoursAssistant(rec.contenu, metaSujet); };
+  div.querySelector('[data-act="dl"]').onclick = function(){ telechargerTexteCommeFichier(rec.contenu, metaSujet); };
+  zone.appendChild(div);
+  const corps = document.getElementById('assistant-corps');
+  if(corps) corps.scrollTop = corps.scrollHeight;
+}
+// Reconstruit la banque des sujets enregistrés dans le panneau de l'assistant.
+function renderSujetsGeneresListe(){
+  const zone = document.getElementById('sujets-generes-liste');
+  if(!zone) return;
+  const liste = sujetsGeneresListe();
+  const compteur = document.getElementById('sujets-generes-compteur');
+  if(compteur) compteur.textContent = liste.length ? (liste.length+' enregistré'+(liste.length>1?'s':'')) : '';
+  if(!liste.length){
+    zone.innerHTML = '<div class="ia-vide">Aucun sujet enregistré pour l’instant. Analysez une répartition du programme, puis appuyez sur « 📝 Générer les sujets de chaque matière ».</div>';
+    return;
+  }
+  zone.innerHTML = liste.map(function(s){
+    const soustitre = [s.matiere, s.niveau, 'sur ' + s.bareme].filter(Boolean).join(' · ');
+    const date = s.dateGeneration ? new Date(s.dateGeneration).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric'}) : '';
+    return '<div class="ia-cours-item">'
+      + '<div class="ia-cours-item-txt">'
+      +   '<div class="ia-cours-item-titre">'+esc(s.titre||'Sujet sans titre')+'</div>'
+      +   '<div class="ia-cours-item-meta">'+esc(soustitre)+(date?' · '+date:'')+'</div>'
+      + '</div>'
+      + '<div class="ia-cours-item-actions">'
+      +   '<button title="Aperçu complet" onclick="sujetsGeneresApercu(\''+s.id+'\')">👁️</button>'
+      +   '<button title="Imprimer / PDF" onclick="sujetsGeneresImprimer(\''+s.id+'\')">🖨️</button>'
+      +   '<button title="Télécharger" onclick="sujetsGeneresTelecharger(\''+s.id+'\')">⭳</button>'
+      +   '<button title="Supprimer" onclick="sujetsGeneresSupprimer(\''+s.id+'\')" class="ia-danger">✕</button>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
 /* ---------- Aperçu complet du cours (avant impression/téléchargement) ---------- */
 // Ouvre une fenêtre modale affichant le cours entièrement mis en forme (fiche d'en-tête,
 // sommaire, contenu structuré) exactement comme il sera imprimé, mais consultable à l'écran,
@@ -18405,10 +18773,13 @@ function coursApercuOuvrir(texte, meta){
       : '';
     ficheZone.style.display = 'block';
     ficheZone.innerHTML =
+      enteteDocumentHTML(meta) +
       '<table>'
       + '<tr><td class="lbl">Matière</td><td>'+esc(meta.matiere||'')+'</td></tr>'
       + '<tr><td class="lbl">Niveau</td><td>'+esc(meta.niveau||'')+'</td></tr>'
       + (meta.chapitre ? '<tr><td class="lbl">Chapitre</td><td>'+esc(meta.chapitre)+'</td></tr>' : '')
+      + (meta.bareme ? '<tr><td class="lbl">Notation</td><td>Sur '+meta.bareme+' points'+(meta.coefficient!=null ? ' · coefficient '+meta.coefficient : '')+'</td></tr>' : '')
+      + (meta.chapitres && meta.chapitres.length ? '<tr><td class="lbl">Chapitres</td><td>'+meta.chapitres.map(function(c){ return esc(c); }).join(' ; ')+'</td></tr>' : '')
       + '<tr><td class="lbl">Date</td><td>'+dateAujourdhui+'</td></tr>'
       + '</table>' + sommaireHtml;
   } else {
@@ -18958,7 +19329,9 @@ function assistantGenererCours(){
   }
 
   assistantDernierCoursMeta = {matiere, niveau, chapitre, titre, sousTitres};
-  const prompt = coursConstruirePrompt(assistantDernierCoursMeta);
+  // Sans fichier importé, la progression enregistrée (même matière et même niveau) sert de cadre à l'IA.
+  const consigneRep = repartitionConsigne(matiere, niveau);
+  const prompt = coursConstruirePrompt(assistantDernierCoursMeta, coursProgrammeFichier ? undefined : (consigneRep || undefined));
 
   const resume = "📘 Cours demandé — " + matiere + " · " + niveau + (chapitre ? (' · ' + chapitre) : '') +
     "\nTitre : " + titre + (sousTitres.length ? ("\nSous-titres : " + sousTitres.join(' / ')) : '') +
@@ -18975,6 +19348,8 @@ function ouvrirFermerAssistant(){
     document.getElementById('assistant-input').focus();
     renderCoursGeneresListe();
     renderProjetsGeneresListe();
+    renderSujetsGeneresListe();
+    repartitionChargerActive();
     renderAssistantArchivesListe();
   }
 }
@@ -19127,7 +19502,7 @@ function assistantAjouterMessage(role, texte, metaCours, metaProjet){
       coursGeneresAjouter(Object.assign({}, metaCours, {
         contenu: texte,
         dateGeneration: new Date().toISOString(),
-        source: coursProgrammeFichier ? 'repartition' : 'manuel'
+        source: (coursProgrammeFichier || repartitionActiveRec()) ? 'repartition' : 'manuel'
       }));
     } else if(metaProjet){
       // De même, un dossier de projet généré (mode "projets") est automatiquement
@@ -19141,13 +19516,29 @@ function assistantAjouterMessage(role, texte, metaCours, metaProjet){
   const corps2 = document.getElementById('assistant-corps');
   if(corps2) corps2.scrollTop = corps2.scrollHeight;
 }
+// En-tête administratif en texte brut, pour les fichiers téléchargés (même informations que l'en-tête imprimé).
+function enteteAdministrativeTexte(titre){
+  const p = getParams();
+  const coord = [p.adresseEcole, p.telephoneEcole ? ('Tél : '+p.telephoneEcole) : '', p.emailEcole ? ('E-mail : '+p.emailEcole) : ''].filter(Boolean).join(' · ');
+  const lignes = ['RÉPUBLIQUE DE GUINÉE', 'Travail — Justice — Solidarité', p.ministereExamen || '',
+    'IRE : ' + (p.ire||'—') + ' | DPE : ' + (p.dpe||'—') + ' | ' + (p.nomEcole||''), coord];
+  return lignes.filter(Boolean).join('\n') + '\n' + '─'.repeat(60) + '\n' + (titre ? titre + '\n' : '') + '\n';
+}
+// En-tête administratif en HTML (aperçu à l'écran), limité à l'aperçu grâce à un sélecteur scopé.
+function enteteDocumentHTML(meta){
+  const titre = meta && meta.sujet ? 'Sujet d’évaluation' : 'Fiche de cours';
+  const css = tekouloEnteteCSS().replace(/\.header/g, '#cours-apercu-fiche .header');
+  return '<style>' + css + '</style>' + tekouloEnteteAdminHTML(getParams(), titre, (meta && meta.titre) || '');
+}
 function telechargerTexteCommeFichier(texte, meta){
-  const blob = new Blob([texte], {type:'text/plain;charset=utf-8'});
+  // Cours et sujets : l'en-tête administratif est ajouté en tête du fichier téléchargé.
+  const contenu = (meta && meta.matiere) ? enteteAdministrativeTexte(meta.sujet ? 'SUJET D’ÉVALUATION' : 'FICHE DE COURS') + texte : texte;
+  const blob = new Blob([contenu], {type:'text/plain;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   let nomBase = 'document_tekoulo';
   if(meta && meta.matiere){
-    nomBase = ('Cours_' + [meta.matiere, meta.niveau, meta.chapitre].filter(Boolean).join('_')).replace(/[^\w\-]+/g,'_');
+    nomBase = ((meta.sujet ? 'Sujet_' : 'Cours_') + [meta.matiere, meta.niveau, meta.chapitre].filter(Boolean).join('_')).replace(/[^\w\-]+/g,'_');
   } else if(meta && meta.titre){
     nomBase = ('Projet_' + meta.titre).replace(/[^\w\-]+/g,'_');
   }
@@ -19256,12 +19647,14 @@ function imprimerCoursAssistant(texte, meta){
     ${tekouloBadgesHTML()}
     ${tekouloEnteteAdminHTML(getParams())}
     <div class="fiche-cours">
-      <div class="bandeau">📘 Fiche de cours</div>
+      <div class="bandeau">${meta.sujet ? '📝 Fiche du sujet d’évaluation' : '📘 Fiche de cours'}</div>
       <table>
         <tr><td class="lbl">Matière</td><td>${esc(meta.matiere)}</td></tr>
         <tr><td class="lbl">Niveau</td><td>${esc(meta.niveau)}</td></tr>
         ${meta.chapitre ? `<tr><td class="lbl">Chapitre</td><td>${esc(meta.chapitre)}</td></tr>` : ''}
         <tr><td class="lbl">Titre</td><td class="titre-cours">${esc(meta.titre)}</td></tr>
+        ${meta.bareme ? `<tr><td class="lbl">Notation</td><td>Sur ${meta.bareme} points${meta.coefficient!=null ? ' · coefficient '+meta.coefficient : ''}</td></tr>` : ''}
+        ${meta.chapitres && meta.chapitres.length ? `<tr><td class="lbl">Chapitres</td><td>${meta.chapitres.map(function(c){ return esc(c); }).join(' ; ')}</td></tr>` : ''}
         <tr><td class="lbl">Date</td><td>${dateAujourdhui}</td></tr>
       </table>
     </div>
@@ -20133,6 +20526,11 @@ function figerColonnesPlanifier(root){
 .ia-projets-banque summary::before{ content:'🏗️ Projets enregistrés'; }
 .ia-archives-banque summary::before{ content:'📦 Réponses archivées'; }
 .ia-cours-banque summary #cours-generes-compteur, .ia-projets-banque summary #projets-generes-compteur, .ia-archives-banque summary #assistant-archives-compteur{ font-weight:600; color:var(--ink-soft); font-size:11px; }
+.ia-sujets-banque{ border-top:1px solid var(--line,#ddd); background:#fff; flex-shrink:0; }
+.ia-sujets-banque summary{ list-style:none; cursor:pointer; padding:10px 14px; font-size:12px; font-weight:700; color:var(--green-deep); display:flex; align-items:center; justify-content:space-between; user-select:none; }
+.ia-sujets-banque summary::-webkit-details-marker{ display:none; }
+.ia-sujets-banque summary::before{ content:'📝 Sujets enregistrés'; }
+.ia-sujets-banque summary #sujets-generes-compteur{ font-weight:600; color:var(--ink-soft); font-size:11px; }
 #cours-generes-liste, #assistant-archives-liste{ max-height:180px; overflow-y:auto; padding:0 14px 10px; }
 .ia-vide{ font-size:11.5px; color:var(--ink-soft); padding:6px 0 4px; line-height:1.5; }
 .ia-cours-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--line-soft); }
@@ -20317,6 +20715,13 @@ function figerColonnesPlanifier(root){
     <div id="liste-import-resultat"></div>
   </div>
   <div id="assistant-cours-form" style="display:none;">
+    <div class="ia-repartition-bloc" id="repartition-banque">
+      <div class="ia-repartition-titre">📚 Répartitions du programme enregistrées</div>
+      <select id="repartition-banque-select" onchange="repartitionBanqueChoisirDepuisSelect()"></select>
+      <div id="repartition-banque-info" style="font-size:12px; margin:6px 0;"></div>
+      <button type="button" class="ia-btn-secondaire" onclick="repartitionTelechargerOriginal()">⬇️ Télécharger l'original (Drive)</button>
+      <button type="button" class="ia-btn-secondaire" onclick="repartitionSupprimerActive()">🗑️ Supprimer la répartition sélectionnée</button>
+    </div>
     <div class="ia-champ">
       <label>📎 Méthode 1 — Importer la répartition annuelle (PDF ou image) pour générer automatiquement</label>
       <input type="file" id="cours-programme-input" accept="application/pdf,image/*" style="display:none" onchange="handleCoursProgrammeUpload(this)">
@@ -20337,6 +20742,8 @@ function figerColonnesPlanifier(root){
           <button type="button" class="ia-btn-secondaire" style="flex:1;" onclick="coursRepartitionRemplirSelection()">✍️ Remplir le formulaire</button>
         </div>
         <button type="button" class="ia-btn-principal" id="cours-repartition-tout-generer-btn" style="margin-top:8px;" onclick="coursRepartitionGenererTous()">🪄 Générer et enregistrer tous les cours</button>
+        <button type="button" class="ia-btn-principal" id="sujets-generer-btn" style="margin-top:8px;" onclick="sujetsGenererTousParMatiere()">📝 Générer les sujets de chaque matière</button>
+        <div id="sujets-statut" style="font-size:12px; margin-top:6px;"></div>
       </div>
     </div>
 
@@ -20435,6 +20842,10 @@ function figerColonnesPlanifier(root){
   <details class="ia-projets-banque">
     <summary><span id="projets-generes-compteur"></span></summary>
     <div id="projets-generes-liste"></div>
+  </details>
+  <details class="ia-sujets-banque">
+    <summary><span id="sujets-generes-compteur"></span></summary>
+    <div id="sujets-generes-liste"></div>
   </details>
   <details class="ia-archives-banque" id="assistant-archives-banque">
     <summary><span id="assistant-archives-compteur"></span></summary>
