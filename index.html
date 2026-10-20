@@ -1308,9 +1308,9 @@
   .ia-cle-aide{ font-size:12px; color:var(--ink-soft,#5B6259); }
 </style>
 <style id="style-horloge">
-  .horloge-ligne{ display:flex; align-items:center; justify-content:center; gap:22px; flex-wrap:wrap; }
+  .horloge-ligne{ display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; }
   .horloge-carte > .horloge-ligne > div:last-child{ text-align:center; }
-  .horloge-cadran{ width:150px; height:150px; flex:0 0 auto; }
+  .horloge-cadran{ width:96px; height:96px; flex:0 0 auto; }
   .hc-fond{ fill:var(--paper,#fff); stroke:var(--green-deep,#0B4A32); stroke-width:4; }
   .hc-tick{ stroke:var(--ink-soft,#5B6259); stroke-width:3; }
   .hc-tick-fin{ stroke-width:1.2; }
@@ -1319,12 +1319,12 @@
   .hc-m{ stroke:var(--ink,#20241F); stroke-width:4; stroke-linecap:round; }
   .hc-s{ stroke:var(--red,#B3231C); stroke-width:2; stroke-linecap:round; }
   .hc-centre{ fill:var(--red,#B3231C); }
-  .horloge-heure{ font-size:40px; font-weight:800; letter-spacing:1px; font-variant-numeric:tabular-nums; color:var(--green-deep,#0B4A32); line-height:1.1; }
-  .horloge-date{ font-size:14px; color:var(--ink-soft,#5B6259); margin-top:6px; }
-  .horloge-meteo{ font-size:13px; color:var(--ink-soft,#5B6259); margin-top:8px; }
+  .horloge-heure{ font-size:26px; font-weight:800; letter-spacing:1px; font-variant-numeric:tabular-nums; color:var(--green-deep,#0B4A32); line-height:1.1; }
+  .horloge-date{ font-size:12px; color:var(--ink-soft,#5B6259); margin-top:3px; }
+  .horloge-meteo{ font-size:12px; color:var(--ink-soft,#5B6259); margin-top:4px; }
   html body.mode-nuit .horloge-heure{ color:#EDEDED; }
   html body.mode-nuit .hc-num, html body.mode-nuit .hc-h, html body.mode-nuit .hc-m{ fill:#EDEDED; stroke:#EDEDED; }
-  @media (max-width:520px){ .horloge-heure{ font-size:32px; } .horloge-cadran{ width:120px; height:120px; } }
+  @media (max-width:520px){ .horloge-heure{ font-size:22px; } .horloge-cadran{ width:76px; height:76px; } .horloge-ligne{ gap:12px; } }
 </style>
 <style id="style-nuit-texte-degrade">
   html body.mode-nuit .stat-value{ background-image:linear-gradient(135deg,#8EE3B5 0%,#4CC68E 100%) !important; }
@@ -1740,6 +1740,15 @@ function dbGet(key, fallback){
   try{ const raw = localStorage.getItem(DB_PREFIX+yearScopedKey(key)); return raw ? JSON.parse(raw) : (fallback!==undefined?fallback:[]); }
   catch(e){ return fallback!==undefined?fallback:[]; }
 }
+/* Accès au stockage (audit P3-2). lireLocal / ecrireLocal / supprimerLocal : réglages propres à l'appareil,
+   jamais liés à une année ni synchronisés. lireDonneesAnnee : une collection pour une année précise
+   (historique d'un élève, calcul des rangs), sans passer par l'année active. */
+function lireLocal(cle, defaut){ try{ const r = localStorage.getItem(DB_PREFIX+cle); return r===null ? defaut : r; }catch(e){ return defaut; } }
+function ecrireLocal(cle, valeur){ try{ localStorage.setItem(DB_PREFIX+cle, valeur); return true; }catch(e){ return false; } }
+function supprimerLocal(cle){ try{ localStorage.removeItem(DB_PREFIX+cle); }catch(e){} }
+function lireDonneesAnnee(base, annee, defaut){
+  try{ const r = localStorage.getItem(DB_PREFIX+base+'__'+annee); return r ? (JSON.parse(r)||defaut) : defaut; }catch(e){ return defaut; }
+}
 let TEKOULO_DERNIER_ECHEC_STOCKAGE = 0;
 
 /* ============================ MOTEUR DE FUSION (v157 — synchronisation) ============================
@@ -1928,6 +1937,102 @@ function _dedoublonnerMetier(base, liste, suppr, signaler){
   });
   return retirer.size ? liste.filter(o=>!retirer.has(o)) : liste;
 }
+/* ---------- Fusion par champ et conflits de synchronisation (audit P1-2) ----------
+   Avant : deux modifications d'une même fiche sur deux appareils → la plus récente remplaçait toute la fiche,
+   et l'autre modification disparaissait sans avertissement.
+   Maintenant : une copie de référence (état après la dernière synchronisation réussie) permet de savoir quel
+   appareil a changé quel champ. Un seul côté a changé le champ → sa valeur est gardée. Les deux côtés l'ont
+   changé différemment → conflit : la valeur la plus récente est conservée, et le conflit est signalé à
+   l'utilisateur au démarrage suivant (journal « Conflits de synchronisation »). Sans référence, comportement d'origine. */
+function _empreinteChamp(v){
+  if(typeof v==='string' && v.length>300){ let h=5381; for(let i=0;i<v.length;i++){ h=((h*33)^v.charCodeAt(i))>>>0; } return 'H'+v.length+':'+h; }
+  return v;
+}
+function _sansTsEmpreinte(o){
+  const r = {};
+  Object.keys(o||{}).forEach(function(k){ if(k!=='_syncTs') r[k] = _empreinteChamp(o[k]); });
+  return r;
+}
+function lireBaseSync(cle){
+  try{ const t = JSON.parse(localStorage.getItem(DB_PREFIX+'__basesync') || '{}') || {}; return (t[cle] && typeof t[cle]==='object') ? t[cle] : {}; }catch(e){ return {}; }
+}
+function sauverBaseSync(cle, val){
+  if(!Array.isArray(val)) return;
+  const base = _baseCle(cle);
+  if(!_estCollectionIdentifiable(val, base)) return;
+  const map = {};
+  val.forEach(function(o){ map[_cleFiche(o, base)] = _sansTsEmpreinte(o); });
+  try{
+    const t = JSON.parse(localStorage.getItem(DB_PREFIX+'__basesync') || '{}') || {};
+    t[cle] = map;
+    localStorage.setItem(DB_PREFIX+'__basesync', JSON.stringify(t));
+  }catch(e){}
+}
+function _fusionnerChamps(base, recCle, l, d, dGagne, baseMap, opts){
+  const plusRecent = dGagne ? d : l;
+  const ref = (baseMap && baseMap[recCle]) ? baseMap[recCle] : null;
+  const imbriques = IMBRIQUES_PAR_COLLECTION[base] || [];
+  const res = Object.assign({}, plusRecent);
+  const champs = new Set(Object.keys(l).concat(Object.keys(d)));
+  champs.delete('_syncTs');
+  champs.forEach(function(f){
+    const vl = l[f], vd = d[f];
+    const el = _empreinteChamp(vl), ed = _empreinteChamp(vd);
+    if(_canon(el)===_canon(ed)){ res[f] = (vl!==undefined ? vl : vd); return; }
+    if(imbriques.includes(f) || !ref){ res[f] = plusRecent[f]; return; } // listes imbriquées : fusionnées ensuite ; sans référence : comportement d'origine
+    const eb = ref[f];
+    const lChange = _canon(el)!==_canon(eb), dChange = _canon(ed)!==_canon(eb);
+    if(lChange && !dChange) res[f] = vl;
+    else if(dChange && !lChange) res[f] = vd;
+    else {
+      res[f] = plusRecent[f];
+      if(opts && opts.signalerConflit) opts.signalerConflit({base:base, recCle:recCle, champ:f, valeurLocale:vl, valeurDistante:vd, valeurRetenue: (plusRecent===l ? 'locale' : 'distante')});
+    }
+  });
+  res._syncTs = Math.max(_tsFiche(l), _tsFiche(d));
+  return res;
+}
+let _conflitToastAt = 0;
+function _signalerConflit(c){
+  const aff = v => (typeof v==='string' && v.length>120) ? '[donnée longue]' : (v===undefined ? null : v);
+  try{
+    const liste = JSON.parse(localStorage.getItem(DB_PREFIX+'__conflitssync') || '[]') || [];
+    const doublon = liste.some(x => x.base===c.base && x.recCle===c.recCle && x.champ===c.champ && _canon(x.valeurLocale)===_canon(aff(c.valeurLocale)) && _canon(x.valeurDistante)===_canon(aff(c.valeurDistante)));
+    if(!doublon){
+      liste.unshift({ date:new Date().toISOString(), base:c.base, recCle:c.recCle, champ:c.champ,
+        valeurLocale:aff(c.valeurLocale), valeurDistante:aff(c.valeurDistante), valeurRetenue:c.valeurRetenue });
+      localStorage.setItem(DB_PREFIX+'__conflitssync', JSON.stringify(liste.slice(0,200)));
+    }
+  }catch(e){}
+  if(Date.now()-_conflitToastAt > 8000 && typeof toast==='function'){
+    _conflitToastAt = Date.now();
+    toast('⚠ Conflit de synchronisation : un champ a été modifié différemment sur deux appareils. Le détail sera présenté au prochain démarrage.', true);
+  }
+}
+function afficherConflitsSync(){
+  let liste = [];
+  try{ liste = JSON.parse(localStorage.getItem(DB_PREFIX+'__conflitssync') || '[]') || []; }catch(e){}
+  if(!liste.length || document.getElementById('conflits-sync-overlay')) return;
+  const fmt = v => (v===undefined||v===null) ? '—' : (typeof v==='object' ? JSON.stringify(v) : String(v));
+  const lignes = liste.slice(0,30).map(function(c){
+    const retenue = c.valeurRetenue==='locale' ? 'celle de cet appareil' : 'celle de l’autre appareil';
+    return '<li><b>'+esc(c.base)+'</b> — champ « '+esc(c.champ)+' » : cet appareil « '+esc(fmt(c.valeurLocale).slice(0,80))+' » ; autre appareil « '+esc(fmt(c.valeurDistante).slice(0,80))+' » ; conservée : '+retenue+'.</li>';
+  }).join('');
+  const o = document.createElement('div');
+  o.id = 'conflits-sync-overlay';
+  o.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,15,.75);z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px;';
+  o.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
+    + '<h3 style="margin:0 0 8px;font-size:17px;">⚠ Conflits de synchronisation</h3>'
+    + '<p style="font-size:13px;line-height:1.5;margin:0 0 10px;">Un même champ a été modifié différemment sur deux appareils. La valeur la plus récente a été conservée. Vérifiez ces fiches et corrigez-les si besoin.</p>'
+    + '<ul style="font-size:12.5px;line-height:1.5;padding-left:18px;">' + lignes + '</ul>'
+    + (liste.length>30 ? '<p style="font-size:12px;color:#666;">… et '+(liste.length-30)+' autre(s).</p>' : '')
+    + '<button type="button" class="btn wide" onclick="fermerConflitsSync()" style="margin-top:12px;">J’ai pris connaissance</button></div>';
+  document.body.appendChild(o);
+}
+function fermerConflitsSync(){
+  try{ localStorage.removeItem(DB_PREFIX+'__conflitssync'); }catch(e){}
+  const o = document.getElementById('conflits-sync-overlay'); if(o) o.remove();
+}
 function fusionnerEtat(cle, a, b, opts){
   opts = opts || {};
   const base = _baseCle(cle);
@@ -1957,6 +2062,7 @@ function fusionnerEtat(cle, a, b, opts){
   if(mode==='A'){
     const la = Array.isArray(a.val) ? a.val : [], lb = Array.isArray(b.val) ? b.val : [];
     const carte = arr => { const m = new Map(); arr.forEach(o=>{ const k=_cleFiche(o, base); const ex=m.get(k); if(!ex || _plusRecent(ex, o, _tsFiche(ex), _tsFiche(o))) m.set(k,o); }); return m; };
+    const baseMap = lireBaseSync(cle);
     const ma = carte(la), mb = carte(lb);
     const sortie = [];
     const traiter = (k, rec) => {
@@ -1969,7 +2075,10 @@ function fusionnerEtat(cle, a, b, opts){
       const d = mb.get(k);
       if(!d){ traiter(k, l); return; }
       const dGagne = _plusRecent(l, d, _tsFiche(l), _tsFiche(d));
-      let choisi = dGagne ? d : l;
+      // Fiche modifiée des deux côtés : fusion champ par champ (audit P1-2) au lieu de remplacer toute la fiche.
+      let choisi = (_canon(_sansTsEmpreinte(l))===_canon(_sansTsEmpreinte(d)))
+        ? (dGagne ? d : l)
+        : _fusionnerChamps(base, k, l, d, dGagne, baseMap, opts);
       choisi = _fusionnerImbriques(base, k, choisi, dGagne ? l : d, suppr);
       traiter(k, choisi);
     });
@@ -2047,7 +2156,7 @@ function dbSet(key, value){
    - une synchronisation périodique récupère ce que d'autres appareils ont écrit et met à jour le local.
    Tant que TEKOULO_API_URL n'est pas configuré (ou que le serveur est injoignable), l'application
    continue de fonctionner en 100% local comme avant — aucune fonctionnalité n'est cassée. */
-const TEKOULO_API_URL = 'https://summer-sky-9498.yombounoalbert69.workers.dev'; // Ancien serveur Render remplacé par un Cloudflare Worker (assistant IA uniquement ; le stockage des données reste sur Google Drive, voir bloc SYNCHRONISATION GOOGLE DRIVE ci-dessous)
+const TEKOULO_API_URL = 'https://tekoulo-assistant.komahkbaro.workers.dev'; // Ancien serveur Render remplacé par un Cloudflare Worker (assistant IA uniquement ; le stockage des données reste sur Google Drive, voir bloc SYNCHRONISATION GOOGLE DRIVE ci-dessous)
 let TEKOULO_TOKEN = sessionStorage.getItem('tekoulo_token') || null;
 
 /* ==================== SYNCHRONISATION GOOGLE DRIVE ====================
@@ -2535,7 +2644,7 @@ async function _synchroniserCleCore(cle, opts){
     /* Bloc SYNCHRONE (aucune attente réseau) : relit le local au dernier moment, fusionne et écrit. Une saisie
        faite pendant le téléchargement est donc toujours prise en compte, jamais écrasée. */
     const local = lireEtatLocal(cle);
-    const m = fusionnerEtat(cle, local, distant, { prefereX: enAttente ? 'a' : 'b', signaler:_signalerDoublon });
+    const m = fusionnerEtat(cle, local, distant, { prefereX: enAttente ? 'a' : 'b', signaler:_signalerDoublon, signalerConflit:_signalerConflit });
     let changed = false;
     if(m.val!==undefined && signatureEtat(cle, local.val)!==signatureEtat(cle, m.val)){
       try{ localStorage.setItem(DB_PREFIX+cle, JSON.stringify(m.val)); changed = true; }
@@ -2567,6 +2676,7 @@ async function _synchroniserCleCore(cle, opts){
         }
       }
     }
+    sauverBaseSync(cle, m.val); // nouvelle référence commune : l'état que les deux appareils partagent désormais
     if(modifiedTime) _vu[cle] = modifiedTime;
     if((_versionPush[cle]||0)===versionAvant) retirerEnAttente(cle);
     return {ok:true, changed, envoye:besoinEnvoi};
@@ -3835,6 +3945,12 @@ function qrSecurityBlock(docType, refCode, personName, extraLine, size){
 
 
 /* Ouvre la fenêtre d'impression ; si le navigateur la bloque, prévient l'utilisateur au lieu d'échouer en silence. */
+/* Écrit un document HTML dans une fenêtre d'impression puis la referme. Remplace les couples
+   document.write / document.close recopiés dans les fonctions d'impression (audit P3-1). */
+function tekouloEcrireDocument(fenetre, html){
+  fenetre.document.write(html);
+  fenetre.document.close();
+}
 function tekouloOuvrirFenetre(){
   let w = null;
   try{ w = window.open('', '_blank'); }catch(e){ w = null; }
@@ -3988,7 +4104,8 @@ function tekouloVerifierMdp(mdp, stocke){
   if(stocke.startsWith('h1$')){ const p = stocke.split('$'); return p.length===3 && tekouloHashMdp(mdp, p[1])===stocke; }
   return mdp===stocke; // ancien format (clair) : accepté une dernière fois, converti à la connexion
 }
-const MDP_ADMIN_PAR_DEFAUT = 'tekoulo2026';
+// Aucun mot de passe par défaut dans le code (audit P0-1) : le premier démarrage impose d'en créer un.
+const MDP_ADMIN_PAR_DEFAUT = null;
 const MDP_MIN_LONGUEUR = 8; // politique de mot de passe renforcée (audit 2.8) — était 6 caractères
 function mdpAdminParDefaut(){ return !localStorage.getItem(DB_PREFIX+'password'); }
 function verifierMdpAdmin(pass){
@@ -4140,6 +4257,15 @@ function validerChangementMdpDefaut(){
   document.getElementById('mdp-defaut-overlay').remove();
   toast('Mot de passe enregistré. Utilisez-le à votre prochaine connexion.');
 }
+/* Création du mot de passe administrateur au premier démarrage sur un appareil (remplace le mot de passe par défaut). */
+function demanderCreationMdpAdmin(){
+  demanderChangementMdpDefaut();
+  const o = document.getElementById('mdp-defaut-overlay');
+  if(!o) return;
+  const h = o.querySelector('h3'); if(h) h.textContent = '🔒 Créez le mot de passe administrateur';
+  const p = o.querySelector('p');
+  if(p) p.textContent = 'Premier démarrage sur cet appareil. Choisissez le mot de passe administrateur (8 caractères minimum). Il est propre à cet appareil : sur un autre ordinateur ou téléphone, il faudra le créer à nouveau. Conservez-le en lieu sûr.';
+}
 /* Limitation des tentatives de connexion : 5 échecs = attente, avec délai qui double à chaque nouveau
    palier (audit 1.7/2.7). Stocké dans localStorage (partagé entre tous les onglets de cet appareil et
    persistant au-delà d'une session) plutôt que sessionStorage, pour ne plus être contournable en ouvrant
@@ -4209,6 +4335,7 @@ async function doLoginCore(){
     sessionStorage.setItem('tekoulo_session','1');
     ouvrirEspaceApresConnexion();
     recupererTokenAssistant(userField, pass);
+    setTimeout(afficherConflitsSync, 2500); // conflits de synchronisation à présenter après connexion (audit P1-2)
     return;
   }
 
@@ -4219,6 +4346,7 @@ async function doLoginCore(){
     sessionStorage.setItem('tekoulo_session','1');
     ouvrirEspaceApresConnexion();
     recupererTokenAssistant(userField, pass);
+    setTimeout(afficherConflitsSync, 2500); // conflits de synchronisation à présenter après connexion (audit P1-2)
     if(mdpAdminParDefaut()) demanderChangementMdpDefaut();
   } else {
     loginNoterEchec();
@@ -4231,26 +4359,26 @@ async function doLoginCore(){
    l'assistant indisponible pour cette session — cela n'affecte jamais les modules visibles
    ni le rôle, qui restent décidés uniquement par doLoginCore ci-dessus. */
 async function recupererTokenAssistant(identifiant, pass){
-  if(!TEKOULO_API_URL) return;
-  const ctrl = new AbortController();
-  const tm = setTimeout(()=>ctrl.abort(), 15000);
-  try{
-    const res = await fetch(TEKOULO_API_URL+'/api/auth/login', {
-      signal: ctrl.signal, method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ nom_utilisateur: (identifiant||'direction').toLowerCase(), mot_de_passe: pass })
-    });
-    clearTimeout(tm);
-    if(res.ok){
-      const data = await res.json();
-      if(data && data.token){
-        TEKOULO_TOKEN = data.token;
-        sessionStorage.setItem('tekoulo_token', data.token);
-      }
-    }
-  }catch(e){
-    clearTimeout(tm);
-    // Pas grave : l'assistant IA restera simplement indisponible pour cette session.
+  // Audit P0-2 : le mot de passe administrateur n'est plus envoyé au serveur de l'assistant.
+  // L'assistant utilise le jeton propre à l'école, saisi une fois par l'administrateur sur cet appareil.
+  // Ce jeton est révocable (il suffit de le changer sur le serveur). Les clés d'IA restent côté serveur.
+  let jeton = null;
+  try{ jeton = localStorage.getItem(DB_PREFIX+'assistant_jeton'); }catch(e){}
+  try{ sessionStorage.removeItem('tekoulo_token'); }catch(e){}
+  if(jeton){ TEKOULO_TOKEN = jeton; try{ sessionStorage.setItem('tekoulo_token', jeton); }catch(e){} return; }
+  TEKOULO_TOKEN = null;
+  if(sessionStorage.getItem('tekoulo_role') === 'fondateur'){
+    setTimeout(assistantDemanderJeton, 2500);
   }
+}
+function assistantDemanderJeton(){
+  if(TEKOULO_TOKEN) return;
+  const saisi = prompt("Jeton de l'assistant IA Tekoulo (fourni par le responsable informatique). Laissez vide pour ne pas l'activer maintenant :");
+  if(!saisi || !saisi.trim()) return;
+  try{ localStorage.setItem(DB_PREFIX+'assistant_jeton', saisi.trim()); }catch(e){}
+  TEKOULO_TOKEN = saisi.trim();
+  try{ sessionStorage.setItem('tekoulo_token', TEKOULO_TOKEN); }catch(e){}
+  toast('Assistant IA activé sur cet appareil.');
 }
 /* ---------- Choix de l'espace (cycle) PUIS connexion propre à ce cycle ---------- */
 let CYCLE_CONNEXION = null;
@@ -4378,7 +4506,7 @@ const IA_FOURNISSEURS = {
   tekoulo:    {nom:'Assistant Tekoulo', mode:'serveur'},
   anthropic:  {nom:'Claude (Anthropic)', mode:'api', modele:'claude-sonnet-5-5', lienCle:'https://console.anthropic.com/settings/keys'},
   openai:     {nom:'ChatGPT (OpenAI)', mode:'api', modele:'gpt-4o-mini', lienCle:'https://platform.openai.com/api-keys'},
-  gemini:     {nom:'Gemini (Google)', mode:'api', modele:'gemini-2.5-flash', lienCle:'https://aistudio.google.com/apikey'},
+  gemini:     {nom:'Gemini (Google)', mode:'api', modele:'gemini-3.8-flash', lienCle:'https://aistudio.google.com/apikey'},
   mistral:    {nom:'Mistral (Le Chat)', mode:'api', modele:'mistral-large-latest', lienCle:'https://console.mistral.ai/api-keys'},
   deepseek:   {nom:'DeepSeek', mode:'api', modele:'deepseek-chat', lienCle:'https://platform.deepseek.com/api_keys'},
   perplexity: {nom:'Perplexity (recherche)', mode:'web', site:'https://www.perplexity.ai/'},
@@ -4395,24 +4523,9 @@ const IA_TACHES = {
   maths:     {label:'Mathématiques et calculs', ia:'openai'},
   document:  {label:'Analyse de document ou image', ia:'gemini'}
 };
-const IA_URLS = {
-  openai:   'https://api.openai.com/v1/chat/completions',
-  mistral:  'https://api.mistral.ai/v1/chat/completions',
-  deepseek: 'https://api.deepseek.com/chat/completions'
-};
-const IA_SYSTEME = "Tu es l'assistant pédagogique et administratif du Collège Tekoulo Centre (Guéckédou, Guinée). Réponds de façon claire, structurée et adaptée à des enseignants. Pour les mathématiques et les calculs, présente les étapes.";
 
-/* ---- Clés personnelles : stockées uniquement sur cet appareil (jamais envoyées à Tekoulo ni à Drive) ---- */
-function iaCles(){ try{ return JSON.parse(localStorage.getItem(DB_PREFIX+'ia_cles') || '{}') || {}; }catch(e){ return {}; } }
-function iaSauverCles(c){ try{ localStorage.setItem(DB_PREFIX+'ia_cles', JSON.stringify(c)); }catch(e){} }
-function iaCleEnregistree(f){ const c = iaCles()[f]; return !!(c && c.cle); }
-function iaModele(f){ const c = iaCles()[f] || {}; return c.modele || IA_FOURNISSEURS[f].modele; }
-function iaPeutAppeler(f){
-  const cfg = IA_FOURNISSEURS[f];
-  if(!cfg) return false;
-  if(cfg.mode === 'web') return true;
-  return cfg.mode === 'api' && iaCleEnregistree(f);
-}
+/* ---- Clés d'IA : aucune clé n'est plus stockée dans l'application. Les IA « api » passent par le serveur relais Tekoulo. ---- */
+try{ localStorage.removeItem(DB_PREFIX+'ia_cles'); }catch(e){}
 function assistantFournisseurChoisi(){ const s = document.getElementById('assistant-ia'); return s ? s.value : 'tekoulo'; }
 
 function iaMettreAJourStatut(){
@@ -4424,8 +4537,7 @@ function iaMettreAJourStatut(){
   let t;
   if(f === 'tekoulo') t = "Assistant Tekoulo : réponses dans l'application, sans clé personnelle.";
   else if(cfg.mode === 'web') t = cfg.nom + " n'est pas branché à l'application : votre demande sera copiée, puis collez-la sur " + cfg.site + ".";
-  else if(iaCleEnregistree(f)) t = '✅ ' + cfg.nom + ' répondra directement (clé enregistrée sur cet appareil).';
-  else t = "⚠ Pas de clé pour " + cfg.nom + " : l'assistant Tekoulo répondra. Ajoutez la clé dans Paramètres › Clés des IA.";
+  else t = '✅ ' + cfg.nom + ' répondra via le serveur sécurisé de Tekoulo (aucune clé sur cet appareil).';
   z.textContent = t;
 }
 function assistantChoisirIA(){
@@ -4451,61 +4563,10 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
 else initChoixIA();
 
 /* ---- Appel direct des IA choisies (même question, même pièce jointe, même historique) ---- */
-function iaPieceMedia(piece){
-  return {mime: piece.mediaType, data: piece.base64, pdf: piece.mediaType === 'application/pdf', image: /^image\//.test(piece.mediaType)};
-}
 function iaHistoriqueSansDoublon(historique, message){
   const h = (historique || []).slice();
   if(h.length && h[h.length-1].role === 'user' && h[h.length-1].texte === message) h.pop();
   return h.slice(-12).map(x=>({role: x.role === 'assistant' ? 'assistant' : 'user', texte: x.texte}));
-}
-async function iaAnthropic(cle, modele, message, piece, hist){
-  const msgs = hist.map(h=>({role: h.role, content: h.texte}));
-  const contenu = [];
-  if(piece){
-    const p = iaPieceMedia(piece);
-    if(p.pdf) contenu.push({type:'document', source:{type:'base64', media_type:'application/pdf', data:p.data}});
-    else contenu.push({type:'image', source:{type:'base64', media_type:p.mime, data:p.data}});
-  }
-  contenu.push({type:'text', text: message});
-  msgs.push({role:'user', content: contenu});
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method:'POST',
-    headers:{'content-type':'application/json','x-api-key':cle,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body: JSON.stringify({model: modele, max_tokens: 4096, system: IA_SYSTEME, messages: msgs})
-  });
-  const data = await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error((data.error && data.error.message) || ('erreur ' + res.status));
-  return (data.content || []).filter(b=>b.type === 'text').map(b=>b.text).join('\n');
-}
-async function iaGemini(cle, modele, message, piece, hist){
-  const contents = hist.map(h=>({role: h.role === 'assistant' ? 'model' : 'user', parts:[{text: h.texte}]}));
-  const parts = [{text: message}];
-  if(piece){ const p = iaPieceMedia(piece); parts.unshift({inline_data:{mime_type: p.mime, data: p.data}}); }
-  contents.push({role:'user', parts: parts});
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modele) + ':generateContent?key=' + encodeURIComponent(cle);
-  const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({systemInstruction:{parts:[{text: IA_SYSTEME}]}, contents: contents})});
-  const data = await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error((data.error && data.error.message) || ('erreur ' + res.status));
-  const cand = data.candidates && data.candidates[0];
-  return cand && cand.content ? cand.content.parts.map(p=>p.text || '').join('') : '';
-}
-async function iaCompatible(f, cle, modele, message, piece, hist){
-  if(piece){
-    const p = iaPieceMedia(piece);
-    if(p.pdf) throw new Error('ce fournisseur ne lit pas les PDF : choisissez Claude ou Gemini.');
-    if(f !== 'openai') throw new Error('ce fournisseur ne lit pas les images : choisissez Claude, ChatGPT ou Gemini.');
-  }
-  const msgs = [{role:'system', content: IA_SYSTEME}].concat(hist.map(h=>({role: h.role, content: h.texte})));
-  let contenu = message;
-  if(piece) contenu = [{type:'text', text: message}, {type:'image_url', image_url:{url:'data:' + piece.mediaType + ';base64,' + piece.base64}}];
-  msgs.push({role:'user', content: contenu});
-  const res = await fetch(IA_URLS[f], {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer ' + cle},
-    body: JSON.stringify({model: modele, messages: msgs})});
-  const data = await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error((data.error && data.error.message) || ('erreur ' + res.status));
-  return data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '';
 }
 async function assistantAppelFournisseur(f, message, piece, historique){
   const cfg = IA_FOURNISSEURS[f];
@@ -4513,64 +4574,7 @@ async function assistantAppelFournisseur(f, message, piece, historique){
     try{ await navigator.clipboard.writeText(message); }catch(e){}
     return {ok:true, reponse: '🌐 ' + cfg.nom + " n'est pas branché directement à l'application. Votre demande a été copiée : ouvrez " + cfg.site + ', collez-la (Ctrl+V), puis copiez ici la réponse si vous voulez la garder.'};
   }
-  const cle = (iaCles()[f] || {}).cle;
-  const modele = iaModele(f);
-  const hist = iaHistoriqueSansDoublon(historique, message);
-  try{
-    let texte;
-    if(f === 'anthropic') texte = await iaAnthropic(cle, modele, message, piece, hist);
-    else if(f === 'gemini') texte = await iaGemini(cle, modele, message, piece, hist);
-    else texte = await iaCompatible(f, cle, modele, message, piece, hist);
-    return {ok:true, reponse: texte || '(réponse vide)'};
-  }catch(e){
-    return {ok:false, error: cfg.nom + ' : ' + (e && e.message ? e.message : e)};
-  }
-}
-
-/* ---- Paramètres : saisie des clés ---- */
-function htmlSectionClesIA(){
-  const cles = iaCles();
-  const lignes = Object.keys(IA_FOURNISSEURS).filter(f=>IA_FOURNISSEURS[f].mode === 'api').map(f=>{
-    const cfg = IA_FOURNISSEURS[f];
-    const enr = iaCleEnregistree(f);
-    return '<div class="cp-ligne"><div class="cp-titre">' + cfg.nom + '</div>' +
-      '<div class="ia-cle-ligne">' +
-      '<input type="password" id="ia-cle-' + f + '" placeholder="' + (enr ? '•••••• clé enregistrée' : 'Coller la clé API ici') + '" autocomplete="off" spellcheck="false">' +
-      '<input type="text" id="ia-modele-' + f + '" value="' + esc((cles[f] || {}).modele || '') + '" placeholder="Modèle conseillé : ' + cfg.modele + '">' +
-      '<button type="button" class="btn sm" onclick="enregistrerCleIA(\'' + f + '\')">Enregistrer</button>' +
-      '<button type="button" class="btn ghost sm" onclick="effacerCleIA(\'' + f + '\')">Effacer</button>' +
-      '</div>' +
-      '<div class="ia-cle-aide"><span id="ia-statut-' + f + '">' + (enr ? '✅ Clé enregistrée' : 'Aucune clé') + '</span> · <a href="' + cfg.lienCle + '" target="_blank" rel="noopener">Obtenir une clé</a></div></div>';
-  }).join('');
-  return '<div class="card pad cp-carte"><h3>🔑 Clés des IA (facultatif)</h3>' +
-    '<p class="cp-aide">Avec une clé, Claude, ChatGPT, Gemini, Mistral ou DeepSeek répondent directement dans l\'assistant. La clé reste sur cet appareil : elle n\'est ni envoyée à Tekoulo ni synchronisée sur Google Drive. Le modèle est facultatif.</p>' +
-    lignes + '</div>';
-}
-function enregistrerCleIA(f){
-  const k = (document.getElementById('ia-cle-' + f) || {}).value || '';
-  const m = (document.getElementById('ia-modele-' + f) || {}).value || '';
-  const cles = iaCles();
-  const cle = k.trim() || (cles[f] || {}).cle || '';
-  if(!cle){ toast("Collez d'abord la clé API."); return; }
-  cles[f] = {cle: cle, modele: m.trim()};
-  iaSauverCles(cles);
-  const st = document.getElementById('ia-statut-' + f);
-  if(st) st.textContent = '✅ Clé enregistrée';
-  const inp = document.getElementById('ia-cle-' + f);
-  if(inp){ inp.value = ''; inp.placeholder = '•••••• clé enregistrée'; }
-  iaMettreAJourStatut();
-  toast('🔑 Clé enregistrée sur cet appareil.');
-}
-function effacerCleIA(f){
-  const cles = iaCles();
-  delete cles[f];
-  iaSauverCles(cles);
-  const st = document.getElementById('ia-statut-' + f);
-  if(st) st.textContent = 'Aucune clé';
-  const inp = document.getElementById('ia-cle-' + f);
-  if(inp){ inp.value = ''; inp.placeholder = 'Coller la clé API ici'; }
-  iaMettreAJourStatut();
-  toast('Clé effacée.');
+  return {ok:false, error: cfg.nom + " n'est pas branché directement à l'application."};
 }
 
 /* ===================== COMPARAISON DE DEUX IA ===================== */
@@ -4585,7 +4589,8 @@ function assistantToggleComparaison(){
 }
 async function iaRepondreA(f, message, piece, historique, sansHistorique){
   if(f === 'tekoulo') return assistantAppelAPI(message, piece, undefined, !!sansHistorique, 'tekoulo');
-  if(!iaPeutAppeler(f)) return {ok:false, error: IA_FOURNISSEURS[f].nom + " : pas de clé enregistrée (Paramètres › Clés des IA)."};
+  // Les IA « api » (Claude, ChatGPT, Gemini, Mistral, DeepSeek) passent par le serveur relais, qui détient les clés.
+  if(IA_FOURNISSEURS[f] && IA_FOURNISSEURS[f].mode === 'api') return assistantAppelAPI(message, piece, undefined, !!sansHistorique, f);
   return assistantAppelFournisseur(f, message, piece, historique);
 }
 async function assistantEnvoyerComparaison(message, messageAffiche, pieceJointe){
@@ -4891,9 +4896,18 @@ function doLogout(){
 document.getElementById('login-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 
 /* ============================ EXPORT / IMPORT (sauvegarde manuelle, .json téléchargé) ============================ */
+/* Clés qui ne sortent jamais dans une sauvegarde (audit P1-4 / P0-2) : clés d'IA et jeton de l'assistant.
+   Elles restent sur l'appareil ; après une restauration sur un autre appareil, il faut les saisir à nouveau. */
+const CLES_HORS_SAUVEGARDE = ['ia_cles','assistant_jeton'];
 function collectAllDataSnapshot(){
   const all = {};
-  Object.keys(localStorage).forEach(k=>{ if(k.startsWith(DB_PREFIX)) all[k]=localStorage.getItem(k); });
+  Object.keys(localStorage).forEach(k=>{
+    if(!k.startsWith(DB_PREFIX)) return;
+    if(CLES_HORS_SAUVEGARDE.includes(k.slice(DB_PREFIX.length))) return;
+    all[k]=localStorage.getItem(k);
+  });
+  // Identité de l'établissement : permet de reconnaître une sauvegarde d'une autre école à la restauration.
+  try{ all['__tekoulo_meta'] = JSON.stringify({ecole: String((getParams().nomEcole)||''), date: new Date().toISOString()}); }catch(e){}
   return all;
 }
 function exportAllData(){
@@ -4905,8 +4919,11 @@ function exportAllData(){
   localStorage.setItem(DB_PREFIX+'__lastBackupAt', new Date().toISOString());
   toast('Sauvegarde téléchargée.');
 }
+/* Restaure les données de cette application ; renvoie le nombre d'éléments écrits (audit P1 — sauvegarde). */
 function restoreSnapshotIntoStorage(data){
-  Object.keys(data).forEach(k=>{ if(k.startsWith(DB_PREFIX)) localStorage.setItem(k, data[k]); });
+  let nb = 0;
+  Object.keys(data).forEach(k=>{ if(k.startsWith(DB_PREFIX) && typeof data[k]==='string'){ localStorage.setItem(k, data[k]); nb++; } });
+  return nb;
 }
 function importAllData(evt){
   const file = evt.target.files[0]; if(!file) return;
@@ -4914,6 +4931,15 @@ function importAllData(evt){
   reader.onload = e=>{
     try{
       const data = JSON.parse(e.target.result);
+      if(!data || typeof data!=='object' || Array.isArray(data)) throw new Error('format');
+      const nbCles = Object.keys(data).filter(k=>k.startsWith(DB_PREFIX)).length;
+      if(!nbCles){ toast('Ce fichier ne contient pas les données de cette application : restauration annulée.', true); return; }
+      let ecoleSauvegarde = '', dateSauvegarde = '';
+      try{ const m = JSON.parse(data['__tekoulo_meta'] || 'null'); if(m){ ecoleSauvegarde = m.ecole || ''; dateSauvegarde = m.date || ''; } }catch(e){}
+      const ecoleActuelle = String((getParams().nomEcole)||'');
+      const autre = ecoleSauvegarde && ecoleActuelle && ecoleSauvegarde !== ecoleActuelle;
+      const avertissement = autre ? 'Cette sauvegarde provient de « '+ecoleSauvegarde+' », alors que cet appareil est configuré pour « '+ecoleActuelle+' ». ' : '';
+      if(!confirm(avertissement + 'Restaurer cette sauvegarde remplace TOUTES les données actuelles de cet appareil ('+nbCles+' éléments'+(dateSauvegarde?', sauvegarde du '+dateSauvegarde.slice(0,10):'')+'). Continuer ?')){ toast('Restauration annulée.'); return; }
       restoreSnapshotIntoStorage(data);
       toast('Données restaurées. Rechargement…');
       setTimeout(()=>location.reload(), 900);
@@ -5847,7 +5873,7 @@ function renderGuide(container){
           </ul>
         </li>
         <li><b>Compte personnel :</b> chaque personne se connecte avec l'identifiant et le mot de passe du compte créé pour elle dans Paramètres (chapitre 10.7). Un compte peut être limité à un seul espace ; s'il est utilisé dans un autre espace, l'application affiche « Ce compte n'est pas autorisé pour l'espace … ».</li>
-        <li><b>Mot de passe administrateur :</b> si le champ identifiant est laissé vide, le mot de passe administrateur (par défaut <b>tekoulo2026</b>) donne un accès complet à l'espace choisi.</li>
+        <li><b>Mot de passe administrateur :</b> si le champ identifiant est laissé vide, le mot de passe administrateur (créé lors du premier démarrage sur cet appareil) donne un accès complet à l'espace choisi.</li>
         <li>Cliquez sur « Entrer dans la base de données » (ou appuyez sur Entrée). En cas d'erreur, un message s'affiche : vérifiez la saisie et réessayez.</li>
         <li>Le bouton « ← Changer d'espace » ramène à l'écran de choix des espaces.</li>
       </ul>
@@ -6110,7 +6136,7 @@ function renderGuide(container){
         <li>Saisissez le nouveau mot de passe (<b>8 caractères minimum</b>), puis confirmez-le.</li>
         <li>Cliquez sur « Changer le mot de passe ».</li>
       </ol>
-      <div class="guide-callout attention"><b class="gc-label">⚠️ Changement obligatoire à la première connexion</b>Tant que le mot de passe administrateur par défaut est conservé, une fenêtre « Choisissez votre mot de passe » s'affiche après la connexion du Fondateur ou du Chef d'établissement, et l'application ne peut pas être utilisée avant d'en avoir choisi un nouveau (8 caractères minimum, différent de celui par défaut). Ce mot de passe est propre à l'appareil : sur un nouvel ordinateur ou une nouvelle école, il faut le définir de nouveau.</div>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Création obligatoire au premier démarrage</b>Sur chaque appareil, la première ouverture de l'application demande de créer le mot de passe administrateur (8 caractères minimum) ; aucun mot de passe par défaut n'existe, et l'application ne peut pas être utilisée avant cette création. Ce mot de passe est propre à l'appareil : sur un nouvel ordinateur ou une nouvelle école, il faut le définir de nouveau.</div>
       <ul>
         <li><b>Comptes personnels</b> (chapitre 10.7) : le mot de passe doit contenir au moins 4 caractères.</li>
         <li><b>Module technique</b> : il dispose de son propre mot de passe (6 caractères minimum), modifiable dans la section dédiée ; le mot de passe administrateur l'ouvre aussi.</li>
@@ -6814,7 +6840,7 @@ function techniqueContenuHTML(){
         <p style="margin:0 0 6px; font-weight:700;">🔑 Mot de passe oublié</p>
         <ol style="font-size:12.5px; padding-left:18px; margin:0; line-height:1.6;">
           <li>Pour un compte personnel : demander au Fondateur ou au Chef d'établissement de le recréer (Paramètres → Comptes de connexion par rôle).</li>
-          <li>Pour le mot de passe administrateur : seule une réinitialisation complète permet de revenir au mot de passe par défaut — à utiliser en tout dernier recours, après sauvegarde, car elle efface les données non synchronisées.</li>
+          <li>Pour le mot de passe administrateur : seule une réinitialisation complète permet de recommencer la création du mot de passe administrateur — à utiliser en tout dernier recours, après sauvegarde, car elle efface les données non synchronisées.</li>
         </ol>
       </div>
 
@@ -6963,7 +6989,6 @@ function renderParametres(container){
   if(!fondateurConnecte && PARAM_TABS_RESERVES_FONDATEUR.includes(lastTab)) lastTab = 'securite';
   container.innerHTML = `
     ${htmlSectionCouleurs()}
-    ${htmlSectionClesIA()}
     <div class="hint-box">Ces réglages personnalisent automatiquement les en-têtes des documents imprimés (bulletins, fiches individuelles, listes complètes, statistiques) ainsi que la sécurité d'accès. Ils sont enregistrés localement et pourront être ajustés à tout moment selon les besoins de l'établissement.<br><br>⚙️ <b>Type d'établissement</b> : si vous choisissez <b>Privé</b>, les modules « APEAE (cotisations) » et « Bureau de l'APEAE » sont automatiquement désactivés et remplacés, au tableau de bord et dans le menu, par le module « Gestion des frais de scolarité ». Si vous choisissez <b>Public</b>, c'est l'inverse : le module « Gestion des frais de scolarité » est désactivé et les modules APEAE restent actifs.</div>
 
     <div class="params-tabs no-print">
@@ -7088,6 +7113,14 @@ function renderParametres(container){
     </div>
 
     <div class="params-panel" id="panel-securite">
+      ${estFondateurActuel() ? `
+      <div class="section-title"><h3><span class="bar"></span>Mot de passe des modules protégés</h3></div>
+      <div class="hint-box">Protège l'ouverture des modules sensibles (Paramètres, Guide, Personnel, Discipline, Salaires, Frais de scolarité, Dépenses, Dons…). Il est demandé une fois par session sur cet appareil. Ce n'est pas une protection des données contre une personne qui a accès à l'appareil.</div>
+      <div class="form-grid">
+        <div class="field"><label>Nouveau mot de passe des modules</label><input id="mdpm-1" type="password" autocomplete="new-password"></div>
+        <div class="field"><label>Confirmer</label><input id="mdpm-2" type="password" autocomplete="new-password"></div>
+      </div>
+      <div class="form-actions"><button type="button" class="btn" onclick="paramChangerMdpModules()">Enregistrer le mot de passe des modules</button></div>` : ''}
       <div class="section-title"><h3><span class="bar"></span>Synchronisation — Google Drive</h3></div>
       <div class="hint-box">
         Les données de l'école (élèves, notes, frais, personnel…) se synchronisent via un dossier Google Drive partagé. Connectez-vous avec un compte Google autorisé par le Fondateur.
@@ -8612,7 +8645,7 @@ function salaireBulletinDocumentHTML(rec){
   return `<html><head><title>Bulletin de salaire — ${esc(rec.personnelNom)}</title>
     <style>
       @page{ margin: 16mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative; font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; color:#20241F; padding:10px 6px 0; background:#fff;}
       .receipt{max-width:640px; margin:18px auto 0; border:2px solid ${col.deep}; border-radius:12px; overflow:hidden; position:relative; z-index:1; background:#fff;}
       .rc-head{background:linear-gradient(135deg,${col.deep} 0%,${col.mid} 100%); color:#fff; padding:16px 22px;}
@@ -8667,8 +8700,7 @@ function salaireBulletinImprimer(id){
   const rec = salairesListe().find(s=>s.__id===id) || dbGet('salaires', []).find(s=>s.__id===id);
   if(!rec){ toast('Fiche introuvable.', true); return; }
   const w = tekouloOuvrirFenetre(); if(!w) return;
-  w.document.write(salaireBulletinDocumentHTML(rec));
-  w.document.close();
+  tekouloEcrireDocument(w, salaireBulletinDocumentHTML(rec));
 }
 /* ============================ ENVOI DU BULLETIN DE SALAIRE PAR E-MAIL — AUTOMATIQUE COMPLET ============================
    Si l'établissement est connecté à Google Drive (et a autorisé, en plus de Drive, l'envoi d'e-mails —
@@ -10151,10 +10183,73 @@ function fermerFormulaireModal(){
   if(bd) bd.classList.remove('open');
   document.body.classList.remove('tk-modal-noscroll');
 }
+/* ===== Verrou des modules sensibles (demande du Fondateur) =====
+   Ces modules ne s'ouvrent qu'après saisie du mot de passe des modules, défini par le Fondateur dans
+   Paramètres › Sécurité & comptes. Le verrou est vérifié dans le navigateur : il empêche l'ouverture
+   normale de l'application, mais ne protège pas les données contre une personne qui a accès à l'appareil
+   (voir audit P1-1 et P1-4). Liste modifiable ici. */
+const MODULES_VERROUILLES = ['parametres','guide','personnel','dossierspers','discipline','comitediscipline','salaires','pretsscolaires','cotisationssociales','fraisscolarite','depenses','dons'];
+function verrouModulesDefini(){ try{ return !!localStorage.getItem(DB_PREFIX+'verrou_modules'); }catch(e){ return false; } }
+function verrouModuleDeverrouille(){ try{ return sessionStorage.getItem('tekoulo_verrou_ok')==='1'; }catch(e){ return false; } }
+function verrouModulesVerifier(pass){
+  try{ const s = localStorage.getItem(DB_PREFIX+'verrou_modules'); return !!s && tekouloVerifierMdp(pass, s); }catch(e){ return false; }
+}
+function verrouModulesEnregistrer(pass){
+  if(!pass || pass.length < MDP_MIN_LONGUEUR) return 'Le mot de passe doit comporter au moins '+MDP_MIN_LONGUEUR+' caractères.';
+  try{ localStorage.setItem(DB_PREFIX+'verrou_modules', tekouloHashMdp(pass)); }catch(e){ return 'Impossible d’enregistrer (stockage plein ou refusé).'; }
+  return null;
+}
+function htmlVerrouModule(key){
+  const titre = (PAGE_META[key] && PAGE_META[key].title) || key;
+  const creation = !verrouModulesDefini() && estFondateurActuel();
+  let corps;
+  if(verrouModulesDefini()){
+    corps = `<p class="muted">Ce module est protégé. Saisissez le mot de passe des modules.</p>
+      <input type="password" id="verrou-mdp" placeholder="Mot de passe des modules" autocomplete="off" style="width:100%;padding:9px;box-sizing:border-box;margin-bottom:8px;">
+      <div id="verrou-err" style="color:#B3231C;font-size:12.5px;min-height:18px;margin-bottom:8px;"></div>
+      <button type="button" class="btn wide" onclick="verrouModulesOuvrir('${key}')">Ouvrir</button>`;
+  } else if(creation){
+    corps = `<p class="muted">Premier accès : créez le mot de passe des modules protégés (8 caractères minimum). Il sera demandé pour ouvrir ces modules sur cet appareil.</p>
+      <input type="password" id="verrou-mdp" placeholder="Nouveau mot de passe" autocomplete="new-password" style="width:100%;padding:9px;box-sizing:border-box;margin-bottom:8px;">
+      <input type="password" id="verrou-mdp2" placeholder="Confirmer" autocomplete="new-password" style="width:100%;padding:9px;box-sizing:border-box;margin-bottom:8px;">
+      <div id="verrou-err" style="color:#B3231C;font-size:12.5px;min-height:18px;margin-bottom:8px;"></div>
+      <button type="button" class="btn wide" onclick="verrouModulesCreer('${key}')">Créer et ouvrir</button>`;
+  } else {
+    corps = `<p class="muted">Ce module est protégé. Le Fondateur n'a pas encore défini le mot de passe des modules.</p>`;
+  }
+  return `<div class="card pad" style="max-width:460px;margin:24px auto;text-align:center;">
+    <div style="font-size:34px;">🔒</div><h3 style="margin:8px 0;">${esc(titre)}</h3>${corps}</div>`;
+}
+function verrouModulesOuvrir(key){
+  const inp = document.getElementById('verrou-mdp'), err = document.getElementById('verrou-err');
+  if(!inp) return;
+  if(!verrouModulesVerifier(inp.value)){ if(err) err.textContent = 'Mot de passe incorrect.'; inp.value = ''; return; }
+  try{ sessionStorage.setItem('tekoulo_verrou_ok','1'); }catch(e){}
+  renderView(key);
+}
+function verrouModulesCreer(key){
+  const a = document.getElementById('verrou-mdp'), b = document.getElementById('verrou-mdp2'), err = document.getElementById('verrou-err');
+  if(!a || !b) return;
+  if(a.value !== b.value){ if(err) err.textContent = 'Les deux mots de passe ne correspondent pas.'; return; }
+  const e = verrouModulesEnregistrer(a.value);
+  if(e){ if(err) err.textContent = e; return; }
+  try{ sessionStorage.setItem('tekoulo_verrou_ok','1'); }catch(e){}
+  renderView(key);
+}
+function paramChangerMdpModules(){
+  const a = document.getElementById('mdpm-1'), b = document.getElementById('mdpm-2');
+  if(!a || !b) return;
+  if(a.value !== b.value){ toast('Les deux mots de passe ne correspondent pas.', true); return; }
+  const e = verrouModulesEnregistrer(a.value);
+  if(e){ toast(e, true); return; }
+  a.value = ''; b.value = '';
+  toast('Mot de passe des modules enregistré.');
+}
 function renderView(key){
   fermerFormulaireModal(); // tout nouvel affichage referme une éventuelle fenêtre de saisie ouverte
   TEKOULO_SAISIE_EN_COURS = false; // nouvel affichage = nouveau départ, aucune saisie non enregistrée pour l'instant
   const c = document.getElementById('content');
+  if(MODULES_VERROUILLES.includes(key) && !verrouModuleDeverrouille()){ c.innerHTML = htmlVerrouModule(key); return; }
   c.innerHTML = '<div class="view active" id="view-'+key+'"></div>';
   const target = document.getElementById('view-'+key);
   if(key==='dashboard') renderDashboard(target);
@@ -10432,6 +10527,9 @@ const GENERIC_MODULES = {
       {key:'dateFinContrat', label:'Date de fin de contrat', type:'date'},
       {key:'numeroCnss', label:'Numéro CNSS', type:'text'},
       {key:'nbHeuresService', label:'Nombre d\'heures de service par semaine', type:'number'},
+      {key:'adresse', label:'Adresse / quartier', type:'text', span:2},
+      {key:'personneUrgence', label:"Personne à prévenir en cas d'urgence", type:'text'},
+      {key:'telephoneUrgence', label:"Téléphone d'urgence", type:'text'},
     ],
     columns:['matricule','prenoms','nom','sexe','fonction','telephone','typeContrat'],
     // Fusionné directement dans la fiche Personnel (au lieu d'un module séparé) : le bouton
@@ -10682,6 +10780,8 @@ const GENERIC_MODULES = {
       {key:'dureeSanction', label:'Durée de la sanction', type:'text'},
       {key:'parentsInformes', label:'Parents informés', type:'select', options:['OUI','NON']},
       {key:'dateInformationParents', label:'Date d\'information des parents', type:'date'},
+      {key:'statutDossier', label:'Statut du dossier', type:'select', options:['OUVERT','EN COURS','CLÔTURÉ']},
+      {key:'dateCloture', label:'Date de clôture', type:'date'},
     ],
     columns:['date','identifiant','prenoms','nom','classeFonction','fauteCommise','niveauGravite','sanction'],
   },
@@ -10759,6 +10859,8 @@ const GENERIC_MODULES = {
       {key:'partenaires', label:'Partenaires', type:'text'},
       {key:'observation', label:'Observation', type:'text', span:2},
       {key:'statutProjet', label:'Statut du projet', type:'select', options:['PRÉVU','EN COURS','TERMINÉ','SUSPENDU']},
+      {key:'objectifs', label:'Objectifs', type:'text', span:2},
+      {key:'indicateurs', label:'Indicateurs de suivi', type:'text', span:2},
     ],
     columns:['nomProjet','statut','responsable','dateDebut','dateFin','budgetPrevu'],
   },
@@ -10781,6 +10883,8 @@ const GENERIC_MODULES = {
       {key:'expediteur', label:'Expéditeur', type:'text'},
       {key:'destinataire', label:'Destinataire', type:'text'},
       {key:'reponseRequise', label:'Réponse requise', type:'select', options:['OUI','NON']},
+      {key:'priorite', label:'Priorité', type:'select', options:['Normale','Urgente','Très urgente']},
+      {key:'dateLimiteReponse', label:'Date limite de réponse', type:'date'},
     ],
     columns:['codeCourrier','dateReception','typeCourrier','source','destination','objet','responsable'],
   },
@@ -11110,6 +11214,8 @@ const GENERIC_MODULES = {
       {key:'observation', label:'Observation', type:'text', span:2},
       {key:'justificatif', label:'N° du justificatif / reçu', type:'text'},
       {key:'approuvePar', label:'Approuvé par', type:'text'},
+      {key:'modePaiement', label:'Mode de paiement', type:'select', options:['Espèces','Virement','Mobile money','Chèque']},
+      {key:'beneficiaire', label:'Fournisseur / bénéficiaire', type:'text'},
     ],
     columns:['codeDepense','date','typeDepense','budgetTotal','montantDepense'],
     computedLabels:{ montantRestant:'Budget restant (GNF)' },
@@ -11130,6 +11236,8 @@ const GENERIC_MODULES = {
       {key:'observation', label:'Observation', type:'text', span:2},
       {key:'donateurContact', label:'Contact du donateur', type:'text'},
       {key:'modeReception', label:'Mode de réception', type:'select', options:['Espèces','Virement','Matériel en nature','Mobile money']},
+      {key:'valeurEstimee', label:'Valeur estimée (GNF)', type:'number'},
+      {key:'referenceDon', label:'N° de procès-verbal / document de don', type:'text'},
     ],
     columns:['dateReception','typeMateriel','natureMateriel','quantiteRecu','nomDonateur'],
   },
@@ -11147,6 +11255,8 @@ const GENERIC_MODULES = {
       {key:'observation', label:'Observation', type:'text', span:2},
       {key:'etatMateriel', label:'État du matériel', type:'select', options:['Neuf','Bon','Usé','Hors service']},
       {key:'localisation', label:'Localisation (salle / bureau)', type:'text'},
+      {key:'valeurUnitaire', label:'Valeur unitaire (GNF)', type:'number'},
+      {key:'fournisseur', label:'Fournisseur', type:'text'},
     ],
     columns:['typeMateriel','natureMateriel','quantiteEntree','quantiteSortie','stockRestant'],
     computed:{ stockRestant:r=>(num(r.quantiteEntree)-num(r.quantiteSortie)) }
@@ -11555,6 +11665,9 @@ function tekouloEnteteAdminHTML(p, titre, sousTitre){
     </div>`;
 }
 /* Ouvre une fenêtre d'impression complète : en-tête administratif, contenu, code QR, signature et les trois boutons */
+/* CSS d'impression commun (audit P2-3) : auparavant recopié dans une vingtaine de fonctions d'impression. */
+const TEKOULO_CSS_IMPRESSION_COULEURS = `* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }`;
+const TEKOULO_CSS_NO_PRINT = `.no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }`;
 function tekouloDocumentImprimable(o){
   const p = getParams(), CP = printCycleColors();
   const w = tekouloOuvrirFenetre(); if(!w) return;
@@ -11562,19 +11675,19 @@ function tekouloDocumentImprimable(o){
   const appCss = o.avecStylesApp ? Array.from(document.querySelectorAll('style')).map(st=>st.textContent).join('\n') : '';
   const qr = o.qrType ? qrSecurityBlock(o.qrType, o.qrRef||p.anneeScolaire, o.qrNom||'', o.qrExtra||o.titre||'') : '';
   const sig = o.sansSignature ? '' : `<div style="display:flex; gap:48px;"><div>Fait à ${esc(p.ville)}, le ${fmtDate(todayISO())}</div>${signatureTraitHTML(p)}</div>`;
-  w.document.write(`<html><head><meta charset="UTF-8"><title>${esc(o.titre)}</title>
+  tekouloEcrireDocument(w, `<html><head><meta charset="UTF-8"><title>${esc(o.titre)}</title>
     <style>${appCss}</style>
     <style>
       html,body{height:auto !important; overflow:visible !important; display:block !important; background:#fff !important; margin:0;}
       @page{ size:A4 ${o.paysage?'landscape':'portrait'}; margin:18mm 14mm 16mm 14mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative; font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; padding:36px; color:#20241F;}
       ${tekouloBadgesCSS(CP)}
       ${tekouloEnteteCSS(CP)}
       .vue-contenu .table-wrap{overflow:visible !important;} .vue-contenu table{width:100%;}
       .vue-contenu .card, .vue-contenu .stat-card{break-inside:avoid; box-shadow:none;}
       .foot{margin-top:40px; display:flex; justify-content:space-between; font-size:13px; border-top:2px solid #E4B426; padding-top:14px; break-inside:avoid;}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       ${o.extraCss||''}
     </style></head><body data-cycle="${esc(TEKOULO_CYCLE_ACTIF)}">
     ${tekouloBadgesHTML()}
@@ -11584,7 +11697,6 @@ function tekouloDocumentImprimable(o){
     ${tekouloBarreActions(o.module, o.libelle)}
     ${tekouloScriptAutoPrint(1500)}
     </body></html>`);
-  w.document.close();
   return w;
 }
 /* Pages qui s'imprimaient directement depuis l'application : elles utilisent maintenant la même fenêtre d'impression que tous les documents */
@@ -11678,7 +11790,7 @@ function printActeNomination(id){
   const titre = String(rec.titreNomination||'').trim();
   const w = tekouloOuvrirFenetre(); if(!w) return;
   if(!w){ toast('Autorisez les fenêtres pop-up pour imprimer l\u2019acte.', true); return; }
-  w.document.write(`<html><head><meta charset="UTF-8"><title>Note de service ${esc(ref)} — ${esc(nomComplet)}</title>
+  tekouloEcrireDocument(w, `<html><head><meta charset="UTF-8"><title>Note de service ${esc(ref)} — ${esc(nomComplet)}</title>
     <style>
       @page{ size:A4 portrait; margin:18mm 16mm; }
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing:border-box; }
@@ -11748,7 +11860,6 @@ function printActeNomination(id){
     ${tekouloBarreActions('actesnomination','Retour aux actes de nomination')}
     ${tekouloScriptAutoPrint(1200)}
 </body></html>`);
-  w.document.close();
 }
 
 /* ============================ FRAIS DE SCOLARITÉ — PAIEMENTS ET REÇUS ============================
@@ -11823,10 +11934,10 @@ function scoImprimerRecu(recordId, paiementId){
   const reste = rep.annuelle - totalVerse;
   const numeroRecu = 'REC-'+(rec.__code||rec.__id.slice(0,6).toUpperCase())+'-'+paiement.id.slice(-5).toUpperCase();
   const w = tekouloOuvrirFenetre(); if(!w) return;
-  w.document.write(`<html><head><title>Reçu de paiement — ${esc(rec.prenom)} ${esc(rec.nom)}</title>
+  tekouloEcrireDocument(w, `<html><head><title>Reçu de paiement — ${esc(rec.prenom)} ${esc(rec.nom)}</title>
     <style>
       @page{ margin: 16mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative; font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; color:#20241F; padding:10px 6px 0;}
       .receipt{max-width:640px; margin:18px auto 0; border:2px solid ${col.deep}; border-radius:12px; overflow:hidden; position:relative; z-index:1;}
       .rc-head{background:linear-gradient(135deg,${col.deep} 0%,${col.mid} 100%); color:#fff; padding:16px 22px;}
@@ -11883,7 +11994,6 @@ function scoImprimerRecu(recordId, paiementId){
     ${tekouloBarreActions('fraisscolarite','Retour aux frais de scolarité')}
     ${tekouloScriptAutoPrint(1200)}
   </body></html>`);
-  w.document.close();
 }
 function num(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
 /* Formate la valeur d'un champ calculé (mod.computed) pour affichage — ajoute le suffixe GNF si le libellé l'indique */
@@ -12659,14 +12769,14 @@ function printMonthlyReport(key){
   const cols = mod.fields.filter(f=>f.type!=='photo');
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Rapport mensuel — ${esc(mod.label)}</title>
+  tekouloEcrireDocument(w, `<html><head><title>Rapport mensuel — ${esc(mod.label)}</title>
     <style>
       @page{ size: landscape; margin:15mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
       ${tekouloEnteteCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:20px; color:#20241F;}
       .summary{display:flex; gap:14px; flex-wrap:wrap; margin:16px 0; justify-content:center;}
       .box{border:1px solid #DCD5C2; border-top:3px solid ${CP.mid}; background:#F6F3EA; padding:10px 16px; text-align:center; min-width:120px; border-radius:4px;}
@@ -12702,7 +12812,6 @@ function printMonthlyReport(key){
     ${tekouloBarreActions('rapports','Retour aux rapports mensuels')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 function printMonthlyReportEleves(){
   const now = new Date();
@@ -12716,14 +12825,14 @@ function printMonthlyReportEleves(){
   const cols = champsEleves();
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Rapport mensuel — Élèves</title>
+  tekouloEcrireDocument(w, `<html><head><title>Rapport mensuel — Élèves</title>
     <style>
       @page{ size: landscape; margin:15mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
       ${tekouloEnteteCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:20px; color:#20241F;}
       .summary{display:flex; gap:14px; margin:16px 0; justify-content:center;}
       .box{border:1px solid #DCD5C2; border-top:3px solid ${CP.mid}; background:#F6F3EA; padding:10px 16px; text-align:center; min-width:120px; border-radius:4px;}
@@ -12760,7 +12869,6 @@ function printMonthlyReportEleves(){
     ${tekouloBarreActions('rapports','Retour aux rapports mensuels')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 function renderRapports(container){
   renderGenericModule(container, GENERIC_MODULES['rapports']);
@@ -13508,14 +13616,14 @@ function printBilanAnnuel(){
   const p = d.p;
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Bilan annuel</title>
+  tekouloEcrireDocument(w, `<html><head><title>Bilan annuel</title>
     <style>
       @page{ size:A4; margin:18mm 14mm 16mm 14mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
       ${tekouloEnteteCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:34px; color:#20241F; font-size:14px;}
       h2{font-size:13.5px; text-transform:uppercase; color:${CP.deep}; border-left:4px solid #E4B426; padding-left:8px; margin:22px 0 8px;}
       table{width:100%; border-collapse:collapse; margin-bottom:6px;}
@@ -13679,7 +13787,6 @@ function printBilanAnnuel(){
     ${tekouloBarreActions('bilanAnnuel','Retour au bilan annuel')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 /* Partage d'une information vers le groupe WhatsApp de l'école */
 function genShareWhatsApp(key, id){
@@ -14170,13 +14277,13 @@ function printEvalPlanning(){
   }).sort((a,b)=>(a.dateEvaluation||'').localeCompare(b.dateEvaluation||''));
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Emploi du temps des évaluations — ${MOIS_NOMS[m]} ${y}</title>
+  tekouloEcrireDocument(w, `<html><head><title>Emploi du temps des évaluations — ${MOIS_NOMS[m]} ${y}</title>
     <style>
       @page{ size: landscape; margin:15mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:20px; color:#20241F;}
       ${tekouloEnteteCSS(CP)}
       table{border-collapse:collapse; width:100%; margin-top:10px;}
@@ -14206,7 +14313,6 @@ function printEvalPlanning(){
     ${tekouloBarreActions('evalplanning','Retour à l\'emploi du temps des évaluations')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 
 function dashBudgetSave(){
@@ -14236,13 +14342,13 @@ function printSituationFinanciere(){
   const sorted = [...depenses].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Situation financière</title>
+  tekouloEcrireDocument(w, `<html><head><title>Situation financière</title>
     <style>
       @page{ size:A4; margin:18mm 14mm 16mm 14mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:36px; color:#20241F;}
       ${tekouloEnteteCSS(CP)}
       .summary{display:flex; gap:14px; margin:20px 0;}
@@ -14280,7 +14386,6 @@ function printSituationFinanciere(){
     ${tekouloBarreActions('dashboard')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 
 /* ---- Graphiques (SVG natif, sans dépendance externe — impression compatible) ---- */
@@ -15004,13 +15109,13 @@ function elevePrintList(){
   const cols = champsEleves();
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Élèves — Liste complète</title>
+  tekouloEcrireDocument(w, `<html><head><title>Élèves — Liste complète</title>
     <style>
       @page{ size: landscape; margin:15mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:16px; color:#20241F;}
       ${tekouloEnteteCSS(CP)}
       table{border-collapse:collapse; width:100%;}
@@ -15038,7 +15143,6 @@ function elevePrintList(){
     ${tekouloBarreActions('eleves','Retour aux élèves')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 function elevePrint(id){
   const e = dbGet('eleves').find(r=>r.__id===id);
@@ -15046,13 +15150,13 @@ function elevePrint(id){
   const p = getParams();
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Fiche élève — ${esc(e.prenoms)} ${esc(e.nom)}</title>
+  tekouloEcrireDocument(w, `<html><head><title>Fiche élève — ${esc(e.prenoms)} ${esc(e.nom)}</title>
     <style>
       @page{ size:A4; margin:18mm 14mm 16mm 14mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:40px; color:#20241F;}
       h1{font-size:18px; text-align:center; text-transform:uppercase; color:${CP.deep}; letter-spacing:.3px;}
       .row{display:flex; border-bottom:1px solid #EBE6D8; padding:7px 4px;}
@@ -15095,7 +15199,6 @@ function elevePrint(id){
     ${tekouloBarreActions('eleves','Retour aux élèves')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 
 /* ============================ CARTE SCOLAIRE ============================ */
@@ -15234,13 +15337,13 @@ function idCardSharedCSS(){
 function openCardPrintWindow(title, bodyHTML, hintText){
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>${esc(title)}</title>
+  tekouloEcrireDocument(w, `<html><head><title>${esc(title)}</title>
     <style>
       @page{ size:auto; margin:15mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:400; padding:24px; color:#20241F; display:flex; flex-direction:column; align-items:center;}
       .cut-hint{font-size:12px; color:#5B6259; margin-top:16px; text-align:center; max-width:520px;}
       ${idCardSharedCSS()}
@@ -15262,7 +15365,6 @@ function openCardPrintWindow(title, bodyHTML, hintText){
       if(document.readyState==='complete'){ __waitImgsThenPrint(); } else { window.addEventListener('load', __waitImgsThenPrint); }
     <\/script>
     </body></html>`);
-  w.document.close();
 }
 
 /* Construit le HTML de la carte scolaire recto/verso (réutilisé à l'écran et à l'impression) */
@@ -15535,14 +15637,14 @@ function getRangEffectifAnnuel(eleveId, niveau){
 /* En-tête / pied de page communs aux deux documents officiels ci-dessous (style « certificat » : cadre doré,
    typographies EB Garamond / Playfair Display), cohérents avec l'identité graphique du reste de l'application. */
 function certificatOfficielHead(titleTag){
-  return `<meta charset="UTF-8"><title>${titleTag}</title>
+  return `<meta charset="UTF-8"><title>${esc(titleTag)}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
     <style>
       :root{ --ink:#1C2A22; --ink-soft:#3B4A3F; --gold:#AD8A3F; --green:${printCycleColors().deep}; --paper:#FEFDFB; --rule:#C9C2AE; }
       *{box-sizing:border-box; margin:0; padding:0;}
       @page{ size:A4; margin:0; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{ width:210mm; min-height:297mm; background:var(--paper); font-family:"EB Garamond", serif; color:var(--ink); font-size:11pt; position:relative; }
       body::before{content:'';position:fixed;top:0;left:0;right:0;height:7px;background:linear-gradient(to right,#B3231C 0 33.333%,#D9A81C 33.333% 66.666%,${printCycleColors().deep} 66.666% 100%);z-index:999;}
       .page{ padding:9mm 16mm 12mm; position:relative; min-height:297mm; }
@@ -15621,7 +15723,7 @@ function printCertificatScolarite(id){
   const fils = e.sexe==='FEMININ' ? 'Fille' : (e.sexe==='MASCULIN' ? 'Fils' : 'Fils/Fille');
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head>${certificatOfficielHead('Certificat de scolarité — '+e.prenoms+' '+e.nom)}</head><body>
+  tekouloEcrireDocument(w, `<html><head>${certificatOfficielHead('Certificat de scolarité — '+e.prenoms+' '+e.nom)}</head><body>
   <div class="page">
     ${certificatOfficielHeaderHTML(p, numeroDoc, e.prenoms+' '+e.nom)}
     <div class="title-box"><h1>CERTIFICAT DE SCOLARITÉ</h1></div>
@@ -15655,7 +15757,6 @@ function printCertificatScolarite(id){
   </div>
   ${tekouloScriptAutoPrint(1200)}
   </body></html>`);
-  w.document.close();
 }
 
 function printAttestationNiveau(id){
@@ -15668,7 +15769,7 @@ function printAttestationNiveau(id){
   const fils = e.sexe==='FEMININ' ? 'Fille' : (e.sexe==='MASCULIN' ? 'Fils' : 'Fils/Fille');
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head>${certificatOfficielHead('Attestation de niveau de scolarisation — '+e.prenoms+' '+e.nom)}</head><body>
+  tekouloEcrireDocument(w, `<html><head>${certificatOfficielHead('Attestation de niveau de scolarisation — '+e.prenoms+' '+e.nom)}</head><body>
   <div class="page">
     ${certificatOfficielHeaderHTML(p, numeroDoc, e.prenoms+' '+e.nom)}
     <div class="title-box"><h1>ATTESTATION DE NIVEAU DE SCOLARISATION</h1></div>
@@ -15701,7 +15802,6 @@ function printAttestationNiveau(id){
   </div>
   ${tekouloScriptAutoPrint(1200)}
   </body></html>`);
-  w.document.close();
 }
 
 /* ============================ ATTESTATION DE PRISE DE SERVICE (PERSONNEL) ============================ */
@@ -15785,12 +15885,11 @@ function printAttestationPriseService(id){
   const numeroDoc = genNumeroDoc('APS', person.__id);
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head>${certificatOfficielHead('Attestation de prise de service — '+person.prenoms+' '+person.nom)}</head><body>
+  tekouloEcrireDocument(w, `<html><head>${certificatOfficielHead('Attestation de prise de service — '+person.prenoms+' '+person.nom)}</head><body>
   ${attestationPriseServiceHTML(person, p, numeroDoc)}
   ${tekouloBarreActions('personnel','Retour au personnel')}
   ${tekouloScriptAutoPrint(1200)}
   </body></html>`);
-  w.document.close();
 }
 
 /* ============================ CERTIFICAT DE RECONNAISSANCE DU PERSONNEL ============================ */
@@ -16036,7 +16135,7 @@ function printCertificatReconnaissance(id){
   const p = getParams();
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head>
+  tekouloEcrireDocument(w, `<html><head>
     <meta charset="UTF-8"><title>Certificat de reconnaissance — ${esc(person.prenoms)} ${esc(person.nom)}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Playfair+Display:wght@600;700;900&display=swap" rel="stylesheet">
@@ -16061,7 +16160,6 @@ function printCertificatReconnaissance(id){
       if(document.readyState==='complete'){ __waitImgsThenPrint(); } else { window.addEventListener('load', __waitImgsThenPrint); }
     <\/script>
     </body></html>`);
-  w.document.close();
 }
 
 /* ============================ NOTES & BULLETINS ============================ */
@@ -16522,13 +16620,13 @@ function notesPrintTable(){
   }).join('');
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Notes — ${esc(NOTES_STATE.niveau)}</title>
+  tekouloEcrireDocument(w, `<html><head><title>Notes — ${esc(NOTES_STATE.niveau)}</title>
     <style>
       @page{ size: landscape; margin:15mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:16px; color:#20241F;}
       ${tekouloEnteteCSS(CP)}
       table{border-collapse:collapse; width:100%; position:relative; z-index:1;}
@@ -16563,7 +16661,6 @@ function notesPrintTable(){
     ${tekouloBarreActions('notes','Retour aux notes et bulletins')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 function notesUpdate(eleveId, matiereCode, field, value, inputEl){
   const rec = getNoteRec(eleveId, NOTES_STATE.semestre);
@@ -16622,13 +16719,13 @@ function printClassement(){
   const rangsP = computeRanks(data.ranked);
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Classement — ${esc(data.niveau)}</title>
+  tekouloEcrireDocument(w, `<html><head><title>Classement — ${esc(data.niveau)}</title>
     <style>
       @page{ size:A4; margin:18mm 14mm 16mm 14mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:36px; color:#20241F;}
       ${tekouloEnteteCSS(CP)}
       table{width:100%; border-collapse:collapse; margin-top:18px;}
@@ -16669,7 +16766,6 @@ function printClassement(){
     ${tekouloBarreActions('notes','Retour aux notes et bulletins')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 
 /* ============================ RÉSULTATS ANNUELS ============================ */
@@ -16721,13 +16817,13 @@ function printResultatsAnnuels(){
   const estLycee = cyclePourNiveau(data.niveau)==='LYCEE';
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Résultats annuels — ${esc(data.niveau)}</title>
+  tekouloEcrireDocument(w, `<html><head><title>Résultats annuels — ${esc(data.niveau)}</title>
     <style>
       @page{ size:A4; margin:18mm 14mm 16mm 14mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:36px; color:#20241F;}
       .print-home{margin:10px 0 14px;text-align:center;border:1px solid #DCD5C2;border-radius:10px;padding:10px;background:#FCFAF3}.home-title{font-weight:800;color:${CP.deep};font-size:14px;letter-spacing:1px}.home-sub{font-size:11.5px;color:#5B6259;margin-top:3px}.summary-table{margin-top:8px!important;margin-bottom:18px}.summary-table th{background:${CP.deep}!important}.summary-table td{text-align:center}.summary-table td:first-child{text-align:left;font-weight:700}
       ${tekouloEnteteCSS(CP)}
@@ -16780,7 +16876,6 @@ function printResultatsAnnuels(){
     ${tekouloBarreActions('notes','Retour aux notes et bulletins')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 
 function notesOpenBulletin(eleveId){
@@ -16807,13 +16902,13 @@ function notesOpenBulletin(eleveId){
   const moyColor = mentionColor(moyAnnuelle);
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Bulletin — ${esc(e.prenoms)} ${esc(e.nom)}</title>
+  tekouloEcrireDocument(w, `<html><head><title>Bulletin — ${esc(e.prenoms)} ${esc(e.nom)}</title>
   <style>
       @page{ size:A4; margin:18mm 14mm 16mm 14mm; }
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
     body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:30px; color:#20241F; font-size:14.5px;}
     ${tekouloEnteteCSS(CP)}
     .ident{display:flex; justify-content:space-between; border:1px solid #DCD5C2; border-left:4px solid ${CP.deep}; padding:10px 16px; margin-bottom:14px; font-size:13.5px; background:#F6F3EA;}
@@ -16856,7 +16951,6 @@ function notesOpenBulletin(eleveId){
     ${tekouloBarreActions('notes','Retour aux notes et bulletins')}
     ${tekouloScriptAutoPrint(1200)}
   </body></html>`);
-  w.document.close();
 }
 function rangFor(eleves, eleveId, semestre){
   const ranked = eleves.map(e=>({id:e.__id, moy:moyenneGenerale(getNoteRec(e.__id, semestre))}))
@@ -16949,10 +17043,10 @@ function ficheAnnualAverage(history, niveau){
    sur la moyenne pondérée propre à une série DNESGT (et non la moyenne générale toutes matières). */
 function computeSerieRang(year, niveau, semestre, eleveId, matieresList){
   let elevesYear = [];
-  try{ const raw = localStorage.getItem(DB_PREFIX+'eleves__'+year); elevesYear = raw? (JSON.parse(raw)||[]) : []; }catch(e){}
+  elevesYear = lireDonneesAnnee('eleves', year, []);
   const cohort = elevesYear.filter(x=>x.niveau===niveau);
   let notesYear = [];
-  try{ const raw = localStorage.getItem(DB_PREFIX+'notes__'+year); notesYear = raw? (JSON.parse(raw)||[]) : []; }catch(e){}
+  notesYear = lireDonneesAnnee('notes', year, []);
   const ranked = cohort.map(x=>{
     const rec = notesYear.find(n=>n.eleveId===x.__id && n.semestre===semestre) || {matieres:{}};
     return {id:x.__id, moy:serieMoyenne(rec, matieresList)};
@@ -16977,11 +17071,11 @@ function collectEleveParcours(identifiant){
   const years = (yd && yd.list && yd.list.length) ? yd.list : [getActiveYear()].filter(Boolean);
   years.forEach(year=>{
     let elevesYear = [];
-    try{ const raw = localStorage.getItem(DB_PREFIX+'eleves__'+year); elevesYear = raw? (JSON.parse(raw)||[]) : []; }catch(e){}
+    elevesYear = lireDonneesAnnee('eleves', year, []);
     const match = elevesYear.find(x=>x.identifiant && x.identifiant===identifiant);
     if(!match) return;
     let notesYear = [];
-    try{ const raw = localStorage.getItem(DB_PREFIX+'notes__'+year); notesYear = raw? (JSON.parse(raw)||[]) : []; }catch(e){}
+    notesYear = lireDonneesAnnee('notes', year, []);
     ['1','2'].forEach(sem=>{
       const rec = notesYear.find(n=>n.eleveId===match.__id && n.semestre===sem);
       if(rec) history.push({year, niveau:match.niveau, semestre:sem, rec});
@@ -17051,10 +17145,10 @@ function orientationToggleRedouble(eleveId, niveau){
    parcours historique — permet d'afficher, comme sur la fiche modèle, le rang par semestre et par année. */
 function computeHistoricRang(year, niveau, semestre, eleveId){
   let elevesYear = [];
-  try{ const raw = localStorage.getItem(DB_PREFIX+'eleves__'+year); elevesYear = raw? (JSON.parse(raw)||[]) : []; }catch(e){}
+  elevesYear = lireDonneesAnnee('eleves', year, []);
   const cohort = elevesYear.filter(x=>x.niveau===niveau);
   let notesYear = [];
-  try{ const raw = localStorage.getItem(DB_PREFIX+'notes__'+year); notesYear = raw? (JSON.parse(raw)||[]) : []; }catch(e){}
+  notesYear = lireDonneesAnnee('notes', year, []);
   const ranked = cohort.map(x=>{
     const rec = notesYear.find(n=>n.eleveId===x.__id && n.semestre===semestre) || {matieres:{}};
     return {id:x.__id, moy:moyenneGenerale(rec)};
@@ -17366,13 +17460,13 @@ function printFicheOrientation(eleveId){
   const scores10 = ficheScoresTable(e, history, '10EME', true);
   const w = tekouloOuvrirFenetre(); if(!w) return;
   if(!w){ toast('Autorisez les fenêtres pop-up pour imprimer la fiche.', true); return; }
-  w.document.write(`<html><head><meta charset="UTF-8"><title>Fiche bilan pour l'orientation — ${esc(e.prenoms)} ${esc(e.nom)}</title>
+  tekouloEcrireDocument(w, `<html><head><meta charset="UTF-8"><title>Fiche bilan pour l'orientation — ${esc(e.prenoms)} ${esc(e.nom)}</title>
   <style>
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    ${TEKOULO_CSS_IMPRESSION_COULEURS}
       @page { size: auto; margin: 80px 26px 58px; }
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-    .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+    ${TEKOULO_CSS_NO_PRINT}
     body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:0; margin:0; color:#20241F; font-size:13px;}
     .head{text-align:center; margin-bottom:10px; border-bottom:4px solid #E4B426; border-image:linear-gradient(to right,#B3231C,#D9A81C,#0B4A32) 1; padding-bottom:10px;}
     .head .rep{font-size:13px; letter-spacing:1px; color:#5B6259;}
@@ -17493,7 +17587,6 @@ function printFicheOrientation(eleveId){
     ${tekouloBarreActions('orientation','Retour à l\'orientation')}
     ${tekouloScriptAutoPrint(1200)}
   </body></html>`);
-  w.document.close();
 }
 /* ---- Synthèse (page finale du modèle) : liste des candidats orientés d'un niveau, admis au BEPC ----
    Auto-remplie autant que possible : Moy Examen Blanc calculée depuis les notes de 10ème saisies dans
@@ -17523,13 +17616,13 @@ function printSyntheseOrientation(){
   }).join('');
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Synthèse des candidats orientés — ${esc(ORIENTATION_STATE.niveau)}</title>
+  tekouloEcrireDocument(w, `<html><head><title>Synthèse des candidats orientés — ${esc(ORIENTATION_STATE.niveau)}</title>
     <style>
       @page{ size: landscape; margin:15mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:16px; color:#20241F; font-size:13px;}
       ${tekouloEnteteCSS(CP)}
       table{width:100%; border-collapse:collapse; position:relative; z-index:1;}
@@ -17560,7 +17653,6 @@ function printSyntheseOrientation(){
     ${tekouloBarreActions('orientation','Retour à l\'orientation')}
     ${tekouloScriptAutoPrint(1200)}
   </body></html>`);
-  w.document.close();
 }
 
 /* ============================ EMPLOI DU TEMPS ============================ */
@@ -17902,13 +17994,13 @@ function printEffectifs(){
   }).join('');
   const w = tekouloOuvrirFenetre(); if(!w) return;
   const CP = printCycleColors();
-  w.document.write(`<html><head><title>Statistiques des effectifs</title>
+  tekouloEcrireDocument(w, `<html><head><title>Statistiques des effectifs</title>
     <style>
       @page{ size: landscape; margin:15mm; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       ${tekouloBadgesCSS(CP)}
-      .no-print{margin-top:28px; text-align:center;} @media print{ .no-print{display:none !important;} }
+      ${TEKOULO_CSS_NO_PRINT}
       body{font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; font-weight:500; padding:36px; color:#20241F;}
       ${tekouloEnteteCSS(CP)}
       table{width:100%; border-collapse:collapse; margin-top:14px;}
@@ -17952,7 +18044,6 @@ function printEffectifs(){
     ${tekouloBarreActions('effectifs','Retour aux statistiques effectifs')}
     ${tekouloScriptAutoPrint(1200)}
     </body></html>`);
-  w.document.close();
 }
 
 /* Auto-login if session already open (same browser tab session) */
@@ -19371,13 +19462,37 @@ function assistantEffacerHistorique(){
 // Transforme le texte (Markdown léger renvoyé par l'IA) en HTML sûr et bien structuré :
 // vrais paragraphes espacés, vraies listes à puces/numérotées, titres hiérarchisés,
 // blocs de code et schémas SVG mis en valeur, puis rendu des formules (KaTeX).
+/* Nettoyage d'un schéma SVG renvoyé par l'IA avant affichage (audit P1-3) : le SVG est analysé comme un
+   document XML ; les balises actives (script, objets externes, formulaires…) et tous les attributs
+   d'événements ou de liens javascript: sont retirés. Renvoie null si le SVG est invalide. */
+const SVG_BALISES_INTERDITES = ['script','foreignobject','iframe','object','embed','link','meta','animate','animatemotion','animatetransform','set','handler','audio','video','feimage','use'];
+function svgSecuriser(texte){
+  let doc;
+  try{ doc = new DOMParser().parseFromString(texte, 'image/svg+xml'); }catch(e){ return null; }
+  if(!doc || doc.getElementsByTagName('parsererror').length) return null;
+  const racine = doc.documentElement;
+  if(!racine || String(racine.localName).toLowerCase() !== 'svg') return null;
+  const elements = [racine].concat(Array.from(racine.getElementsByTagName('*')));
+  elements.forEach(function(el){
+    if(SVG_BALISES_INTERDITES.includes(String(el.localName).toLowerCase())){ if(el.parentNode) el.parentNode.removeChild(el); return; }
+    Array.from(el.attributes).forEach(function(a){
+      const nom = a.name.toLowerCase();
+      const val = String(a.value||'').replace(/[\s\u0000-\u001f]/g,'').toLowerCase();
+      const lien = (nom==='href' || nom==='xlink:href' || nom==='src' || nom==='action' || nom==='formaction');
+      if(nom.startsWith('on') || (lien && (val.startsWith('javascript:') || val.startsWith('vbscript:') || (val.startsWith('data:') && !val.startsWith('data:image/png') && !val.startsWith('data:image/jpeg'))))){
+        el.removeAttribute(a.name);
+      }
+    });
+  });
+  return new XMLSerializer().serializeToString(racine);
+}
 function assistantRendreContenu(conteneur, texte){
   const blocs = [];
   let travail = (texte||'').replace(/```(svg|code)?\n?([\s\S]*?)```/g, function(_, type, contenu){
     const idx = blocs.length;
     if((type||'').toLowerCase()==='svg' && /^\s*<svg[\s\S]*<\/svg>\s*$/i.test(contenu)){
-      const svgNettoye = contenu.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/ on[a-z]+="[^"]*"/gi, '');
-      blocs.push('<div class="ia-svg-bloc">' + svgNettoye + '</div>');
+      const svgNettoye = svgSecuriser(contenu);
+      if(svgNettoye) blocs.push('<div class="ia-svg-bloc">' + svgNettoye + '</div>');
     } else {
       blocs.push('<pre class="ia-code-bloc"><code>' + esc(contenu.trim()) + '</code></pre>');
     }
@@ -19553,13 +19668,13 @@ function imprimerTexteAssistant(texte){
   assistantRendreContenu(conteneurTemp, texte);
   const fenetre = tekouloOuvrirFenetre(); if(!fenetre) return;
   const CP = printCycleColors();
-  fenetre.document.write(`
+  tekouloEcrireDocument(fenetre, `
     <html><head><meta charset="UTF-8"><title>Document — ${esc(nomEcoleAffiche())}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
     <style>
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      ${TEKOULO_CSS_IMPRESSION_COULEURS}
       body{position:relative;}
       body{font-family:Georgia,serif; max-width:720px; margin:30px auto; padding:8px 20px 0; color:#20241F; line-height:1.7; font-size:14px; position:relative;}
       p{margin:0 0 12px;}
@@ -19592,7 +19707,6 @@ function imprimerTexteAssistant(texte){
     <\/script>
     </body></html>
   `);
-  fenetre.document.close();
   fenetre.focus();
 }
 // Version « cours » de l'impression : ajoute une fiche d'en-tête (matière, niveau,
@@ -19608,7 +19722,7 @@ function imprimerCoursAssistant(texte, meta){
   const sommaireHtml = (meta.sousTitres && meta.sousTitres.length)
     ? '<div class="sommaire"><h2>Sommaire</h2><ol>' + meta.sousTitres.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('') + '</ol></div>'
     : '';
-  fenetre.document.write(`
+  tekouloEcrireDocument(fenetre, `
     <html><head><meta charset="UTF-8"><title>${esc(meta.titre)} — ${esc(nomEcoleAffiche())}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
@@ -19678,7 +19792,6 @@ function imprimerCoursAssistant(texte, meta){
     <\/script>
     </body></html>
   `);
-  fenetre.document.close();
   fenetre.focus();
 }
 // Ouvre le dossier de projet généré dans une fenêtre imprimable, avec l'en-tête du collège
@@ -19690,7 +19803,7 @@ function imprimerProjetAssistant(texte, meta){
   const fenetre = tekouloOuvrirFenetre(); if(!fenetre) return;
   const CP = printCycleColors();
   const dateAujourdhui = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
-  fenetre.document.write(`
+  tekouloEcrireDocument(fenetre, `
     <html><head><meta charset="UTF-8"><title>${esc(meta.titre)} — ${esc(nomEcoleAffiche())}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
@@ -19757,7 +19870,6 @@ function imprimerProjetAssistant(texte, meta){
     <\/script>
     </body></html>
   `);
-  fenetre.document.close();
   fenetre.focus();
 }
 /* ---------- Aperçu complet du projet (avant impression/téléchargement) ---------- */
@@ -19829,7 +19941,7 @@ async function assistantEnvoyer(){
 async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique, fournisseurForce){
   // Le serveur Tekoulo n'est requis que si l'IA choisie est l'assistant Tekoulo : une IA directe avec clé peut répondre sans lui
   const _fournisseurPrevu = fournisseurForce || assistantFournisseurChoisi();
-  const _directe = _fournisseurPrevu !== 'tekoulo' && iaPeutAppeler(_fournisseurPrevu);
+  const _directe = !!IA_FOURNISSEURS[_fournisseurPrevu] && IA_FOURNISSEURS[_fournisseurPrevu].mode === 'web';
   if((!TEKOULO_API_URL || !TEKOULO_TOKEN) && !_directe){
     return {ok:false, error:"L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter)."};
   }
@@ -19854,8 +19966,8 @@ async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique, fou
     }
   }
   const fournisseurIA = fournisseurForce || assistantFournisseurChoisi();
-  if(fournisseurIA !== 'tekoulo' && iaPeutAppeler(fournisseurIA)) return assistantAppelFournisseur(fournisseurIA, messageEnvoye, pieceJointe, historiquePertinent);
-  const corpsRequete = {message: messageEnvoye, historique: historiquePertinent, mode: modeEffectif};
+  if(IA_FOURNISSEURS[fournisseurIA] && IA_FOURNISSEURS[fournisseurIA].mode === 'web') return assistantAppelFournisseur(fournisseurIA, messageEnvoye, pieceJointe, historiquePertinent);
+  const corpsRequete = {message: messageEnvoye, historique: historiquePertinent, mode: modeEffectif, fournisseur: fournisseurIA};
   if(pieceJointe){
     corpsRequete.piece_jointe = {
       nom: pieceJointe.nom,
@@ -20621,6 +20733,14 @@ function figerColonnesPlanifier(root){
 
 @media (max-width:480px){
   #assistant-panneau{ top:8px; left:3vw; width:94vw; height:92vh; }
+  /* Téléphone : les réponses doivent occuper la plus grande part du panneau */
+  #assistant-panneau .ia-modes{ flex-wrap:nowrap; overflow-x:auto; padding:6px 8px; gap:5px; }
+  #assistant-panneau .assistant-mode-btn{ flex-shrink:0; padding:4px 9px; font-size:11px; }
+  #assistant-consigne{ display:none; }
+  #assistant-langue-ligne, #assistant-ia-ligne{ padding:4px 10px 0; gap:4px; }
+  #assistant-messages{ padding:10px; }
+  #assistant-input-row{ padding:8px; }
+  #assistant-input{ min-height:38px; max-height:90px; }
 }
 </style>
 
@@ -21328,8 +21448,7 @@ function corrImprimer(){
   if(!corrDocHTML) return;
   const fenetre = tekouloOuvrirFenetre(); if(!fenetre) return;
   fenetre.document.open();
-  fenetre.document.write(corrDocumentComplet(corrDocHTML, corrDocTitre));
-  fenetre.document.close();
+  tekouloEcrireDocument(fenetre, corrDocumentComplet(corrDocHTML, corrDocTitre));
   setTimeout(() => fenetre.print(), 400);
 }
 function corrTelecharger(){
@@ -21343,4 +21462,17 @@ function corrTelecharger(){
 
 </script>
 </body>
+
+<script>
+/* Premier démarrage sur cet appareil : il n'existe plus de mot de passe administrateur par défaut.
+   Tant qu'aucun mot de passe n'a été créé ici, la fenêtre de création bloque l'accès (audit P0-1). */
+(function(){
+  function verifier(){
+    let existe = true;
+    try{ existe = !!localStorage.getItem(DB_PREFIX+'password'); }catch(e){}
+    if(!existe && typeof demanderCreationMdpAdmin === 'function') demanderCreationMdpAdmin();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', verifier); else verifier();
+})();
+</script>
 </html>
