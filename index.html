@@ -4077,7 +4077,7 @@ function tekouloAjouterPageDeGarde(html){
   const sommaireHTML = titres.length
     ? `<section class="page-sommaire">
     <style>
-      .page-sommaire{ page-break-after:always; break-after:page; min-height:250mm; box-sizing:border-box; display:flex; flex-direction:column; }
+      .page-sommaire{ page-break-after:always; break-after:page; min-height:250mm; box-sizing:border-box; display:flex; flex-direction:column; padding-top:9mm; }
       .gs-entete{ display:flex; justify-content:space-between; align-items:center; gap:16px; padding:14px 0 12px; border-bottom:1px solid #D9DED6; }
       .gs-entete img{ height:50px; max-width:130px; object-fit:contain; }
       .gs-t{ text-align:center; }
@@ -4105,8 +4105,8 @@ function tekouloAjouterPageDeGarde(html){
   const garde = `<section class="page-garde">
     <style>
       @page gd-couverture{ size:A4; margin:0; }
-      .page-garde{ page:gd-couverture; margin:0; padding:0; page-break-after:always; break-after:page; }
-      .gd-cover{ position:relative; z-index:20; width:100%; height:268mm; margin:0; overflow:hidden; box-sizing:border-box; padding:20mm 16mm 14mm; display:flex; flex-direction:column; color:#fff;
+      .page-garde{ page:gd-couverture; margin:-36px 0 0 0; padding:0; page-break-after:always; break-after:page; }
+      .gd-cover{ position:relative; z-index:1000; width:100%; height:268mm; margin:0; overflow:hidden; box-sizing:border-box; padding:20mm 16mm 14mm; display:flex; flex-direction:column; color:#fff;
         background:linear-gradient(160deg, ${deep} 0%, #0A1B2E 100%); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .gd-cover::before{ content:''; position:absolute; z-index:0; right:-120px; top:-120px; width:420px; height:420px; border-radius:50%; border:2px solid rgba(228,180,38,.35); }
       .gd-cover::after{ content:''; position:absolute; z-index:0; right:-40px; top:-40px; width:260px; height:260px; border-radius:50%; border:1px solid rgba(255,255,255,.14); }
@@ -4158,7 +4158,8 @@ function tekouloAjouterPageDeGarde(html){
       <div class="gd-bande bas"></div>
     </div>
   </section>`;
-  return html.slice(0, debut) + garde + sommaireHTML + html.slice(debut);
+  const espaceSuite = '<div class="gd-espace" style="height:18mm"></div>';
+  return html.slice(0, debut) + garde + sommaireHTML + espaceSuite + html.slice(debut);
 }
 function tekouloEcrireDocument(fenetre, html){
   try{ html = tekouloAjouterPageDeGarde(html); }catch(e){}
@@ -11986,7 +11987,7 @@ function tekouloBadgesCSS(CP){
       body::before{content:'';position:fixed;top:0;left:0;right:0;height:7px;background:linear-gradient(to right,#B3231C 0 33.333%,#D9A81C 33.333% 66.666%,#0B4A32 66.666% 100%);z-index:999;}
       .print-logo-badge{position:absolute;top:16px;left:24px;width:38px;height:38px;object-fit:contain;z-index:998;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25));}
       .print-emblem-badge{position:absolute;top:14px;right:24px;width:44px;height:44px;object-fit:contain;z-index:998;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));}
-      .print-motto{position:fixed;left:0;right:0;bottom:10px;text-align:center;z-index:998;font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;font-style:italic;font-size:12px;letter-spacing:.3px;color:${CP.deep};padding:0 40px;}
+      .print-motto{display:none !important;position:fixed;left:0;right:0;bottom:10px;text-align:center;z-index:998;font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;font-style:italic;font-size:12px;letter-spacing:.3px;color:${CP.deep};padding:0 40px;}
       .print-motto .orn{color:${CP.deep};font-style:normal;font-weight:700;margin:0 8px;}
       .print-motto .txt{color:${CP.deep};font-weight:600;}
       body{padding-bottom:46px !important;}
