@@ -4072,50 +4072,82 @@ function tekouloAjouterPageDeGarde(html){
     ['Date d’édition', dateEdition],
     ['Contenu', nbTableaux ? (nbTableaux + (nbTableaux>1?' tableaux':' tableau') + ' · ' + nbLignes + (nbLignes>1?' lignes':' ligne')) : 'Texte'],
   ].filter(([,v])=>v);
-  const sommaire = titres.length
-    ? `<div class="gd-sommaire-bloc"><h4>Sommaire</h4><ol>${titres.map(t=>`<li>${t}</li>`).join('')}</ol></div>` : '';
+  const infosGarde = infos.map(([k,v])=>`<div class="gd-info"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+  const chef = [p.chefEtablissement, p.telephoneChef].filter(Boolean).join(' · ');
+  const sommaireHTML = titres.length
+    ? `<section class="page-sommaire">
+    <style>
+      .page-sommaire{ page-break-after:always; break-after:page; min-height:250mm; box-sizing:border-box; display:flex; flex-direction:column; }
+      .gs-entete{ display:flex; justify-content:space-between; align-items:center; gap:16px; padding:14px 0 12px; border-bottom:1px solid #D9DED6; }
+      .gs-entete img{ height:50px; max-width:130px; object-fit:contain; }
+      .gs-t{ text-align:center; }
+      .gs-t b{ display:block; font-size:18px; color:${deep}; letter-spacing:1px; text-transform:uppercase; }
+      .gs-t span{ font-size:11px; color:#5B6259; }
+      .gs-vide{ width:130px; }
+      .gs-titre{ margin-top:28px; padding:0 0 8px; border-bottom:1px solid #C9D1C6; font-size:15px; font-weight:800; color:#20241F; text-transform:uppercase; letter-spacing:.6px; }
+      .gs-tab{ width:100%; border-collapse:collapse; font-size:13.5px; }
+      .gs-tab th{ background:none; color:#5B6259; text-align:left; padding:8px 14px; border-bottom:1px solid #9AA397; font-size:10.5px; text-transform:uppercase; letter-spacing:.6px; }
+      .gs-tab td{ padding:10px 14px; border-bottom:1px solid #E4E8E1; }
+      .gs-n{ width:60px; text-align:center; font-weight:700; color:#20241F; }
+      .gs-bas{ margin-top:auto; border-top:1px solid #C9D1C6; padding-top:8px; display:flex; justify-content:space-between; font-size:10.5px; color:#5B6259; }
+    </style>
+    <div class="gs-entete">
+      <img src="${logoEcoleActuel()}" alt="">
+      <div class="gs-t"><b>Sommaire</b><span>${esc(p.nomEcole||'')}${p.anneeScolaire ? ' · Année scolaire ' + esc(p.anneeScolaire) : ''}</span></div>
+      <span class="gs-vide"></span>
+    </div>
+    <div class="gs-titre">${titre}</div>
+    <table class="gs-tab"><thead><tr><th class="gs-n">N°</th><th>Partie du document</th></tr></thead>
+      <tbody>${titres.map((t,i)=>`<tr><td class="gs-n">${i+1}</td><td>${t}</td></tr>`).join('')}</tbody></table>
+    <div class="gs-bas"><div>${esc(p.nomEcole||'')}</div><div>Édité le ${esc(dateEdition)}</div></div>
+  </section>` : '';
   const garde = `<section class="page-garde">
     <style>
-      .page-garde{ page-break-after:always; break-after:page; min-height:250mm; display:flex; flex-direction:column; box-sizing:border-box; }
-      .gd-bande{ height:10px; border-radius:4px; background:linear-gradient(90deg,#CE1126 33.33%,#FCD116 33.33%,#FCD116 66.66%,#009460 66.66%); }
-      .gd-haut{ text-align:center; margin-top:16px; }
-      .gd-rep{ font-weight:800; letter-spacing:1.6px; color:${deep}; font-size:15px; }
-      .gd-devise{ font-style:italic; font-weight:700; color:#A67A00; font-size:12.5px; margin-top:2px; }
-      .gd-logos{ display:flex; justify-content:center; align-items:center; gap:30px; margin-top:14px; }
-      .gd-logos img{ height:72px; max-width:150px; object-fit:contain; }
-      .gd-centre{ text-align:center; margin-top:44px; }
-      .gd-etab{ font-size:16px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:#5B6259; }
-      .gd-titre{ font-size:34px; font-weight:800; color:${deep}; line-height:1.2; margin:14px 30px 0; }
-      .gd-trait{ width:120px; height:4px; background:linear-gradient(90deg,${mid},#E4B426); margin:22px auto 26px; border-radius:2px; }
-      .gd-infos{ width:76%; margin:0 auto; border-collapse:collapse; }
-      .gd-infos td{ padding:9px 14px; border-bottom:1px solid #E4E8E1; font-size:13.5px; text-align:left; }
-      .gd-infos td:first-child{ width:40%; color:#5B6259; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
-      .gd-infos td:last-child{ font-weight:700; color:#20241F; }
-      .gd-sommaire-bloc{ width:76%; margin:30px auto 0; }
-      .gd-sommaire-bloc h4{ margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:${deep}; border-bottom:2px solid #E4B426; padding-bottom:4px; }
-      .gd-sommaire-bloc ol{ columns:2; column-gap:28px; margin:0; padding-left:0; list-style:none; font-size:12.5px; line-height:1.75; }
-      .gd-sommaire-bloc li{ break-inside:avoid; }
-      .gd-bas{ margin-top:auto; display:flex; justify-content:space-between; gap:20px; font-size:11.5px; color:#5B6259; border-top:2px solid #E4B426; padding-top:10px; }
+      .page-garde{ page-break-after:always; break-after:page; }
+      .gd-cover{ position:relative; overflow:hidden; min-height:250mm; box-sizing:border-box; padding:14mm 16mm 12mm; display:flex; flex-direction:column; color:#fff;
+        background:linear-gradient(160deg, ${deep} 0%, #0A1B2E 100%); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .gd-cover::before{ content:''; position:absolute; right:-120px; top:-120px; width:420px; height:420px; border-radius:50%; border:2px solid rgba(228,180,38,.35); }
+      .gd-cover::after{ content:''; position:absolute; right:-40px; top:-40px; width:260px; height:260px; border-radius:50%; border:1px solid rgba(255,255,255,.14); }
+      .gd-top{ position:relative; z-index:1; display:flex; align-items:center; gap:14px; }
+      .gd-top img{ height:56px; max-width:130px; background:#fff; border-radius:8px; padding:5px 10px; object-fit:contain; }
+      .gd-rep{ font-size:12.5px; font-weight:800; letter-spacing:1.2px; }
+      .gd-devise{ font-size:10px; opacity:.85; margin-top:2px; }
+      .gd-etab{ font-size:11px; font-weight:700; color:#E4B426; margin-top:3px; text-transform:uppercase; letter-spacing:.6px; }
+      .gd-kicker{ position:relative; z-index:1; margin-top:58mm; font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#E4B426; }
+      .gd-titre{ position:relative; z-index:1; margin-top:10px; font-size:40px; font-weight:800; line-height:1.12; text-transform:uppercase; max-width:88%; }
+      .gd-bar{ position:relative; z-index:1; width:96px; height:4px; background:#E4B426; border-radius:2px; margin-top:16px; }
+      .gd-chip{ position:relative; z-index:1; display:inline-block; margin-top:20px; background:#fff; color:${deep}; font-weight:800; padding:7px 18px; border-radius:999px; font-size:14px; }
+      .gd-infos{ position:relative; z-index:1; margin-top:26px; display:grid; grid-template-columns:1fr 1fr; gap:10px 28px; max-width:620px; }
+      .gd-info{ border-left:3px solid #E4B426; padding:2px 0 2px 10px; }
+      .gd-info span{ display:block; font-size:9.5px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; opacity:.75; }
+      .gd-info b{ display:block; font-size:13px; margin-top:2px; }
+      .gd-bas{ position:relative; z-index:1; margin-top:auto; border-top:2px solid #E4B426; padding-top:12px; display:flex; justify-content:space-between; align-items:flex-end; gap:20px; }
+      .gd-bas .lbl{ font-size:9.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#E4B426; }
+      .gd-bas .nom{ font-size:17px; font-weight:800; margin-top:3px; }
+      .gd-bas .det{ font-size:11px; opacity:.85; margin-top:3px; line-height:1.5; }
+      .gd-bas .droite{ text-align:right; font-size:11px; opacity:.85; }
     </style>
-    <div class="gd-bande"></div>
-    <div class="gd-haut">
-      <div class="gd-rep">RÉPUBLIQUE DE GUINÉE</div>
-      <div class="gd-devise">Travail — Justice — Solidarité</div>
-      <div class="gd-logos"><img src="${logoEcoleActuel()}" alt=""><img src="${GUINEA_EMBLEM_DATAURI}" alt=""></div>
-    </div>
-    <div class="gd-centre">
-      <div class="gd-etab">${esc(p.nomEcole||'')}</div>
+    <div class="gd-cover">
+      <div class="gd-top">
+        <img src="${logoEcoleActuel()}" alt="">
+        <div><div class="gd-rep">RÉPUBLIQUE DE GUINÉE</div><div class="gd-devise">Travail — Justice — Solidarité</div><div class="gd-etab">${esc(p.nomEcole||'')}</div></div>
+      </div>
+      <div class="gd-kicker">Document officiel${p.anneeScolaire ? ' · ' + esc(p.anneeScolaire) : ''}</div>
       <div class="gd-titre">${titre}</div>
-      <div class="gd-trait"></div>
-      <table class="gd-infos">${infos.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>
-    </div>
-    ${sommaire}
-    <div class="gd-bas">
-      <div>Document à usage interne de l’établissement.</div>
-      <div>Édité le ${esc(dateEdition)}</div>
+      <div class="gd-bar"></div>
+      ${cycle ? `<div class="gd-chip">${esc(cycle)}</div>` : ''}
+      <div class="gd-infos">${infosGarde}</div>
+      <div class="gd-bas">
+        <div>
+          <div class="lbl">Établissement</div>
+          <div class="nom">${esc(p.nomEcole||'')}</div>
+          <div class="det">${[p.ville, chef].filter(Boolean).map(esc).join('<br>')}</div>
+        </div>
+        <div class="droite">Document à usage interne<br>Édité le ${esc(dateEdition)}</div>
+      </div>
     </div>
   </section>`;
-  return html.slice(0, debut) + garde + html.slice(debut);
+  return html.slice(0, debut) + garde + sommaireHTML + html.slice(debut);
 }
 function tekouloEcrireDocument(fenetre, html){
   try{ html = tekouloAjouterPageDeGarde(html); }catch(e){}
