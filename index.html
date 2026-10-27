@@ -1308,26 +1308,112 @@
   .ia-cle-aide{ font-size:12px; color:var(--ink-soft,#5B6259); }
 </style>
 <style id="style-horloge">
-  .horloge-ligne{ display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; }
-  .horloge-carte > .horloge-ligne > div:last-child{ text-align:center; }
-  .horloge-cadran{ width:96px; height:96px; flex:0 0 auto; }
-  .hc-fond{ fill:var(--paper,#fff); stroke:var(--green-deep,#0B4A32); stroke-width:4; }
+  .horloge-carte{ position:relative; overflow:hidden; padding:20px 24px 18px; margin-bottom:20px; }
+  .horloge-carte::before{ content:''; position:absolute; top:0; left:0; right:0; height:5px; background:linear-gradient(90deg, #CE1126 33.33%, #FCD116 33.33%, #FCD116 66.66%, #009460 66.66%); }
+  .horloge-ligne{ display:flex; align-items:center; justify-content:flex-start; gap:26px; flex-wrap:wrap; }
+  .horloge-cadran{ width:124px; height:124px; flex:0 0 auto; filter:drop-shadow(0 4px 10px rgba(11,74,50,.18)); }
+  .hc-fond{ fill:var(--paper,#fff); stroke:var(--green-deep,#0B4A32); stroke-width:5; }
   .hc-tick{ stroke:var(--ink-soft,#5B6259); stroke-width:3; }
   .hc-tick-fin{ stroke-width:1.2; }
-  .hc-num{ font-size:13px; font-weight:700; fill:var(--ink,#20241F); text-anchor:middle; dominant-baseline:central; }
-  .hc-h{ stroke:var(--ink,#20241F); stroke-width:6; stroke-linecap:round; }
-  .hc-m{ stroke:var(--ink,#20241F); stroke-width:4; stroke-linecap:round; }
+  .hc-num{ font-size:15px; font-weight:800; fill:var(--ink,#20241F); text-anchor:middle; dominant-baseline:central; }
+  .hc-h{ stroke:var(--ink,#20241F); stroke-width:7; stroke-linecap:round; }
+  .hc-m{ stroke:var(--ink,#20241F); stroke-width:4.5; stroke-linecap:round; }
   .hc-s{ stroke:var(--red,#B3231C); stroke-width:2; stroke-linecap:round; }
   .hc-centre{ fill:var(--red,#B3231C); }
-  .horloge-heure{ font-size:26px; font-weight:800; letter-spacing:1px; font-variant-numeric:tabular-nums; color:var(--green-deep,#0B4A32); line-height:1.1; }
-  .horloge-date{ font-size:12px; color:var(--ink-soft,#5B6259); margin-top:3px; }
-  .horloge-meteo{ font-size:12px; color:var(--ink-soft,#5B6259); margin-top:4px; }
-  html body.mode-nuit .horloge-heure{ color:#EDEDED; }
+  .horloge-infos{ flex:1 1 260px; min-width:0; }
+  .horloge-heure{ display:inline-block; font-size:34px; font-weight:800; letter-spacing:2px; font-variant-numeric:tabular-nums; color:#fff; background:var(--green-deep,#0B4A32); padding:6px 18px; border-radius:12px; line-height:1.2; box-shadow:0 4px 12px rgba(11,74,50,.25); }
+  .horloge-date{ font-size:15px; font-weight:600; color:var(--ink,#20241F); margin-top:10px; }
+  .horloge-meteo{ display:inline-block; font-size:13px; color:var(--ink-soft,#5B6259); margin-top:8px; padding:4px 12px; border-radius:999px; background:rgba(11,74,50,.07); }
+  #horloge-meteo-action{ display:inline-block; margin-left:6px; }
+  html body.mode-nuit .horloge-date{ color:#EDEDED; }
   html body.mode-nuit .hc-num, html body.mode-nuit .hc-h, html body.mode-nuit .hc-m{ fill:#EDEDED; stroke:#EDEDED; }
-  @media (max-width:520px){ .horloge-heure{ font-size:22px; } .horloge-cadran{ width:76px; height:76px; } .horloge-ligne{ gap:12px; } }
+  @media (max-width:520px){
+    .horloge-carte{ padding:18px 16px 16px; }
+    .horloge-ligne{ flex-direction:column; text-align:center; gap:14px; }
+    .horloge-infos{ width:100%; }
+    .horloge-cadran{ width:108px; height:108px; }
+    .horloge-heure{ font-size:26px; padding:5px 14px; }
+  }
 </style>
 <style id="style-nuit-texte-degrade">
   html body.mode-nuit .stat-value{ background-image:linear-gradient(135deg,#8EE3B5 0%,#4CC68E 100%) !important; }
+</style>
+<style id="style-formulaires">
+  /* ===== Formulaires : présentation harmonisée sur toute l'application ===== */
+  .form-grid{ gap:18px 20px; }
+  .field{ position:relative; }
+  .field label{ display:flex; align-items:center; gap:4px; font-size:12.5px; font-weight:600; color:var(--ink,#20241F); text-transform:none; letter-spacing:.1px; margin-bottom:6px; }
+  .field label .req{ color:var(--red,#B3231C); font-weight:800; font-size:14px; line-height:1; }
+  .field input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=radio]),
+  .field select, .field textarea{
+    min-height:42px; padding:10px 13px; border:1.5px solid #CFD6CB; border-radius:10px;
+    font-size:14px; color:var(--ink,#20241F); background:var(--paper,#fff);
+    box-shadow:0 1px 2px rgba(15,35,25,.05);
+  }
+  .field input::placeholder, .field textarea::placeholder{ color:#9AA298; opacity:1; }
+  .field input:hover, .field select:hover, .field textarea:hover{ border-color:#8FA596; }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    border-color:var(--green,#0F6B45); background:var(--paper,#fff); box-shadow:0 0 0 4px rgba(15,107,69,.14);
+  }
+  .field select{
+    appearance:none; -webkit-appearance:none; padding-right:38px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%230B4A32' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 14px center;
+  }
+  .field textarea{ min-height:84px; line-height:1.5; resize:vertical; }
+  .field input[type=file]{ min-height:0; padding:6px; font-size:12px; border-style:dashed; }
+  .field input[type=date]{ min-height:42px; }
+  .field input.invalid, .field select.invalid, .field textarea.invalid{
+    border-color:var(--red,#B3231C) !important; background:#FDF2F2 !important; box-shadow:0 0 0 4px rgba(179,35,28,.12) !important;
+  }
+  .field-aide{ display:block; margin-top:5px; font-size:11.5px; color:var(--ink-soft,#5B6259); line-height:1.4; }
+  .input-suffix .suffix{ min-height:42px; background:#EEF4EF; border-color:#CFD6CB; font-size:12px; color:var(--green-deep,#0B4A32); }
+  .form-actions{ justify-content:flex-end; flex-wrap:wrap; gap:10px; margin-top:22px; padding-top:16px; border-top:1px solid #E4E8E1; }
+  .entity-form > h4{
+    margin:0 0 16px; padding:10px 14px; border-left:5px solid var(--green,#0F6B45); border-radius:8px;
+    background:linear-gradient(90deg, rgba(15,107,69,.10), rgba(15,107,69,0)); font-size:15px; color:var(--green-deep,#0B4A32);
+  }
+  @media (max-width:560px){
+    .field input:not([type=hidden]):not([type=file]), .field select, .field textarea{ font-size:16px; }
+    .form-actions .btn{ flex:1 1 auto; }
+  }
+</style>
+<style id="style-formulaires-2">
+  .form-progress{ margin:0 0 16px; padding:10px 14px; border:1px solid #E4E8E1; border-radius:10px; background:#FBFAF5; }
+  .form-progress .fp-texte{ font-size:12.5px; font-weight:600; color:var(--ink-soft,#5B6259); margin-bottom:6px; }
+  .form-progress .fp-barre{ height:6px; background:#E4E8E1; border-radius:4px; overflow:hidden; }
+  .form-progress .fp-barre span{ display:block; height:100%; width:0; border-radius:4px; background:linear-gradient(90deg,var(--green,#0F6B45),#E4B426); transition:width .25s ease; }
+  .form-progress.complet{ border-color:#BFD8C8; background:#F3F9F5; }
+  .form-progress.complet .fp-texte{ color:var(--green-deep,#0B4A32); }
+  .field-erreur{ display:block; margin-top:5px; font-size:11.5px; font-weight:600; color:var(--red,#B3231C); }
+  .field-compteur{ display:block; text-align:right; font-size:11px; color:var(--ink-soft,#5B6259); margin-top:3px; }
+  .form-actions{ position:sticky; bottom:0; z-index:4; background:var(--paper,#fff); padding-bottom:10px; }
+</style>
+<style id="style-formulaires-3">
+  .form-section{ margin-bottom:14px; border:1px solid #E4E8E1; border-radius:12px; background:var(--paper,#fff); }
+  .form-section > summary{ cursor:pointer; list-style:none; padding:11px 16px; font-weight:700; font-size:13.5px; color:var(--green-deep,#0B4A32); border-radius:12px; background:linear-gradient(90deg, rgba(15,107,69,.09), rgba(15,107,69,0)); display:flex; align-items:center; }
+  .form-section > summary::-webkit-details-marker{ display:none; }
+  .form-section > summary::before{ content:'▸'; color:var(--green,#0F6B45); margin-right:8px; font-size:12px; }
+  .form-section[open] > summary{ border-radius:12px 12px 0 0; border-bottom:1px solid #E4E8E1; }
+  .form-section[open] > summary::before{ content:'▾'; }
+  .form-section > .form-grid{ padding:16px; margin:0; }
+  .fs-n{ margin-left:8px; font-size:11px; font-weight:600; color:var(--ink-soft,#5B6259); background:#EEF3EF; padding:1px 8px; border-radius:999px; }
+  .select-recherche{ width:100%; box-sizing:border-box; margin-bottom:6px; padding:7px 10px; border:1.5px solid #CFD6CB; border-radius:8px; font-size:13px; font-family:inherit; background:var(--paper,#fff); color:var(--ink,#20241F); }
+  .select-recherche:focus{ outline:none; border-color:var(--green,#0F6B45); box-shadow:0 0 0 3px rgba(15,107,69,.14); }
+</style>
+<style id="style-accueil">
+  .acc-info{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:4px auto 14px; max-width:1000px; }
+  .acc-chip{ background:rgba(255,255,255,.10); border:1px solid rgba(228,180,38,.5); color:#fff; border-radius:999px; padding:6px 14px; font-size:12.5px; font-weight:600; letter-spacing:.2px; }
+  .acc-chip b{ margin-right:4px; }
+  .cycle-card{ transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .cycle-card:hover{ transform:translateY(-3px); box-shadow:0 14px 28px rgba(0,0,0,.16); }
+  .cycle-card:focus-visible{ outline:3px solid #E4B426; outline-offset:3px; }
+  .cc-stats{ display:block; margin-top:9px; font-size:11.5px; font-weight:600; color:#5B6259; }
+  .acc-contact{ margin-top:8px; font-size:12px; color:rgba(255,255,255,.85); }
+  @media (max-width:600px){
+    .acc-chip{ font-size:11.5px; padding:5px 11px; }
+    .cc-stats{ font-size:11px; }
+  }
 </style>
 </head>
 <body>
@@ -1336,7 +1422,7 @@
 <div id="albert-splash" role="status" aria-live="polite" aria-label="Yombouno Albert vous remercie pour votre excellent choix">
   <div class="albert-splash-inner">
     <div class="albert-splash-logo-wrap">
-      <img src="icon-512.png" alt="Albert Digital" class="albert-splash-logo" width="512" height="512" fetchpriority="high" decoding="async">
+      <img src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20512%20512'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%2315834F'/%3E%3Cstop%20offset='1'%20stop-color='%230B4A32'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='512'%20height='512'%20rx='112'%20fill='url%28%23g%29'/%3E%3Crect%20x='22'%20y='22'%20width='468'%20height='468'%20rx='94'%20fill='none'%20stroke='%23E4B426'%20stroke-width='10'/%3E%3Ctext%20x='256'%20y='292'%20font-family='Georgia,serif'%20font-size='184'%20font-weight='700'%20text-anchor='middle'%20fill='%23F4D35E'%3EAD%3C/text%3E%3Crect%20x='150'%20y='352'%20width='70'%20height='12'%20rx='6'%20fill='%23CE1126'/%3E%3Crect%20x='221'%20y='352'%20width='70'%20height='12'%20rx='6'%20fill='%23FCD116'/%3E%3Crect%20x='292'%20y='352'%20width='70'%20height='12'%20rx='6'%20fill='%23009460'/%3E%3C/svg%3E" alt="Albert Digital" class="albert-splash-logo" width="512" height="512" fetchpriority="high" decoding="async">
     </div>
     <div class="albert-splash-word">ALBERT <span>DIGITAL</span> GUINÉE</div>
     <div class="albert-splash-rule"></div>
@@ -2754,7 +2840,7 @@ const CLES_SYNCHRONISEES = [
   'activitesHorsCours','actesnomination','apeae','bibliotheque','bureauapeae','cassociaux','comitediscipline',
   'coordonneesgps','coursGeneres','sujetsGeneres','repartitionsProgramme','repartitionActiveId','cotisationssociales','courriers','depenses','discipline','dons',
   'dossierspers','mutations','eleves','evaluations','fraisscolarite','groupestech','immobilier',
-  'informations','livresscolaires','materiel','notes','orientations','personnel','planning',
+  'informations','livresscolaires','materiel','notes','orientations','parents','personnel','planning',
   'presenceMensuelle','programmeinfo','projets','projetsGeneres','rapports','remarques',
   'responsablesclasse','responsablesecole','supervision','transferts',
   'salaires','pretsscolaires','salairesReglagesMensuels'
@@ -3947,7 +4033,92 @@ function qrSecurityBlock(docType, refCode, personName, extraLine, size){
 /* Ouvre la fenêtre d'impression ; si le navigateur la bloque, prévient l'utilisateur au lieu d'échouer en silence. */
 /* Écrit un document HTML dans une fenêtre d'impression puis la referme. Remplace les couples
    document.write / document.close recopiés dans les fonctions d'impression (audit P3-1). */
+/* ===== Page d'accueil des documents imprimables =====
+   Ajoutée automatiquement, avec le titre du document, l'établissement, l'espace, l'année, la date,
+   le contenu (tableaux et lignes) et un sommaire repris des titres du document.
+   Les documents d'une seule page (bulletins, certificats, attestations, reçus, fiches individuelles,
+   badges, notes de service, actes) n'en reçoivent pas. */
+function tekouloAjouterPageDeGarde(html){
+  const titreM = html.match(/<title>([\s\S]*?)<\/title>/i);
+  const bodyM = html.match(/<body[^>]*>/i);
+  if(!titreM || !bodyM) return html;
+  const titre = titreM[1].trim();
+  if(/^(Bulletin|Certificat|Attestation|Fiche|Reçu|Note de service|Acte|Badge|Carte)/i.test(titre)) return html;
+  const p = getParams();
+  const CP = printCycleColors();
+  const deep = (CP && CP.deep) || '#0B4A32';
+  const mid = (CP && CP.mid) || '#0F6B45';
+  const debut = bodyM.index + bodyM[0].length;
+  const corps = html.slice(debut);
+  // Sommaire : titres du contenu (sans l'en-tête administratif)
+  const idx = corps.indexOf('vue-contenu');
+  const zone = idx >= 0 ? corps.slice(idx) : corps;
+  const titres = [];
+  const reTitre = /<(h2|h3)[^>]*>([\s\S]*?)<\/\1>/gi;
+  let m;
+  while((m = reTitre.exec(zone)) && titres.length < 14){
+    const t = m[2].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    if(t && !titres.includes(t)) titres.push(t);
+  }
+  const nbTableaux = (corps.match(/<table/gi)||[]).length;
+  const nbLignes = Math.max(0, (corps.match(/<tr/gi)||[]).length - (corps.match(/<thead/gi)||[]).length);
+  const dateEdition = fmtDate(todayISO());
+  const cycle = (CYCLES_TEKOULO[TEKOULO_CYCLE_ACTIF] && CYCLES_TEKOULO[TEKOULO_CYCLE_ACTIF].label) || '';
+  const infos = [
+    ['Établissement', p.nomEcole],
+    ['Localité', p.ville],
+    ['Espace', cycle],
+    ['Année scolaire', p.anneeScolaire],
+    ['Date d’édition', dateEdition],
+    ['Contenu', nbTableaux ? (nbTableaux + (nbTableaux>1?' tableaux':' tableau') + ' · ' + nbLignes + (nbLignes>1?' lignes':' ligne')) : 'Texte'],
+  ].filter(([,v])=>v);
+  const sommaire = titres.length
+    ? `<div class="gd-sommaire-bloc"><h4>Sommaire</h4><ol>${titres.map(t=>`<li>${t}</li>`).join('')}</ol></div>` : '';
+  const garde = `<section class="page-garde">
+    <style>
+      .page-garde{ page-break-after:always; break-after:page; min-height:250mm; display:flex; flex-direction:column; box-sizing:border-box; }
+      .gd-bande{ height:10px; border-radius:4px; background:linear-gradient(90deg,#CE1126 33.33%,#FCD116 33.33%,#FCD116 66.66%,#009460 66.66%); }
+      .gd-haut{ text-align:center; margin-top:16px; }
+      .gd-rep{ font-weight:800; letter-spacing:1.6px; color:${deep}; font-size:15px; }
+      .gd-devise{ font-style:italic; font-weight:700; color:#A67A00; font-size:12.5px; margin-top:2px; }
+      .gd-logos{ display:flex; justify-content:center; align-items:center; gap:30px; margin-top:14px; }
+      .gd-logos img{ height:72px; max-width:150px; object-fit:contain; }
+      .gd-centre{ text-align:center; margin-top:44px; }
+      .gd-etab{ font-size:16px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:#5B6259; }
+      .gd-titre{ font-size:34px; font-weight:800; color:${deep}; line-height:1.2; margin:14px 30px 0; }
+      .gd-trait{ width:120px; height:4px; background:linear-gradient(90deg,${mid},#E4B426); margin:22px auto 26px; border-radius:2px; }
+      .gd-infos{ width:76%; margin:0 auto; border-collapse:collapse; }
+      .gd-infos td{ padding:9px 14px; border-bottom:1px solid #E4E8E1; font-size:13.5px; text-align:left; }
+      .gd-infos td:first-child{ width:40%; color:#5B6259; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+      .gd-infos td:last-child{ font-weight:700; color:#20241F; }
+      .gd-sommaire-bloc{ width:76%; margin:30px auto 0; }
+      .gd-sommaire-bloc h4{ margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:${deep}; border-bottom:2px solid #E4B426; padding-bottom:4px; }
+      .gd-sommaire-bloc ol{ columns:2; column-gap:28px; margin:0; padding-left:0; list-style:none; font-size:12.5px; line-height:1.75; }
+      .gd-sommaire-bloc li{ break-inside:avoid; }
+      .gd-bas{ margin-top:auto; display:flex; justify-content:space-between; gap:20px; font-size:11.5px; color:#5B6259; border-top:2px solid #E4B426; padding-top:10px; }
+    </style>
+    <div class="gd-bande"></div>
+    <div class="gd-haut">
+      <div class="gd-rep">RÉPUBLIQUE DE GUINÉE</div>
+      <div class="gd-devise">Travail — Justice — Solidarité</div>
+      <div class="gd-logos"><img src="${logoEcoleActuel()}" alt=""><img src="${GUINEA_EMBLEM_DATAURI}" alt=""></div>
+    </div>
+    <div class="gd-centre">
+      <div class="gd-etab">${esc(p.nomEcole||'')}</div>
+      <div class="gd-titre">${titre}</div>
+      <div class="gd-trait"></div>
+      <table class="gd-infos">${infos.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>
+    </div>
+    ${sommaire}
+    <div class="gd-bas">
+      <div>Document à usage interne de l’établissement.</div>
+      <div>Édité le ${esc(dateEdition)}</div>
+    </div>
+  </section>`;
+  return html.slice(0, debut) + garde + html.slice(debut);
+}
 function tekouloEcrireDocument(fenetre, html){
+  try{ html = tekouloAjouterPageDeGarde(html); }catch(e){}
   fenetre.document.write(html);
   fenetre.document.close();
 }
@@ -4179,6 +4350,7 @@ function techniqueAfficherEcran(){
         <button type="button" class="btn ghost sm" onclick="techniqueVerrouiller()">🔒 Verrouiller</button>
       </div>
       ${techniqueContenuHTML()}
+      ${guideTechniqueHTML()}
       <div class="section-title"><h3><span class="bar"></span>Changer le mot de passe du module technique</h3></div>
       <div class="card pad" style="max-width:420px;">
         <div class="field" style="margin-bottom:8px;"><label>Mot de passe actuel</label><input id="technique-mdp-actuel" type="password" autocomplete="off"></div>
@@ -4683,7 +4855,7 @@ function htmlCadran(){
 function htmlHorloge(){
   const d = new Date();
   return '<div class="card pad horloge-carte"><div class="horloge-ligne">' + htmlCadran() +
-    '<div><div class="horloge-heure" id="horloge-heure">' + formatHeure(d) + '</div>' +
+    '<div class="horloge-infos"><div class="horloge-heure" id="horloge-heure">' + formatHeure(d) + '</div>' +
     '<div class="horloge-date" id="horloge-date">' + formatDateLongue(d) + '</div>' +
     '<div class="horloge-meteo" id="horloge-meteo">🌡️ Météo en cours…</div><div id="horloge-meteo-action"></div></div></div></div>';
 }
@@ -5808,6 +5980,7 @@ function renderGuide(container){
       <a href="#g3">3. Présentation de l'interface</a>
       <a href="#g4">4. Gestion de l'année scolaire</a>
       <a href="#g5">5. Les modules de l'application</a>
+      <a href="#g5b">5 bis. Parents d’élèves et liaison avec les inscriptions</a>
       <a href="#g6">6. Utilisation des formulaires</a>
       <a href="#g7">7. Recherche et filtres</a>
       <a href="#g8">8. Impression de documents</a>
@@ -5939,6 +6112,7 @@ function renderGuide(container){
       <h3>Vie académique</h3>
       <ul>
         <li><b>Élèves :</b> fiches d'inscription, informations personnelles, photos, suivi individuel.</li>
+        <li><b>Parents d’élèves :</b> fiches des pères, mères et tuteurs, avec la liste de leurs enfants et leur classe (chapitre 5 bis).</li>
         <li><b>Notes &amp; Bulletins :</b> saisie des notes, bulletins, classement et résultats annuels (chapitre 12).</li>
         <li><b>Orientation (après le Brevet) :</b> suivi de l'orientation des élèves en fin de cycle (espace Collège uniquement).</li>
         <li><b>Orientation — Changement de série/option</b> et <b>Orientation — Admis au Baccalauréat :</b> suivi de l'orientation des élèves entre séries/options et vers l'enseignement supérieur après le Baccalauréat (espace Lycée uniquement).</li>
@@ -5976,13 +6150,32 @@ function renderGuide(container){
       <div class="guide-callout info"><b class="gc-label">ℹ️ Remarque</b>Ce filtrage s'ajoute à celui du type d'établissement défini dans Paramètres : en établissement <b>Public</b>, les modules APEAE et Bureau de l'APEAE sont visibles et la Gestion des frais de scolarité est masquée ; en établissement <b>Privé</b>, c'est l'inverse (chapitre 10.2). Le rôle de la personne connectée limite encore les modules visibles (chapitre 10.7).</div>
     </div>
 
+    <div class="guide-chapter" id="g5b">
+      <h2>5 bis. Parents d’élèves et liaison avec les inscriptions</h2>
+      <p>Le module <b>Parents d’élèves</b> (menu Vie académique) enregistre une fiche par père, mère ou tuteur. Chaque fiche reçoit un code automatique, de la forme PAR suivi d’un numéro (par exemple PAR001). Ce code relie les parents aux élèves.</p>
+      <h3>5 bis.1 Créer une fiche parent</h3>
+      <ol>
+        <li>Ouvrez « Parents d’élèves » puis cliquez sur « Ajouter ».</li>
+        <li>Renseignez au minimum le <b>nom</b> et les <b>prénoms</b>, champs obligatoires marqués d’un astérisque rouge.</li>
+        <li>Indiquez le <b>lien avec l’élève</b> (Père, Mère, Tuteur ou Autre), le téléphone, la profession, le lieu de travail et la pièce d’identité.</li>
+        <li>Enregistrez. Le code PAR apparaît dans le tableau : notez-le.</li>
+      </ol>
+      <h3>5 bis.2 Relier un élève à ses parents</h3>
+      <p>Dans le formulaire d’inscription de l’élève, trois champs reçoivent le code du parent : <b>Code fiche du père</b>, <b>Code fiche de la mère</b> et <b>Code fiche du tuteur</b>. Saisissez le code, ou choisissez-le dans la liste proposée. Dès que vous quittez le champ, les informations se remplissent automatiquement : nom du père, profession, pièce d’identité, nom de la mère, nom et téléphone du tuteur.</p>
+      <div class="guide-callout info"><b class="gc-label">ℹ️ Téléphone non écrasé</b>Le téléphone de l’élève et celui du tuteur ne sont remplis que s’ils sont vides : une saisie déjà faite n’est jamais effacée.</div>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Code inconnu</b>Si le code ne correspond à aucune fiche, un message le signale. Vérifiez-le dans « Parents d’élèves », ou créez d’abord la fiche du parent.</div>
+      <h3>5 bis.3 Voir les enfants d’un parent</h3>
+      <p>Ouvrez la fiche d’un parent (bouton Modifier) : un tableau affiche chaque élève rattaché, avec son <b>niveau</b>, sa <b>classe (GP)</b> et le lien (Père, Mère ou Tuteur). Une fiche sans élève affiche un rappel du code à saisir.</p>
+      <div class="guide-callout info"><b class="gc-label">ℹ️ Accès</b>Ce module est réservé au personnel de l’école. Les parents n’y ont pas accès : il sert à l’administration pour remplir plus vite les inscriptions.</div>
+    </div>
+
     <div class="guide-chapter" id="g6">
       <h2>6. Utilisation des formulaires</h2>
       <p>Chaque module suit la même logique : une liste des enregistrements existants, un formulaire de saisie, et des actions rapides sur chaque ligne.</p>
       <h3>6.1 Ajouter un enregistrement</h3>
       <ol>
         <li>Ouvrez le module concerné depuis le menu.</li>
-        <li>Remplissez les champs du formulaire (fond bleu clair, bordure verte).</li>
+        <li>Remplissez les champs du formulaire. Les champs marqués d’un astérisque rouge (*) sont obligatoires ; une courte aide, sous certains champs, indique le format attendu (téléphone, montant en GNF, etc.).</li>
         <li>Cliquez sur le bouton d'action (ex. « Ajouter », « Enregistrer ») pour valider.</li>
         <li>Le nouvel enregistrement apparaît immédiatement dans le tableau, avec un effet de surbrillance dorée.</li>
       </ol>
@@ -6007,6 +6200,13 @@ function renderGuide(container){
       <p>Quand on quitte un champ de texte, l'orthographe, les accents, les élisions et l'espacement sont corrigés automatiquement (chapitre 16.1). Les champs qui ne concernent pas du texte libre (identifiants, numéros, dates…) sont traités normalement.</p>
       <h3>6.6 Annuler une modification en cours</h3>
       <p>Pendant une modification, un bouton « Annuler » (contour gris, sans remplissage) permet de fermer le formulaire sans enregistrer les changements.</p>
+      <h3>6.7 Présentation des champs</h3>
+      <ul>
+        <li><b>Champs blancs</b> à bordure fine ; le champ actif reçoit un contour vert.</li>
+        <li><b>Listes déroulantes</b> avec une flèche : cliquez pour choisir une valeur.</li>
+        <li><b>Astérisque rouge (*)</b> : champ obligatoire. Un champ vide au moment de l’enregistrement est signalé en rouge.</li>
+        <li><b>Aide grise</b> sous le champ : rappelle le format ou le sens de la donnée.</li>
+      </ul>
     </div>
 
     <div class="guide-chapter" id="g7">
@@ -6046,6 +6246,9 @@ function renderGuide(container){
         <li>La fenêtre d'impression du navigateur s'ouvre : choisissez votre imprimante ou « Enregistrer en PDF », puis validez.</li>
       </ol>
       <p>Les pages qui s'imprimaient directement depuis l'application (statistiques, bilan financier et rapport global de l'établissement, emplois du temps, guide, biographie) s'impriment maintenant de la même façon : le bouton « ⎙ Imprimer » ouvre le document dans une fenêtre d'impression avec l'en-tête administratif et le code QR.</p>
+      <h3>Page d’accueil des documents</h3>
+      <p>Chaque document de plusieurs pages commence par une <b>page d’accueil</b> générée automatiquement : nom de l’établissement, titre du document, espace, année scolaire, date d’édition, contenu (nombre de tableaux et de lignes) et un <b>sommaire</b> repris des titres du document.</p>
+      <p>Les documents d’une seule page (bulletins, certificats, attestations, reçus, fiches individuelles, badges, notes de service, actes de nomination) n’ont pas de page d’accueil : ils gardent leur mise en page officielle.</p>
       <p>En bas de chaque document ouvert dans une nouvelle fenêtre, <b>trois boutons</b> sont toujours présents (ils ne sont jamais imprimés) : <b>« ↩ Retour à … »</b> (contour bleu), qui ramène au module d'origine — par exemple « Retour aux actes de nomination » ; <b>« 🏠 Retour au tableau de bord »</b> (bleu marine) ; et <b>« ⎙ Imprimer »</b> (jaune d'or), pour relancer l'impression. Lorsque le document a été ouvert depuis le tableau de bord ou depuis l'assistant IA, le premier bouton devient « ↩ Fermer cette page ».</p>
       <h3>8.3 Choisir le signataire du document</h3>
       <p>Sur chaque document généré, un petit menu déroulant « Signature et cachet du … » apparaît juste au-dessus de la zone de signature. Il n'est jamais imprimé — il sert uniquement, avant l'impression, à choisir qui signe. Les signataires proposés dépendent de <b>l'espace actif</b> au moment de l'impression :</p>
@@ -6492,6 +6695,7 @@ function renderGuide(container){
       <h3>13.1 Le tableau de bord d'un espace</h3>
       <ul>
         <li><b>Message de bienvenue</b> et bouton « 🔄 Synchroniser ».</li>
+        <li><b>Horloge</b> : cadran analogique, heure numérique, date complète et météo (Guéckédou par défaut, ou votre position si vous l’autorisez).</li>
         <li><b>« Établissement — les 4 cycles ensemble » :</b> cinq cartes — Effectif total, Personnel, Budget, Recouvrement (frais de scolarité en établissement privé) ou APEAE collecté (établissement public), Total dépenses. Chaque carte affiche, sur des lignes séparées, la valeur de chaque cycle (une ligne « Non rattaché » apparaît seulement si des fiches n'ont pas de cycle). Un clic ouvre la page correspondante de l'établissement.</li>
         <li><b>« Espace … » :</b> les indicateurs propres à l'espace actif (effectifs, personnel, moyenne générale, situation financière), les graphiques et le calendrier des activités.</li>
       </ul>
@@ -6631,6 +6835,9 @@ function renderGuide(container){
         <li><b>Les données saisies</b> (élèves, notes, paiements, comptes) : elles ne se trouvent jamais dans le fichier déposé sur GitHub, seulement dans le navigateur de chaque appareil (ou sur Google Drive si la synchronisation est active). Déposer une nouvelle version du fichier sur GitHub ne touche donc jamais aux données déjà saisies — ni pour les ajouter, ni pour les effacer.</li>
       </ul>
       <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>GitHub met à jour le fonctionnement de l'application ; seule la sauvegarde/restauration ou la synchronisation Google Drive transportent le contenu d'un appareil à l'autre.</div>
+      <h3>Version Android (fichier APK)</h3>
+      <p>Une version installable sur téléphone Android est disponible sous forme de fichier APK. Pour l’installer, copiez le fichier sur le téléphone, ouvrez-le depuis le gestionnaire de fichiers, puis autorisez l’installation depuis cette source si Android le demande.</p>
+      <div class="guide-callout info"><b class="gc-label">ℹ️ Données sur le téléphone</b>Dans cette version, les données restent sur le téléphone : elles ne sont pas partagées avec l’ordinateur. Pensez à faire une sauvegarde (chapitre 9). L’impression et la connexion à Google Drive ne sont pas garanties dans cette version.</div>
     </div>
 
     <div class="guide-chapter" id="g18">
@@ -6651,6 +6858,10 @@ function renderGuide(container){
       <p>Vérifiez les informations de l'établissement et les responsables du cycle dans le module Paramètres (chapitre 10.1), et le signataire choisi dans le menu déroulant du document (chapitre 8.3).</p>
       <h3>Puis-je utiliser l'application sur plusieurs appareils en même temps ?</h3>
       <p>Oui, si l'application est connectée à Google Drive (chapitre 10 bis) : les données saisies sur un appareil apparaissent automatiquement sur les autres après synchronisation. Sans connexion à Google Drive, utilisez la sauvegarde/restauration (chapitre 9) ou le transfert via Xender.</p>
+      <h3>Le code d’un parent ne remplit rien dans l’inscription de l’élève.</h3>
+      <p>Vérifiez que le code est exact (il commence par PAR) et qu’il correspond à une fiche enregistrée dans « Parents d’élèves » sur cet appareil. Un téléphone déjà saisi n’est jamais remplacé (chapitre 5 bis).</p>
+      <h3>Pourquoi certains documents n’ont-ils pas de page d’accueil ?</h3>
+      <p>Les documents d’une seule page (bulletins, certificats, reçus, fiches individuelles, etc.) gardent leur mise en page officielle. Les listes, rapports et statistiques en ont une (chapitre 8).</p>
       <h3>Comment installer, désinstaller ou transférer l'application, et une mise à jour sur GitHub touche-t-elle mes données ?</h3>
       <p>Voir le chapitre 17 bis, entièrement consacré à ces questions.</p>
     </div>
@@ -6682,6 +6893,8 @@ function renderGuide(container){
           <tr><td>Voir les ventes de la cantine du jour</td><td>Cantine : ventes et flux → le récapitulatif s'affiche en haut de la page.</td></tr>
           <tr><td>Enregistrer un achat de vivres</td><td>Cantine : approvisionnements → Ajouter.</td></tr>
           <tr><td>Noter un retard ou une sortie</td><td>Vie scolaire → « Registre des retards et sorties » → Ajouter.</td></tr>
+          <tr><td>Enregistrer un parent d’élève</td><td>Vie académique → « Parents d’élèves » → Ajouter, puis noter le code PAR.</td></tr>
+          <tr><td>Relier un élève à ses parents</td><td>Inscription de l’élève → saisir le code PAR du père, de la mère ou du tuteur.</td></tr>
         </tbody>
       </table>
       <p style="text-align:center; font-style:italic; color:var(--ink-soft); border-top:2px solid var(--gold); padding-top:14px; margin-top:20px;">Collège Tekoulo Centre — Guéckédou, République de Guinée</p>
@@ -6982,6 +7195,61 @@ function techniqueContenuHTML(){
   `;
 }
 
+/* ===== Guide technique (Paramètres, réservé au Fondateur) ===== */
+const GUIDE_TECHNIQUE_MD = "# Guide technique — Base de Données de Gestion, Collège Tekoulo Centre\n\nDestiné à la personne qui maintient l'application (modifications, nouveaux modules, serveur relais, version Android). Le guide d'utilisation destiné au personnel est intégré à l'application (chapitre « Guide d'utilisation », menu Système).\n\n## 1. Vue d'ensemble\n\n| Élément | Détail |\n|---|---|\n| Application web | Un seul fichier `index.html` (≈ 6,3 Mo), HTML + CSS + JavaScript, sans serveur ni base de données. |\n| Stockage | `localStorage` du navigateur, clés préfixées par `DB_PREFIX`. Fonctions `dbGet(collection)` et `dbSet(collection, valeur)`. |\n| Session | `sessionStorage` : rôle connecté (`tekoulo_role`), espace actif (`TEKOULO_CYCLE_ACTIF`). |\n| Synchronisation | Google Drive (Google Identity Services). Liste des données synchronisées : constante `CLES_SYNCHRONISEES`. |\n| Assistant IA | Passe par un serveur relais Cloudflare Worker (`worker-assistant-tekoulo.js`). Aucune clé d'IA dans l'application. |\n| Version Android | Projet Kotlin dans `android-tekoulo/` : une WebView qui charge `assets/index.html`. |\n| Audit | `rapport-audit-tekoulo.md` (points P0 à P3, état de chaque correction). |\n\nAucune clé d'API, aucun mot de passe administrateur en clair ne doit figurer dans le fichier. Le mot de passe administrateur est stocké sous forme de hachage (`tekouloVerifierMdp`).\n\n## 2. Structure du fichier `index.html`\n\nOrdre général, de haut en bas :\n\n1. `<style>` principaux (thèmes par cycle : Élémentaire orange, Primaire bleu, Collège vert, Lycée violet ; variables CSS sur `:root`).\n2. `<style id=\"style-horloge\">` : cadran analogique, heure, date, météo du tableau de bord.\n3. `<style id=\"style-formulaires\">` : présentation commune de tous les champs de formulaire.\n4. `<\/head>` puis le HTML de l'écran de connexion et de la coquille (menu `#nav`, zone `#content`).\n5. Scripts : constantes de référence, fonctions d'affichage, d'impression, d'assistant, puis le script de démarrage en bas de page.\n\nLe fichier contient aussi des chaînes HTML qui sont elles-mêmes des documents (`<html>…<\/html>` écrits dans une nouvelle fenêtre). Le script de vérification doit donc ignorer le premier bloc `<script>` (faux positif connu, déjà présent dans la version d'origine).\n\n## 3. Référentiels à connaître\n\n| Constante ou fonction | Rôle |\n|---|---|\n| `NAV` | Menu latéral : groupes et entrées (`key`, `label`, `icon`, `badge`). |\n| `PAGE_META` | Titre et fil d'Ariane de chaque page. |\n| `ROLE_MODULES` | Modules autorisés par rôle (`'*'` = tous). |\n| `TOUS_LES_MODULES_ADMIN_CYCLE` | Liste des modules administrés par cycle. |\n| `CYCLE_MODULES_EXCLUS` | Modules masqués par espace (Élémentaire, Primaire, Collège, Lycée). |\n| `moduleEnabled(key)` | Décision finale d'affichage : type d'établissement, rôle, espace. |\n| `CLES_SYNCHRONISEES` | Collections envoyées sur Google Drive et sauvegardées. |\n| `GENERIC_MODULES` | Modules construits à partir d'une liste de champs (voir §4). |\n| `MATRICULE_LINKS` | Remplissage automatique par matricule ou identifiant (liaisons entre modules). |\n| `PARENT_LIENS_ELEVE` | Remplissage des champs de l'élève à partir du code d'une fiche parent. |\n| `UNIQUE_KEY_FIELDS` | Champs dont la valeur doit être unique (identifiant élève, matricule…). |\n| `CRITICAL_KEYS` | Champs obligatoires : signalés par un astérisque et contrôlés à l'enregistrement. |\n| `ELEVE_FIELDS`, `champsEleves()` | Champs du formulaire élève (le module élèves est écrit à la main, pas en générique). |\n\nRoutage : `renderView(key)` appelle `renderDashboard`, `renderEleves`, etc., puis, en dernier recours, `renderGenericModule(target, GENERIC_MODULES[key])`.\n\n## 4. Modules génériques\n\nUn module générique est un objet de `GENERIC_MODULES` :\n\n```js\nparents:{ label:'Parents d’élèves', codePrefix:'PAR',\n  fields:[ {key:'nom', label:'Nom', type:'text'}, … ],   // types : text, date, number, select (options), textarea, photo\n  columns:['nom','prenoms','lienParente','telephone','profession'],  // colonnes du tableau\n  extraFormHTML(record){ … }   // HTML ajouté sous le formulaire (ex. liste des enfants)\n}\n```\n\n- `codePrefix` : préfixe du code automatique (`__code`, ex. PAR001), généré par `nextCode`.\n- `genSave` enregistre ; `cycle` est ajouté automatiquement (filtrage par espace via `cycleModuleVisible`).\n- `extraFormHTML(record)` reçoit l'enregistrement en cours ; il est appelé en ajout (`record` vide) et en modification.\n\n### Checklist pour ajouter un module générique\n\n1. Déclarer le module dans `GENERIC_MODULES` (fields, columns, codePrefix).\n2. Ajouter l'entrée dans `NAV`, avec son icône et son compteur `badge`.\n3. Ajouter le titre dans `PAGE_META`.\n4. Ajouter la clé dans `CLES_SYNCHRONISEES` (sinon le module n'est ni sauvegardé ni synchronisé).\n5. Ajouter la clé dans `TOUS_LES_MODULES_ADMIN_CYCLE` et dans les listes de `ROLE_MODULES` qui doivent y accéder.\n6. Si le module doit se remplir à partir d'un autre, ajouter une entrée dans `MATRICULE_LINKS` ou une fonction dédiée.\n7. Vérifier les espaces où le module doit être masqué (`CYCLE_MODULES_EXCLUS`).\n\nExemple réalisé : le module « Parents d’élèves » (fiches parents) et la liaison avec les élèves (`PARENT_LIENS_ELEVE`, champs `codeParentPere`, `codeParentMere`, `codeParentTuteur` dans `ELEVE_FIELDS`, liste de suggestions `<datalist>` construite dans `fieldInput`).\n\n## 5. Formulaires\n\n- Les champs sont rendus par `fieldInput(f, val, excludeId)`. Il en existe une version par contexte (module générique, élèves, édition d'élève, personnel…).\n- Apparence : `style-formulaires` (champs blancs, focus vert, champs invalides en rouge). Les champs sont reconnus par `.field` et `[data-f]`.\n- Aide et astérisques : script `script-formulaires` en fin de fichier. Il utilise un `MutationObserver` et ajoute, pour chaque `.field` :\n  - un astérisque rouge si la clé figure dans `CRITICAL_KEYS` ;\n  - une aide grise si la clé figure dans le dictionnaire `AIDE` (à compléter pour les nouveaux champs).\n  Ce script ne modifie aucune donnée.\n\n## 6. Impression\n\nTous les documents passent par une seule fonction d'écriture :\n\n```\ndocument imprimable → tekouloDocumentImprimable(o)  ──┐\nautres fonctions d'impression (tekouloOuvrirFenetre)  ─┴→ tekouloEcrireDocument(fenetre, html)\n                                                          └→ tekouloAjouterPageDeGarde(html)  (page d'accueil)\n```\n\n- `tekouloOuvrirFenetre()` ouvre la fenêtre (pop-up) ; si elle est bloquée, un message le signale.\n- `tekouloAjouterPageDeGarde(html)` insère la page d'accueil après `<body>`. Elle reprend le `<title>`, l'établissement (`getParams()`), l'espace, l'année, le nombre de tableaux et de lignes, et un sommaire des `<h2>`/`<h3>` du contenu (après le repère `vue-contenu`).\n- Exclusion : les documents dont le titre commence par `Bulletin`, `Certificat`, `Attestation`, `Fiche`, `Reçu`, `Note de service`, `Acte`, `Badge` ou `Carte` ne reçoivent pas de page d'accueil. Pour modifier cette règle, changer la regex dans `tekouloAjouterPageDeGarde`.\n- `tekouloBarreActions` : barre de boutons (retour, tableau de bord, imprimer), masquée à l'impression (`.no-print`).\n- `tekouloScriptAutoPrint` : lance l'impression une fois les images chargées.\n\n## 7. Horloge et météo du tableau de bord\n\n- `htmlHorloge()` construit la carte (cadran SVG, heure, date, météo) ; les identifiants `horloge-heure`, `horloge-date`, `horloge-meteo` sont utilisés par `majHorloge()`, appelé chaque seconde par `demarrerHorloge()`.\n- Météo : `majMeteo()` interroge l'API Open-Meteo (sans clé) avec la position de l'appareil ou, à défaut, Guéckédou (`METEO_LIEU`). Un cache de 15 minutes limite les appels. En mode hors connexion, la météo n'est pas demandée.\n\n## 8. Assistant IA et serveur relais\n\nFichier : `worker-assistant-tekoulo.js` (Cloudflare Worker).\n\n- Route unique : `POST /api/assistant/chat`. Le navigateur envoie `Authorization: Bearer <jeton école>`.\n- Vérification du jeton (`ECOLE_TOKEN`) en temps constant. Sans jeton valide : réponse 401.\n- Fournisseur par défaut : `gemini`, modèle `gemini-3.8-flash` (constante `FOURNISSEURS`). Les autres fournisseurs (anthropic, openai, mistral, deepseek) sont prêts.\n- Secrets du Worker : `ECOLE_TOKEN` (obligatoire), `GEMINI_API_KEY`, et facultativement `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`. Ils se créent dans Settings › Variables and Secrets (type Secret).\n- Nouvel essai : jusqu'à 3 tentatives, espacées de 1,5 s puis 3 s, sur les erreurs 429 et 5xx (Gemini surchargé ou délai dépassé).\n- Pièces jointes : images (PNG, JPEG, WebP, GIF) et PDF pour Claude et Gemini ; 10 Mo maximum.\n- Côté application : `assistantAppelAPI(...)` envoie la demande au relais. Les fournisseurs « web » (Perplexity, Copilot, Grok) restent gérés par copie de la demande (`assistantAppelFournisseur`).\n- Les anciennes clés d'IA saisies dans Paramètres ont été retirées ; l'application supprime au démarrage l'entrée `ia_cles` si elle existe.\n\nMise à jour du modèle : changer la ligne `gemini: { … modele: … }` dans le Worker, puis `Deploy`. Dans `index.html`, le modèle n'apparaît qu'à titre informatif dans `IA_FOURNISSEURS`.\n\n## 9. Version Android\n\nDossier `android-tekoulo/` :\n\n- `app/src/main/AndroidManifest.xml` : permission `INTERNET`, `android:label=\"Albert Digital Guinée\"`, activité `.MainActivity`.\n- `app/src/main/java/com/tekoulo/centre/MainActivity.kt` : WebView (JavaScript, `localStorage`, accès aux fichiers), pont `AndroidBridge.enregistrerFichier(nom, base64)` pour les téléchargements (enregistrés dans Téléchargements via MediaStore), sélecteur de fichiers (`onShowFileChooser`), bouton Retour.\n- `app/build.gradle.kts` : `namespace` et `applicationId` = `com.tekoulo.centre`, `minSdk` 29 (requis par MediaStore), `versionCode` 2, `versionName` 1.1.\n- `app/src/main/assets/index.html` : copie de l'application à jour. **À recopier à chaque mise à jour de `index.html`**, sinon l'APK garde l'ancienne version.\n\nGénération de l'APK : Build › Generate App Bundles or APKs › Generate APKs (fichier `app/build/outputs/apk/debug/app-debug.apk`). Le build « release » non signé ne s'installe pas sur Android.\n\nLimites connues dans la WebView : connexion Google Drive et impression non garanties.\n\n## 10. Tests et vérifications\n\nTests Python (Playwright, Chromium dans `/opt/pw-browsers/chromium`) :\n\n| Fichier | Contenu | Résultat attendu |\n|---|---|---|\n| `tests/tests_tekoulo.py` | Parcours principaux | 49/49 |\n| `tests/test_sauvegarde.py` | Sauvegarde et restauration | 22/22 |\n| `tests/test_verrou_modules.py` | Verrous des modules et des rôles | 30/30 |\n\nVérification de syntaxe après chaque modification :\n\n1. Extraire chaque bloc `<script>` sans `src` et lancer `node --check` dessus.\n2. Le bloc 0 signale une erreur : c'est le faux positif connu (chaîne HTML de la première page), déjà présent dans la version d'origine.\n3. Les autres blocs doivent passer sans erreur.\n\nVérification fonctionnelle rapide : charger le fichier avec Playwright, appeler `renderView(key)` sur le module modifié et contrôler l'absence d'erreur (`pageerror`).\n\n## 11. Données, sauvegarde et sécurité\n\n- Les données vivent dans le navigateur de chaque appareil. La synchronisation Drive ne concerne que les collections de `CLES_SYNCHRONISEES`.\n- La sauvegarde complète (`⭳ Sauvegarder`) exporte toutes les collections, avec la date et le nom de l'école.\n- Mot de passe administrateur : haché ; à la première ouverture, la création est obligatoire sur chaque appareil.\n- Le module « Parents d’élèves » est réservé au personnel. Un accès des parents exigerait un serveur dédié (décision prise : non construit).\n- Points ouverts : P1-1, P1-4 et P2-1 de l'audit (reportés à la demande de l'école) ; bibliothèques hors ligne (P2-4) ; lenteur ponctuelle de l'assistant IA lors de la charge de Gemini.\n\n## 12. Procédure de livraison\n\n1. Modifier `index.html` ; vérifier la syntaxe (§10).\n2. Lancer les trois suites de tests ; elles doivent rester à 49/49, 22/22 et 30/30 (ou être mises à jour si une fonctionnalité a changé).\n3. Recopier `index.html` dans `android-tekoulo/app/src/main/assets/index.html`, puis générer l'APK.\n4. Publier `index.html` (GitHub Pages ou copie locale de l'école). Les données existantes ne sont pas touchées par une mise à jour du fichier, car elles restent dans le navigateur.\n5. Pour l'assistant : ne modifier le Worker que si le modèle ou le jeton change ; le redéployer et tester les huit contrôles de la fiche de test.\n";
+function gtInline(t){
+  return esc(t).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+}
+function mdVersHTML(md){
+  const L = String(md).split('\n');
+  let html = '', i = 0, liste = null;
+  const fermer = ()=>{ if(liste){ html += '</'+liste+'>'; liste = null; } };
+  const cellules = r => r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+  while(i < L.length){
+    const l = L[i];
+    if(/^```/.test(l)){
+      fermer(); const code = []; i++;
+      while(i < L.length && !/^```/.test(L[i])){ code.push(L[i]); i++; }
+      i++; html += '<pre class="gt-code">' + esc(code.join('\n')) + '</pre>'; continue;
+    }
+    if(/^\|/.test(l) && i+1 < L.length && /^\|[\s\-:|]+\|?$/.test(L[i+1])){
+      fermer(); const tete = cellules(l); i += 2; const lignes = [];
+      while(i < L.length && /^\|/.test(L[i])){ lignes.push(cellules(L[i])); i++; }
+      html += '<div class="table-wrap gt-table"><table><thead><tr>' + tete.map(c=>'<th>'+gtInline(c)+'</th>').join('') +
+        '</tr></thead><tbody>' + lignes.map(r=>'<tr>'+r.map(c=>'<td>'+gtInline(c)+'</td>').join('')+'</tr>').join('') + '</tbody></table></div>';
+      continue;
+    }
+    const h = l.match(/^(#{1,3})\s+(.*)$/);
+    if(h){ fermer(); const n = h[1].length >= 3 ? 3 : 2; html += '<h'+n+'>'+gtInline(h[2])+'</h'+n+'>'; i++; continue; }
+    if(/^\s*-\s+/.test(l)){
+      if(liste !== 'ul'){ fermer(); html += '<ul>'; liste = 'ul'; }
+      html += '<li>'+gtInline(l.replace(/^\s*-\s+/,''))+'</li>'; i++; continue;
+    }
+    if(/^\d+\.\s+/.test(l)){
+      if(liste !== 'ol'){ fermer(); html += '<ol>'; liste = 'ol'; }
+      html += '<li>'+gtInline(l.replace(/^\d+\.\s+/,''))+'</li>'; i++; continue;
+    }
+    if(!l.trim()){ fermer(); i++; continue; }
+    fermer(); html += '<p>'+gtInline(l)+'</p>'; i++;
+  }
+  fermer();
+  return html;
+}
+function guideTechniqueHTML(){
+  return `<style>
+      .gt-doc h2{ font-size:18px; color:var(--green-deep,#0B4A32); border-bottom:2px solid var(--gold,#E4B426); padding-bottom:6px; margin:26px 0 10px; }
+      .gt-doc h3{ font-size:15px; color:var(--green,#0F6B45); margin:18px 0 8px; }
+      .gt-doc h4{ font-size:13.5px; margin:14px 0 6px; }
+      .gt-doc p, .gt-doc li{ font-size:13.5px; line-height:1.6; }
+      .gt-doc code{ background:#EEF3EF; padding:1px 5px; border-radius:4px; font-size:12px; }
+      .gt-doc .gt-code{ background:#1F2A24; color:#E8F0EA; padding:12px 14px; border-radius:10px; font-size:12px; overflow:auto; white-space:pre; }
+      .gt-doc .gt-table table{ font-size:12.5px; }
+    </style>
+    <div class="gt-doc">
+      <div class="hint-box">🛠️ Guide technique : fonctionnement interne de l’application, pour la maintenance et le dépannage. Il ne contient aucune clé d’accès ni mot de passe.</div>
+      ${mdVersHTML(GUIDE_TECHNIQUE_MD)}
+    </div>`;
+}
 function renderParametres(container){
   const p = getParams();
   const fondateurConnecte = estFondateurActuel();
@@ -9859,7 +10127,7 @@ function roleLabel(roleKey){
    volontairement absent de ces listes : il est contrôlé séparément dans moduleEnabled()
    (réservé Fondateur + Comptable). */
 const TOUS_LES_MODULES_ADMIN_CYCLE = [
-  'dashboard','statsEtab','rapportGlobal','eleves','notes','orientation',
+  'dashboard','statsEtab','rapportGlobal','eleves','parents','notes','orientation',
   'orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning',
   'programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque',
   'livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers',
@@ -9877,20 +10145,20 @@ const ROLE_MODULES = {
   chef_etablissement: '*',
   secretariat: '*',   // rôles hérités du mode serveur, conservés tels quels (accès complet)
   consultation: '*',
-  secretaire_general: ['dashboard','cantine','cantineappro','statsEtab','rapportGlobal','eleves','effectifs','transferts','carteScolaire','courriers','informations','personnel','badgePersonnel','dossierspers','mutations','actesnomination','responsablesecole','rapports','bilanAnnuel','guide','biographie'],
+  secretaire_general: ['dashboard','cantine','cantineappro','statsEtab','rapportGlobal','eleves','parents','effectifs','transferts','carteScolaire','courriers','informations','personnel','badgePersonnel','dossierspers','mutations','actesnomination','responsablesecole','rapports','bilanAnnuel','guide','biographie'],
   direction: '*',
   directeur: TOUS_LES_MODULES_ADMIN_CYCLE,
   principal: TOUS_LES_MODULES_ADMIN_CYCLE,
   proviseur: TOUS_LES_MODULES_ADMIN_CYCLE,
-  directeur_etudes: ['statsEtab','rapportGlobal','dashboard','eleves','notes','orientation','orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning','programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque','livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers','mutations','actesnomination','supervision','groupestech','responsablesecole','discipline','comitediscipline','remarques','cassociaux','planning','activitesHorsCours','projets','rapports','bilanAnnuel','guide','biographie'],
-  directeur_adjoint: ['statsEtab','rapportGlobal','dashboard','eleves','notes','orientation','orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning','programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque','livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers','mutations','actesnomination','supervision','groupestech','responsablesecole','discipline','comitediscipline','remarques','cassociaux','planning','activitesHorsCours','projets','rapports','bilanAnnuel','guide','biographie'],
-  censeur: ['statsEtab','rapportGlobal','dashboard','eleves','notes','orientation','orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning','programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque','livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers','mutations','actesnomination','supervision','groupestech','responsablesecole','discipline','comitediscipline','remarques','cassociaux','planning','activitesHorsCours','projets','rapports','bilanAnnuel','guide','biographie'],
+  directeur_etudes: ['statsEtab','rapportGlobal','dashboard','eleves','parents','notes','orientation','orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning','programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque','livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers','mutations','actesnomination','supervision','groupestech','responsablesecole','discipline','comitediscipline','remarques','cassociaux','planning','activitesHorsCours','projets','rapports','bilanAnnuel','guide','biographie'],
+  directeur_adjoint: ['statsEtab','rapportGlobal','dashboard','eleves','parents','notes','orientation','orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning','programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque','livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers','mutations','actesnomination','supervision','groupestech','responsablesecole','discipline','comitediscipline','remarques','cassociaux','planning','activitesHorsCours','projets','rapports','bilanAnnuel','guide','biographie'],
+  censeur: ['statsEtab','rapportGlobal','dashboard','eleves','parents','notes','orientation','orientationChangementLycee','orientationBacLycee','emploi','emploiGeneral','evalplanning','programmeinfo','effectifs','responsablesclasse','transferts','carteScolaire','bibliotheque','livresscolaires','personnel','badgePersonnel','reconnaissancePersonnel','dossierspers','mutations','actesnomination','supervision','groupestech','responsablesecole','discipline','comitediscipline','remarques','cassociaux','planning','activitesHorsCours','projets','rapports','bilanAnnuel','guide','biographie'],
   comptable: ['statsEtab','cantine','cantineappro','bilanFinEtab','dashboard','apeae','bureauapeae','fraisscolarite','salaires','pretsscolaires','depenses','cotisationssociales','materiel','immobilier','coordonneesgps','dons','rapports','bilanAnnuel','guide','biographie'],
   comptabilite: ['statsEtab','cantine','cantineappro','bilanFinEtab','dashboard','apeae','bureauapeae','fraisscolarite','salaires','pretsscolaires','depenses','cotisationssociales','materiel','immobilier','coordonneesgps','dons','rapports','bilanAnnuel','guide','biographie'],
-  charge_orientation: ['dashboard','orientation','orientationChangementLycee','orientationBacLycee','eleves','effectifs','carteScolaire','guide','biographie'],
-  conseiller_orientation: ['dashboard','orientation','orientationChangementLycee','orientationBacLycee','eleves','effectifs','carteScolaire','guide','biographie'],
-  surveillant_general: ['dashboard','retards','eleves','discipline','comitediscipline','remarques','effectifs','responsablesclasse','planning','activitesHorsCours','guide','biographie'],
-  surveillant: ['dashboard','retards','eleves','discipline','comitediscipline','remarques','effectifs','responsablesclasse','planning','activitesHorsCours','guide','biographie'],
+  charge_orientation: ['dashboard','orientation','orientationChangementLycee','orientationBacLycee','eleves','parents','effectifs','carteScolaire','guide','biographie'],
+  conseiller_orientation: ['dashboard','orientation','orientationChangementLycee','orientationBacLycee','eleves','parents','effectifs','carteScolaire','guide','biographie'],
+  surveillant_general: ['dashboard','retards','eleves','parents','discipline','comitediscipline','remarques','effectifs','responsablesclasse','planning','activitesHorsCours','guide','biographie'],
+  surveillant: ['dashboard','retards','eleves','parents','discipline','comitediscipline','remarques','effectifs','responsablesclasse','planning','activitesHorsCours','guide','biographie'],
   enseignant: ['dashboard','notes','emploi','emploiGeneral','evalplanning','guide','biographie'],
   enseignant_college: ['dashboard','notes','emploi','emploiGeneral','evalplanning','guide','biographie'],
   professeur_lycee: ['dashboard','notes','emploi','emploiGeneral','evalplanning','guide','biographie'],
@@ -9962,6 +10230,7 @@ const NAV = [
   ]},
   {group:'Vie académique', items:[
     {key:'eleves', label:'Élèves', icon:'🎓', badge:()=>dbGet('eleves').filter(cycleModuleVisible).length},
+    {key:'parents', label:'Parents d’élèves', icon:'👪', badge:()=>dbGet('parents').filter(cycleModuleVisible).length},
     {key:'notes', label:'Notes & Bulletins', icon:'📒'},
     {key:'orientation', label:'Orientation (après le Brevet)', icon:'🧭'},
     {key:'orientationChangementLycee', label:'Orientation — Changement de série/option', icon:'🧭', badge:()=>dbGet('orientationChangementLycee').filter(cycleModuleVisible).length},
@@ -10056,6 +10325,7 @@ function buildNav(){
 const PAGE_META = {
   dashboard:{title:'Tableau de bord', crumb:'Accueil / Vue d\'ensemble'},
   eleves:{title:'Gestion des élèves', crumb:'Vie académique / Élèves'},
+  parents:{title:'Parents d’élèves', crumb:'Vie académique / Parents d’élèves'},
   notes:{title:'Notes & Bulletins', crumb:'Vie académique / Notes & Bulletins'},
   orientation:{title:'Orientation après le Brevet', crumb:'Vie académique / Orientation'},
   orientationChangementLycee:{title:'Orientation — Changement de série ou d\u2019option', crumb:'Vie académique / Orientation (Lycée) / Changement de série ou d\u2019option'},
@@ -10786,6 +11056,50 @@ const GENERIC_MODULES = {
     columns:['date','identifiant','prenoms','nom','classeFonction','fauteCommise','niveauGravite','sanction'],
   },
 
+  parents:{ label:'Parents d’élèves', codePrefix:'PAR',
+    fields:[
+      {key:'nom', label:'Nom', type:'text'},
+      {key:'prenoms', label:'Prénoms', type:'text'},
+      {key:'sexe', label:'Sexe', type:'select', options:['MASCULIN','FEMININ']},
+      {key:'lienParente', label:'Lien avec l’élève', type:'select', options:['PÈRE','MÈRE','TUTEUR','AUTRE']},
+      {key:'dateNaissance', label:'Date de naissance', type:'date'},
+      {key:'noPieceIdentite', label:'N° pièce d’identité', type:'text'},
+      {key:'profession', label:'Profession', type:'text'},
+      {key:'lieuTravail', label:'Lieu de travail', type:'text', span:2},
+      {key:'telephone', label:'Téléphone', type:'text'},
+      {key:'telephone2', label:'Autre téléphone', type:'text'},
+      {key:'email', label:'Email', type:'text'},
+      {key:'adresse', label:'Adresse / quartier', type:'text', span:2},
+      {key:'observation', label:'Observation', type:'text', span:2},
+    ],
+    columns:['nom','prenoms','lienParente','telephone','profession'],
+    // Liste des enfants rattachés à la fiche (lien par le code PAR…), avec leur niveau et leur classe.
+    extraFormHTML(record){
+      if(!record || !record.__code){
+        return `<div class="hint-box" style="margin:-4px 0 14px;">👪 <b>Enfants liés</b> — enregistrez d’abord cette fiche : les élèves rattachés, avec leur classe, apparaîtront ici.</div>`;
+      }
+      const code = String(record.__code).trim().toUpperCase();
+      const liens = [['codeParentPere','Père'],['codeParentMere','Mère'],['codeParentTuteur','Tuteur']];
+      const lienDe = e => { const t = liens.find(([k])=>String(e[k]||'').trim().toUpperCase()===code); return t ? t[1] : ''; };
+      const enfants = dbGet('eleves').filter(e=>lienDe(e));
+      if(!enfants.length){
+        return `<div class="hint-box" style="margin:-4px 0 14px;">👪 <b>Enfants liés</b> — aucun élève n’est encore rattaché à cette fiche. Saisissez le code <b>${esc(record.__code)}</b> dans la fiche de l’élève.</div>`;
+      }
+      const lignes = enfants.map(e=>`<tr>
+          <td>${esc([e.nom,e.prenoms].filter(Boolean).join(' ') || '—')}</td>
+          <td>${esc(e.niveau || '—')}</td>
+          <td><b>${esc(e.classe || '—')}</b></td>
+          <td>${esc(lienDe(e))}</td>
+        </tr>`).join('');
+      return `<div style="margin:-4px 0 16px;">
+        <div style="font-weight:700; margin-bottom:6px;">👪 Enfants rattachés (${enfants.length})</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Élève</th><th>Niveau</th><th>Classe (GP)</th><th>Lien</th></tr></thead>
+          <tbody>${lignes}</tbody>
+        </table></div>
+      </div>`;
+    },
+  },
   remarques:{ label:'Remarques', codePrefix:'REM',
     fields:[
       {key:'identifiantConcerne', label:'Identifiant / Matricule concerné(e)', type:'text'},
@@ -12471,6 +12785,43 @@ function lookupMatricule(inputEl){
     }
   }
   toast('Aucune correspondance trouvée pour cette valeur.', true);
+}
+
+/* Liaison Élèves ↔ Parents d’élèves : le code de la fiche parent remplit automatiquement
+   les champs de l’élève. Un champ « seulSiVide » n’est rempli que s’il est encore vide. */
+const PARENT_LIENS_ELEVE = {
+  codeParentPere:{ champs:[
+    ['pere',['prenoms','nom']],
+    ['professionPere',['profession']],
+    ['noPieceIdentitePere',['noPieceIdentite']],
+    ['telephone',['telephone'],true],
+  ]},
+  codeParentMere:{ champs:[
+    ['mere',['prenoms','nom']],
+    ['professionMere',['profession']],
+  ]},
+  codeParentTuteur:{ champs:[
+    ['nomTuteur',['prenoms','nom']],
+    ['telTuteur',['telephone'],true],
+  ]},
+};
+function lookupParentEleve(inputEl, cle){
+  const config = PARENT_LIENS_ELEVE[cle];
+  const form = inputEl.closest('form');
+  if(!config || !form) return;
+  const code = (inputEl.value||'').trim().toUpperCase();
+  if(!code) return;
+  const parent = dbGet('parents').find(r=>String(r.__code||'').toUpperCase()===code);
+  if(!parent){ toast('Aucune fiche parent avec ce code. Créez-la dans « Parents d’élèves ».', true); return; }
+  config.champs.forEach(([champ, sources, seulSiVide])=>{
+    const el = form.querySelector(`[data-f="${champ}"]`);
+    if(!el) return;
+    if(seulSiVide && el.value.trim()) return;
+    const valeur = sources.map(k=>String(parent[k]||'').trim()).filter(Boolean).join(' ');
+    if(valeur){ el.value = valeur; el.classList.remove('invalid'); }
+  });
+  inputEl.classList.remove('invalid');
+  toast('Informations remplies depuis la fiche de ' + [parent.prenoms, parent.nom].filter(Boolean).join(' ') + '.');
 }
 
 /* ==================== UNICITÉ DES IDENTIFIANTS / MATRICULES / CODES ====================
@@ -14839,6 +15190,9 @@ const ELEVE_FIELDS = [
   {key:'classe', label:'GP (Groupe Pédagogique)', type:'select', options: GP_OPTIONS},
   {key:'nature', label:'Nature (Promu / Redoublant)', type:'select', options:['PROMU(E)','REDOUBLANT(E)']},
   {key:'refDiplomeCEE', label:'Réf. diplôme CEE', type:'text'},
+  {key:'codeParentPere', label:'Code fiche du père', type:'text'},
+  {key:'codeParentMere', label:'Code fiche de la mère', type:'text'},
+  {key:'codeParentTuteur', label:'Code fiche du tuteur', type:'text'},
   {key:'pere', label:'Père', type:'text'},
   {key:'mere', label:'Mère', type:'text'},
   {key:'noPieceIdentitePere', label:"N° pièce d'identité père", type:'text'},
@@ -14909,6 +15263,10 @@ function renderEleves(container){
         <input type="hidden" data-f="${f.key}" value="${esc(val)}">
         <div class="muted" style="font-size:10.5px; margin-top:4px;">Formats JPG/PNG, 1,5 Mo max, ou photo prise directement via la caméra de l'ordinateur.</div>
       </div>`;
+    }
+    if(PARENT_LIENS_ELEVE[f.key]){
+      const options = dbGet('parents').map(p=>`<option value="${esc(p.__code||'')}" label="${esc([p.prenoms,p.nom].filter(Boolean).join(' ')+' ('+(p.lienParente||'')+')')}"></option>`).join('');
+      return `<input data-f="${f.key}" type="text" list="dl-${f.key}" value="${esc(val)}" placeholder="Saisir ou choisir le code" oninput="this.classList.remove('invalid')" onblur="lookupParentEleve(this,'${f.key}')"><datalist id="dl-${f.key}">${options}</datalist>`;
     }
     if(UNIQUE_KEY_FIELDS.eleves===f.key){
       return `<input data-f="${f.key}" type="${f.type||'text'}" class="field-id" value="${esc(val)}" oninput="this.classList.remove('invalid')" onblur="checkUniqueField(this,'eleves','${f.key}','${excludeId}')">`;
@@ -15047,6 +15405,10 @@ function renderEleveEditing(container, rec){
         <input type="hidden" data-f="${f.key}" value="${esc(val)}">
         <div class="muted" style="font-size:10.5px; margin-top:4px;">Formats JPG/PNG, 1,5 Mo max, ou photo prise directement via la caméra de l'ordinateur.</div>
       </div>`;
+    }
+    if(PARENT_LIENS_ELEVE[f.key]){
+      const options = dbGet('parents').map(p=>`<option value="${esc(p.__code||'')}" label="${esc([p.prenoms,p.nom].filter(Boolean).join(' ')+' ('+(p.lienParente||'')+')')}"></option>`).join('');
+      return `<input data-f="${f.key}" type="text" list="dl-${f.key}" value="${esc(val)}" placeholder="Saisir ou choisir le code" oninput="this.classList.remove('invalid')" onblur="lookupParentEleve(this,'${f.key}')"><datalist id="dl-${f.key}">${options}</datalist>`;
     }
     if(UNIQUE_KEY_FIELDS.eleves===f.key){
       return `<input data-f="${f.key}" type="${f.type||'text'}" class="field-id" value="${esc(val)}" oninput="this.classList.remove('invalid')" onblur="checkUniqueField(this,'eleves','${f.key}','${rec.__id||''}')">`;
@@ -21473,6 +21835,333 @@ function corrTelecharger(){
     if(!existe && typeof demanderCreationMdpAdmin === 'function') demanderCreationMdpAdmin();
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', verifier); else verifier();
+})();
+</script>
+<script id="script-formulaires">
+/* Aide et astérisques des formulaires : ajoutés automatiquement à chaque champ affiché.
+   Les textes ne modifient aucune donnée ; ils aident la saisie. */
+(function(){
+  const AIDE = {
+    matricule:'Identifiant unique de la personne, utilisé pour retrouver sa fiche.',
+    nom:'Nom de famille, tel qu’il figure sur la pièce d’identité.',
+    prenoms:'Tous les prénoms, séparés par un espace.',
+    prenom:'Prénom usuel.',
+    sexe:'Choisissez dans la liste.',
+    dateNaissance:'Date de naissance (jour, mois, année).',
+    lieuNaissance:'Ville ou localité de naissance.',
+    telephone:'Numéro à joindre, par exemple 622 00 00 00.',
+    telephoneUrgence:'Numéro d’un proche à joindre en cas d’urgence.',
+    telUrgence:'Numéro d’un proche à joindre en cas d’urgence.',
+    telTuteur:'Numéro du tuteur ou du parent.',
+    telephoneExpediteur:'Numéro de la personne qui envoie le courrier.',
+    email:'Adresse complète, par exemple nom@exemple.com.',
+    adresse:'Quartier, rue ou repère pour retrouver le domicile.',
+    personneUrgence:'Nom de la personne à prévenir en cas d’urgence.',
+    pere:'Nom complet du père.',
+    mere:'Nom complet de la mère.',
+    fonction:'Poste occupé dans l’établissement.',
+    specialite:'Matière ou domaine de spécialité.',
+    niveau:'Niveau d’enseignement concerné.',
+    niveauClasse:'Niveau de la classe.',
+    anneeScolaire:'Année scolaire, au format 2026-2027.',
+    dateDebut:'Premier jour de la période.',
+    dateFin:'Dernier jour de la période.',
+    dateDemande:'Date à laquelle la demande a été faite.',
+    dateDecision:'Date de la décision prise.',
+    dateReception:'Date à laquelle le document a été reçu.',
+    dateDesignation:'Date de la désignation.',
+    montantDepense:'Montant payé, en francs guinéens (GNF).',
+    montantTotal:'Total, en francs guinéens (GNF).',
+    montantUtilise:'Montant utilisé, en francs guinéens (GNF).',
+    prixUnitaire:'Prix d’une unité, en francs guinéens (GNF).',
+    valeurUnitaire:'Valeur d’une unité, en francs guinéens (GNF).',
+    valeurEstimee:'Estimation, en francs guinéens (GNF).',
+    budgetPrevu:'Budget prévu, en francs guinéens (GNF).',
+    quantite:'Nombre d’unités.',
+    quantiteEntree:'Quantité entrée en stock.',
+    quantiteSortie:'Quantité sortie du stock.',
+    modePaiement:'Espèces, virement, Mobile Money ou autre.',
+    codeDepense:'Code de rattachement de la dépense.',
+    noArticle:'Numéro de l’article dans le registre.',
+    designation:'Désignation précise de l’article ou de la dépense.',
+    observation:'Remarque utile pour le suivi (facultatif).',
+    observations:'Remarques utiles pour le suivi (facultatif).',
+    remarques:'Précisions utiles (facultatif).',
+    description:'Décrivez brièvement la situation.',
+    motif:'Raison principale, en quelques mots.',
+    numeroCnss:'Numéro d’immatriculation à la CNSS, si connu.',
+    nbHeuresService:'Nombre d’heures effectuées par semaine.',
+    nombreEnfants:'Mettre 0 si aucun.',
+    noDossier:'Numéro du dossier dans le classement.'
+  };
+  function traiterChamp(wrap){
+    if(wrap.dataset.aide) return;
+    const champ = wrap.querySelector('[data-f]');
+    const libelle = wrap.querySelector('label');
+    if(!champ || !libelle) return;
+    wrap.dataset.aide = '1';
+    const cle = champ.dataset.f;
+    if(typeof CRITICAL_KEYS !== 'undefined' && CRITICAL_KEYS.includes(cle) && !libelle.querySelector('.req')){
+      libelle.insertAdjacentHTML('beforeend', '<span class="req" title="Champ obligatoire">*</span>');
+    }
+    if(AIDE[cle] && champ.type !== 'hidden'){
+      const p = document.createElement('small');
+      p.className = 'field-aide';
+      p.textContent = AIDE[cle];
+      wrap.appendChild(p);
+    }
+  }
+  let minuterie = null;
+  function traiterTout(){
+    try{ document.querySelectorAll('.field').forEach(traiterChamp); }catch(e){}
+  }
+  try{
+    new MutationObserver(function(){ clearTimeout(minuterie); minuterie = setTimeout(traiterTout, 60); })
+      .observe(document.body, {childList:true, subtree:true});
+  }catch(e){}
+  traiterTout();
+})();
+</script>
+<script id="script-formulaires-2">
+/* Formulaires, amélioration de la saisie : progression, vérification en direct, compteurs,
+   avertissement de sortie et raccourci Ctrl+Entrée. Ces aides ne modifient aucune donnée. */
+(function(){
+  function estChamp(el){
+    return !!(el && el.dataset && el.dataset.f !== undefined && el.type !== 'hidden' &&
+      el.closest && el.closest('form.entity-form') && el.closest('.field'));
+  }
+  function erreurDe(el){
+    const cle = el.dataset.f || '';
+    const v = String(el.value || '').trim();
+    const wrap = el.closest('.field');
+    const obligatoire = !!(wrap && wrap.querySelector('label .req'));
+    if(obligatoire && !v) return 'Ce champ est obligatoire.';
+    if(!v) return '';
+    if(/tel|phone/i.test(cle)){
+      const chiffres = v.replace(/[\s.\-+()]/g, '');
+      if(!/^\d{8,15}$/.test(chiffres)) return 'Numéro invalide : 8 à 15 chiffres attendus.';
+    }
+    if(/mail/i.test(cle) && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Adresse e-mail incomplète (ex. nom@exemple.com).';
+    if(el.type === 'date' && isNaN(Date.parse(v))) return 'Date invalide.';
+    return '';
+  }
+  function afficherErreur(el){
+    const wrap = el.closest('.field'); if(!wrap) return;
+    let e = wrap.querySelector('.field-erreur');
+    const msg = erreurDe(el);
+    if(!msg){ if(e) e.remove(); el.classList.remove('invalid'); return; }
+    if(!e){ e = document.createElement('small'); e.className = 'field-erreur'; wrap.appendChild(e); }
+    e.textContent = '⚠ ' + msg;
+    el.classList.add('invalid');
+  }
+  function compteur(el){
+    if(el.tagName !== 'TEXTAREA') return;
+    const wrap = el.closest('.field'); if(!wrap) return;
+    let c = wrap.querySelector('.field-compteur');
+    if(!c){ c = document.createElement('small'); c.className = 'field-compteur'; wrap.appendChild(c); }
+    const n = String(el.value || '').length;
+    c.textContent = n + ' caractère' + (n > 1 ? 's' : '');
+  }
+  function majProgression(form){
+    if(!form) return;
+    const barre = form.querySelector('.form-progress'); if(!barre) return;
+    const obligatoires = [...form.querySelectorAll('.field')]
+      .filter(w => w.querySelector('label .req'))
+      .map(w => w.querySelector('[data-f]'))
+      .filter(el => el && el.type !== 'hidden');
+    const remplis = obligatoires.filter(el => String(el.value || '').trim() !== '').length;
+    const total = obligatoires.length;
+    barre.querySelector('.fp-texte').textContent = total
+      ? 'Champs obligatoires : ' + remplis + ' / ' + total + ' remplis'
+      : 'Aucun champ obligatoire dans ce formulaire';
+    barre.querySelector('.fp-barre span').style.width = (total ? Math.round(remplis / total * 100) : 100) + '%';
+    barre.classList.toggle('complet', total > 0 && remplis === total);
+  }
+  function ajouterProgression(form){
+    if(form.querySelector('.form-progress')) return;
+    const grille = form.querySelector('.form-grid'); if(!grille) return;
+    const div = document.createElement('div');
+    div.className = 'form-progress';
+    div.innerHTML = '<div class="fp-texte"></div><div class="fp-barre"><span></span></div>';
+    grille.parentNode.insertBefore(div, grille);
+    majProgression(form);
+  }
+  let minuterie = null;
+  function traiterFormulaires(){
+    try{ document.querySelectorAll('form.entity-form').forEach(ajouterProgression); }catch(e){}
+  }
+  try{
+    new MutationObserver(function(){ clearTimeout(minuterie); minuterie = setTimeout(traiterFormulaires, 80); })
+      .observe(document.body, {childList:true, subtree:true});
+  }catch(e){}
+
+  document.addEventListener('blur', function(e){
+    const el = e.target;
+    if(!estChamp(el)) return;
+    el.dataset.touche = '1';
+    afficherErreur(el);
+    majProgression(el.closest('form'));
+  }, true);
+
+  function surSaisie(e){
+    const el = e.target;
+    if(!estChamp(el)) return;
+    const form = el.closest('form');
+    form.dataset.modifie = '1';
+    if(el.dataset.touche) afficherErreur(el);
+    compteur(el);
+    majProgression(form);
+  }
+  document.addEventListener('input', surSaisie, true);
+  document.addEventListener('change', surSaisie, true);
+
+  document.addEventListener('keydown', function(e){
+    if(!((e.ctrlKey || e.metaKey) && e.key === 'Enter')) return;
+    const form = e.target && e.target.closest && e.target.closest('form.entity-form');
+    if(!form) return;
+    const bouton = form.querySelector('.form-actions .btn:not(.ghost)');
+    if(bouton){ e.preventDefault(); bouton.click(); }
+  });
+
+  window.addEventListener('beforeunload', function(e){
+    if(document.querySelector('form.entity-form[data-modifie="1"]')){
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  traiterFormulaires();
+})();
+</script>
+<script id="script-formulaires-3">
+/* Formulaires : sections repliables par thème (élèves, personnel) et recherche dans les longues listes.
+   Ces aides réorganisent l'affichage seulement ; les champs gardent leur clé d'origine (data-f). */
+(function(){
+  const SECTIONS = {
+    'form-eleves': [
+      {titre:'Identité', cles:['identifiant','photo','nom','prenoms','sexe','dateNaissance','lieuNaissance','numeroExtrait']},
+      {titre:'Scolarité', cles:['niveau','cycle','optionLycée','profil','classe','nature','refDiplomeCEE','dateArrivee','boursier']},
+      {titre:'Parents et tuteur', cles:['codeParentPere','codeParentMere','codeParentTuteur','pere','noPieceIdentitePere','professionPere','mere','professionMere','nomTuteur','telTuteur','domicileParents','lieuResidence']},
+      {titre:'Contacts et urgences', cles:['telephone','personneUrgence','telUrgence']},
+      {titre:'Santé et administratif', cles:['allergies','mutuelle','observation']}
+    ],
+    'form-personnel': [
+      {titre:'Identité', cles:['photo','matricule','prenoms','nom','sexe','dateNaissance','lieuNaissance','situationMatrimoniale','nombreEnfants']},
+      {titre:'Fonction et carrière', cles:['fonction','hierarchie','corps','echelon','positionStatutaire','indice','ministere','profession','specialite','niveauEtude','anciennete','typeContrat','grade','appreciation','dateFinContrat','nbHeuresService']},
+      {titre:'Actes administratifs', cles:['noArreteEngagement','dateArreteEngagement','datePriseService','noNoteMutation','dateMutation','codeEcole','numeroCnss']},
+      {titre:'Famille et contacts', cles:['telephone','email','adresse','pere','mere','personneUrgence','telephoneUrgence']}
+    ]
+  };
+  const cleDe = w => { const el = w.querySelector('[data-f]'); return el ? el.dataset.f : ''; };
+
+  function regrouperSections(form){
+    if(form.dataset.sections) return;
+    const def = SECTIONS[form.id];
+    const grille = form.querySelector(':scope > .form-grid');
+    if(!def || !grille || !form.querySelector('.form-progress')) return;
+    form.dataset.sections = '1';
+    const champs = [...grille.querySelectorAll(':scope > .field')];
+    const utilises = new Set();
+    const conteneur = document.createElement('div');
+    conteneur.className = 'form-sections';
+    const ajouterSection = (titre, items) => {
+      if(!items.length) return;
+      const det = document.createElement('details');
+      det.className = 'form-section'; det.open = true;
+      det.innerHTML = '<summary>' + titre + '<span class="fs-n">' + items.length + '</span></summary><div class="form-grid"></div>';
+      const g = det.querySelector('.form-grid');
+      items.forEach(w => g.appendChild(w));
+      conteneur.appendChild(det);
+    };
+    def.forEach(sec => {
+      const items = champs.filter(w => !utilises.has(w) && sec.cles.includes(cleDe(w)));
+      items.forEach(w => utilises.add(w));
+      ajouterSection(sec.titre, items);
+    });
+    ajouterSection('Autres informations', champs.filter(w => !utilises.has(w)));
+    grille.replaceWith(conteneur);
+  }
+
+  function rechercheSelect(sel){
+    if(sel.dataset.riche || sel.options.length <= 8) return;
+    sel.dataset.riche = '1';
+    const champ = sel.closest('.field'); if(!champ) return;
+    const recherche = document.createElement('input');
+    recherche.type = 'search';
+    recherche.className = 'select-recherche';
+    recherche.placeholder = 'Rechercher dans la liste… (Entrée pour choisir)';
+    recherche.addEventListener('input', () => {
+      const q = recherche.value.trim().toLowerCase();
+      [...sel.options].forEach((o, i) => { if(i > 0) o.hidden = !!q && !o.text.toLowerCase().includes(q); });
+    });
+    recherche.addEventListener('keydown', e => {
+      if(e.key !== 'Enter') return;
+      e.preventDefault();
+      const premier = [...sel.options].find(o => !o.hidden && o.value !== '');
+      if(premier){ sel.value = premier.value; sel.dispatchEvent(new Event('change', {bubbles:true})); }
+    });
+    sel.parentNode.insertBefore(recherche, sel);
+  }
+
+  let minuterie = null;
+  function traiter(){
+    try{
+      document.querySelectorAll('form.entity-form').forEach(regrouperSections);
+      document.querySelectorAll('form.entity-form select').forEach(rechercheSelect);
+    }catch(e){}
+  }
+  try{
+    new MutationObserver(() => { clearTimeout(minuterie); minuterie = setTimeout(traiter, 90); })
+      .observe(document.body, {childList:true, subtree:true});
+  }catch(e){}
+  traiter();
+})();
+</script>
+<script id="script-accueil">
+/* Écran d’accueil : année scolaire, date du jour, effectifs par espace et contact de l’établissement.
+   Lecture seule : aucune donnée n’est modifiée. */
+(function(){
+  function echappe(t){ return String(t==null?'':t).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function enrichirAccueil(){
+    const carte = document.querySelector('.cycle-select-card');
+    if(!carte || document.getElementById('acc-info')) return;
+    let p = {}, eleves = [], personnel = [];
+    try{ p = getParams() || {}; }catch(e){}
+    try{ eleves = dbGet('eleves') || []; personnel = dbGet('personnel') || []; }catch(e){}
+    const date = new Date().toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+    const dateMaj = date.charAt(0).toUpperCase() + date.slice(1);
+    const chips = [['📅', dateMaj]];
+    if(p.anneeScolaire) chips.push(['🗓️', 'Année scolaire ' + p.anneeScolaire]);
+    if(p.typeEtablissement) chips.push(['🏫', 'Établissement ' + (p.typeEtablissement==='PRIVÉ' ? 'privé' : 'public')]);
+    const bar = document.createElement('div');
+    bar.id = 'acc-info'; bar.className = 'acc-info';
+    bar.innerHTML = chips.map(([ic,t]) => '<span class="acc-chip"><b>' + ic + '</b>' + echappe(t) + '</span>').join('');
+    carte.parentNode.insertBefore(bar, carte);
+
+    const cycles = {'cycle-card-elementaire':'ELEMENTAIRE','cycle-card-primaire':'PRIMAIRE','cycle-card-college':'COLLEGE','cycle-card-lycee':'LYCEE'};
+    Object.keys(cycles).forEach(cls => {
+      const btn = document.querySelector('.' + cls); if(!btn || btn.querySelector('.cc-stats')) return;
+      const c = cycles[cls];
+      const ne = eleves.filter(e => e && e.cycle === c).length;
+      const np = personnel.filter(x => x && x.cycle === c).length;
+      const span = document.createElement('span');
+      span.className = 'cc-stats';
+      span.textContent = ne ? (ne + ' élève' + (ne > 1 ? 's' : '') + ' · ' + np + ' personnel') : 'Aucun élève enregistré';
+      btn.appendChild(span);
+    });
+
+    const pied = document.querySelector('.acc-foot');
+    if(pied && p.chefEtablissement && !pied.querySelector('.acc-contact')){
+      const tel = p.telephoneChef ? ' · ' + p.telephoneChef : '';
+      const div = document.createElement('div');
+      div.className = 'acc-contact';
+      div.textContent = 'Contact : ' + p.chefEtablissement + tel;
+      pied.appendChild(div);
+    }
+  }
+  try{ new MutationObserver(() => { clearTimeout(window.__accTimer); window.__accTimer = setTimeout(enrichirAccueil, 60); })
+    .observe(document.body, {childList:true, subtree:true}); }catch(e){}
+  enrichirAccueil();
 })();
 </script>
 </html>
