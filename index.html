@@ -19931,6 +19931,31 @@ function svgSecuriser(texte){
   });
   return new XMLSerializer().serializeToString(racine);
 }
+function latexVersTableau(corps){
+  const SYM = {alpha:'α',beta:'β',gamma:'γ',delta:'δ',Delta:'Δ',pi:'π',infty:'∞',neq:'≠',leq:'≤',geq:'≥',le:'≤',ge:'≥',times:'×',cdot:'·',pm:'±',rightarrow:'→',to:'→',Rightarrow:'⇒',approx:'≈',sum:'Σ',lambda:'λ',theta:'θ',mu:'μ',sigma:'σ',epsilon:'ε',in:'∈',cup:'∪',cap:'∩',emptyset:'∅'};
+  function nettoyer(t){
+    let x = String(t||'').trim();
+    for(let i=0;i<3;i++) x = x.replace(/\\(?:d?frac)\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    x = x.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    x = x.replace(/\\(?:left|right|displaystyle|textstyle|mathbf|mathrm|text|operatorname)\b/g, '');
+    x = x.replace(/\\([a-zA-Z]+)/g, function(_, n){ return Object.prototype.hasOwnProperty.call(SYM,n) ? SYM[n] : ''; });
+    x = x.replace(/[{}$]/g, '').replace(/\s+/g,' ').trim();
+    return x;
+  }
+  const lignes = String(corps).replace(/\\hline/g,'').split(/\\\\/).map(l=>l.trim()).filter(l=>l.length);
+  if(!lignes.length) return '';
+  const lignesCellules = lignes.map(l => l.split('&').map(c => {
+    const c0 = c.trim();
+    const mc = c0.match(/^\\multicolumn\{(\d+)\}\{[^}]*\}\{([\s\S]*)\}$/);
+    if(mc) return {n: Number(mc[1]) || 1, t: nettoyer(mc[2])};
+    return {n: 1, t: nettoyer(c0)};
+  }));
+  const ligneHtml = (cells, tag) => '<tr>' + cells.map(c => '<'+tag+(c.n>1?' colspan="'+c.n+'"':'')+'>'+esc(c.t)+'</'+tag+'>').join('') + '</tr>';
+  const tete = lignesCellules[0];
+  const reste = lignesCellules.slice(1);
+  return '<div class="table-wrap ia-table"><table><thead>' + ligneHtml(tete,'th') + '</thead><tbody>' +
+    reste.map(c=>ligneHtml(c,'td')).join('') + '</tbody></table></div>';
+}
 function assistantRendreContenu(conteneur, texte){
   const blocs = [];
   let travail = (texte||'').replace(/```(svg|code)?\n?([\s\S]*?)```/g, function(_, type, contenu){
@@ -19942,6 +19967,14 @@ function assistantRendreContenu(conteneur, texte){
       blocs.push('<pre class="ia-code-bloc"><code>' + esc(contenu.trim()) + '</code></pre>');
     }
     return '\u0000BLOC' + idx + '\u0000';
+  });
+
+  // Tableaux écrits en LaTeX (\begin{array} ... \end{array}) : convertis en vrais tableaux HTML,
+  // sans dépendre de KaTeX (qui peut ne pas se charger sur téléphone).
+  travail = travail.replace(/(\$\$)?\s*\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}\s*(\$\$)?/g, function(_, d1, corps){
+    const idx = blocs.length;
+    blocs.push(latexVersTableau(corps));
+    return '\n\u0000BLOC' + idx + '\u0000\n';
   });
 
   const lignesBrutes = esc(travail).split(/\n/);
