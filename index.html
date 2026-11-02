@@ -1330,15 +1330,15 @@
   }
 </style>
 <style id="style-carte-guinee">
-  .carte-guinee{ flex:0 0 auto; width:210px; text-align:center; background:#D1D3D4; border-radius:12px; padding:8px; box-sizing:border-box; }
+  .carte-guinee{ flex:0 0 auto; width:210px; text-align:center; background:#fff; border-radius:12px; padding:8px; box-sizing:border-box; box-shadow:0 2px 8px rgba(0,0,0,.25); }
   .carte-guinee-img{ width:100%; height:auto; display:block; border-radius:8px; }
   .horloge-infos{ display:flex; flex-direction:column; align-items:center; text-align:center; }
   .carte-guinee .cg-leg{ font-size:11px; font-weight:800; color:#3F4540; margin-top:6px; letter-spacing:1px; text-transform:uppercase; }
   @media (max-width:600px){ .carte-guinee{ width:180px; } }
 </style>
 <style id="style-horloge">
-  .horloge-carte{ position:relative; overflow:hidden; padding:20px 24px 18px; margin-bottom:20px; }
-  .horloge-carte::before{ content:''; position:absolute; top:0; left:0; right:0; height:5px; background:linear-gradient(90deg, #CE1126 33.33%, #FCD116 33.33%, #FCD116 66.66%, #009460 66.66%); }
+  /* Même habillage que la bannière d'accueil (.welcome-banner) : fond, bandeau tricolore, filigrane, marges */
+  .horloge-carte{ width:100%; box-sizing:border-box; align-items:stretch; }
   .horloge-ligne{ display:flex; align-items:center; justify-content:flex-start; gap:26px; flex-wrap:wrap; }
   .horloge-cadran{ width:124px; height:124px; flex:0 0 auto; filter:drop-shadow(0 4px 10px rgba(11,74,50,.18)); }
   .hc-fond{ fill:var(--paper,#fff); stroke:var(--green-deep,#0B4A32); stroke-width:5; }
@@ -1350,19 +1350,45 @@
   .hc-s{ stroke:var(--red,#B3231C); stroke-width:2; stroke-linecap:round; }
   .hc-centre{ fill:var(--red,#B3231C); }
   .horloge-infos{ flex:1 1 260px; min-width:0; }
-  .horloge-heure{ display:inline-block; font-size:34px; font-weight:800; letter-spacing:2px; font-variant-numeric:tabular-nums; color:#fff; background:var(--green-deep,#0B4A32); padding:6px 18px; border-radius:12px; line-height:1.2; box-shadow:0 4px 12px rgba(11,74,50,.25); }
-  .horloge-date{ font-size:15px; font-weight:600; color:var(--ink,#20241F); margin-top:10px; }
-  .horloge-meteo{ display:inline-block; font-size:13px; color:var(--ink-soft,#5B6259); margin-top:8px; padding:4px 12px; border-radius:999px; background:rgba(11,74,50,.07); }
+  .horloge-heure{ display:inline-block; font-size:34px; font-weight:800; letter-spacing:2px; font-variant-numeric:tabular-nums; color:var(--green-deep,#0B4A32); background:#fff; padding:6px 18px; border-radius:12px; line-height:1.2; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+  .horloge-date{ font-size:12px; font-weight:600; color:var(--gold,#FCD116); margin-top:10px; letter-spacing:.2px; }
+  .horloge-meteo{ display:inline-block; font-size:13px; color:#fff; margin-top:8px; padding:4px 12px; border-radius:999px; background:rgba(255,255,255,.16); }
   #horloge-meteo-action{ display:inline-block; margin-left:6px; }
-  html body.mode-nuit .horloge-date{ color:#EDEDED; }
   html body.mode-nuit .hc-num, html body.mode-nuit .hc-h, html body.mode-nuit .hc-m{ fill:#EDEDED; stroke:#EDEDED; }
   @media (max-width:520px){
-    .horloge-carte{ padding:18px 16px 16px; }
     .horloge-ligne{ flex-direction:column; text-align:center; gap:14px; }
     .horloge-infos{ width:100%; flex:0 0 auto; }
     .horloge-cadran{ width:108px; height:108px; }
     .horloge-heure{ font-size:26px; padding:5px 14px; }
   }
+</style>
+<style id="style-tableau-de-bord-compact">
+  /* Tableau de bord : cartes plus compactes et sobres (ne touche pas aux autres vues) */
+  #view-dashboard .card{ border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  #view-dashboard .card.pad{ padding:12px 14px; }
+  #view-dashboard .kpi-strip{ gap:10px; margin-bottom:12px; }
+  #view-dashboard .kpi-strip .stat-card{ padding:10px 38px 10px 12px; }
+  #view-dashboard .stat-card .stat-label{ font-size:10px; letter-spacing:.5px; }
+  #view-dashboard .stat-card .stat-value{ font-size:20px; margin-top:2px; }
+  #view-dashboard .stat-card .stat-sub{ font-size:10px; margin-top:2px; }
+  #view-dashboard .stat-card .stat-icon{ width:26px; height:26px; top:10px; right:10px; font-size:12px; border-radius:8px; }
+  #view-dashboard .section-title{ padding:4px 12px; margin-bottom:8px; }
+  #view-dashboard .welcome-banner{ padding:12px 16px; margin-bottom:12px; gap:14px; }
+  #view-dashboard .welcome-greeting{ font-size:17px; }
+  #view-dashboard .welcome-sub{ font-size:12px; margin-top:4px; }
+  #view-dashboard .welcome-date{ font-size:11px; margin-top:6px; }
+  #view-dashboard .welcome-emblem-badge{ padding:5px 7px; }
+  #view-dashboard .welcome-emblem-badge img{ height:44px; }
+  #view-dashboard .welcome-logo-badge{ padding:6px 9px; }
+  #view-dashboard .welcome-logo-badge img{ height:34px; }
+  #view-dashboard .horloge-carte{ padding:12px 16px; margin-bottom:12px; }
+  #view-dashboard .horloge-ligne{ gap:18px; }
+  #view-dashboard .horloge-cadran{ width:96px; height:96px; }
+  #view-dashboard .horloge-heure{ font-size:24px; padding:4px 12px; }
+  #view-dashboard .horloge-date{ font-size:11px; margin-top:6px; }
+  #view-dashboard .horloge-meteo{ font-size:11.5px; margin-top:6px; padding:3px 10px; }
+  #view-dashboard .carte-guinee{ width:150px; padding:6px; }
+  #view-dashboard .carte-guinee .cg-leg{ font-size:9.5px; margin-top:4px; }
 </style>
 <style id="style-nuit-texte-degrade">
   html body.mode-nuit .stat-value{ background-image:linear-gradient(135deg,#8EE3B5 0%,#4CC68E 100%) !important; }
@@ -4937,7 +4963,7 @@ function htmlCarteGuinee(){
 }
 function htmlHorloge(){
   const d = new Date();
-  return '<div class="card pad horloge-carte"><div class="horloge-ligne">' + htmlCadran() +
+  return '<div class="welcome-banner horloge-carte"><div class="horloge-ligne">' + htmlCadran() +
     '<div class="horloge-infos"><div class="horloge-heure" id="horloge-heure">' + formatHeure(d) + '</div>' +
     '<div class="horloge-date" id="horloge-date">' + formatDateLongue(d) + '</div>' +
     '<div class="horloge-meteo" id="horloge-meteo">🌡️ Météo en cours…</div><div id="horloge-meteo-action"></div></div>' + htmlCarteGuinee() + '</div></div>';
@@ -21267,6 +21293,27 @@ function figerColonnesPlanifier(root){
     <button class="assistant-mode-btn" data-mode="listes" onclick="assistantChoisirMode('listes')">👥 Importer une liste</button>
     <button class="assistant-mode-btn" onclick="corrOuvrir()">📑 Corriger un document</button>
   </div>
+  <style>
+    #assistant-panneau .ia-reglages{ margin:4px 12px 0; font-size:12px; }
+    #assistant-panneau .ia-reglages > summary{ cursor:pointer; list-style:none; font-size:12px; font-weight:700; color:var(--green-deep,#0B4A32); padding:4px 0; user-select:none; }
+    #assistant-panneau .ia-reglages > summary::-webkit-details-marker{ display:none; }
+    #assistant-panneau .ia-reglages > summary::before{ content:'▸ '; }
+    #assistant-panneau .ia-reglages[open] > summary::before{ content:'▾ '; }
+    #assistant-panneau .ia-reglages #assistant-ia-ligne{ padding:4px 0 6px; }
+    @media (min-width:481px){
+      /* Ordinateur : panneau plus large et plus haut, réponse au centre */
+      #assistant-panneau{ width:min(600px, 94vw); height:min(86vh, 860px); }
+      #assistant-panneau .ia-modes{ flex-wrap:nowrap; overflow-x:auto; padding:6px 10px; gap:5px; }
+      #assistant-panneau .assistant-mode-btn{ flex-shrink:0; white-space:nowrap; padding:4px 10px; font-size:11px; }
+      #assistant-panneau #assistant-consigne{ display:none; }
+      #assistant-panneau .ia-reglages{ margin:0 10px; }
+      #assistant-panneau .ia-reglages > summary{ padding:3px 2px; }
+      #assistant-panneau #assistant-messages{ padding:14px 16px; }
+      #assistant-panneau #assistant-input-row{ padding:8px 10px; }
+    }
+  </style>
+  <details class="ia-reglages" id="assistant-reglages">
+  <summary>⚙️ Réglages de l'assistant (tâche, IA, langue)</summary>
   <div id="assistant-langue-ligne" style="display:flex; align-items:center; gap:6px; padding:6px 12px 0; font-size:12px;">
     <label for="assistant-langue" style="font-weight:600; color:var(--ink-soft,#666);">🌐 Répondre en :</label>
     <select id="assistant-langue" style="flex:0 0 auto; padding:3px 6px; border-radius:6px; border:1px solid var(--line,#ccc); font-size:12px; background:#fff;">
@@ -21318,6 +21365,7 @@ function figerColonnesPlanifier(root){
     <label id="assistant-synthese-ligne" style="display:none; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" id="assistant-synthese"> 🧭 Ajouter une synthèse</label>
     <span id="assistant-ia-statut"></span>
   </div>
+  </details>
   <div id="assistant-consigne">Pose n'importe quelle question : administration, calcul, rédaction, programmation...</div>
 
   <div id="assistant-corps">
