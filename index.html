@@ -6623,7 +6623,7 @@ function renderGuide(container){
       <h2>10 ter. Assistant IA intégré 🤖</h2>
       <p>Une bulle <b>💬</b> est visible dans la barre supérieure une fois connecté. Elle ouvre un panneau de discussion avec un assistant intelligent, capable de répondre à des questions, de rédiger des documents administratifs, de traduire ou d'expliquer des mots difficiles, et de préparer des cours complets pour les enseignants — via un petit serveur relais dédié (Cloudflare Worker) qui appelle l'API Gemini, indépendant de la synchronisation des données (chapitre 10 bis).</p>
 
-      <h3>10 ter.1 Les sept modes de l'assistant</h3>
+      <h3>10 ter.1 Les modes de l'assistant</h3>
       <table>
         <thead><tr><th>Mode</th><th>À utiliser pour</th></tr></thead>
         <tbody>
@@ -6637,6 +6637,7 @@ function renderGuide(container){
         </tbody>
       </table>
       <p>En choisissant un mode, un texte d'aide s'affiche juste au-dessus du champ de saisie pour rappeler quoi taper, et pour les modes Compte-rendu, Lettre et Notes, un modèle à compléter (avec les champs Date, Participants, Objet…) se remplit automatiquement dans la zone de texte.</p>
+      <p>Le mode se choisit dans la liste déroulante <b>« 🧭 Mode »</b>, juste au-dessus du champ de saisie, sous les réponses. Ainsi, la zone des réponses occupe toute la hauteur du panneau. Deux options de la liste ouvrent leur fenêtre sans changer de mode : <b>« 📑 Corriger un document »</b> et <b>« 📦 Réponses archivées »</b>.</p>
       <div class="guide-callout astuce"><b class="gc-label">💡 Choisir la langue de réponse</b>Le menu déroulant <b>« 🌐 Répondre en »</b>, au-dessus du champ de saisie, permet de demander une réponse en anglais, espagnol, arabe, soussou, poular ou maninka plutôt qu'en français, pour les modes Question libre, Compte-rendu, Lettre et Notes (le mode « Traduire un mot » répond quant à lui toujours en français facile, quel que soit ce choix, puisque c'est justement son rôle). La qualité de la réponse dans les langues nationales peut être moins fiable que pour le français ou l'anglais.</div>
       <div class="guide-callout attention"><b class="gc-label">⚠️ L'assistant n'invente jamais</b>Il ne complète jamais lui-même un nom, une date, une décision ou une donnée chiffrée absente des informations fournies : il le signale et demande une précision plutôt que de deviner.</div>
 
@@ -6684,6 +6685,11 @@ function renderGuide(container){
         <li><b>🖨️ Imprimer</b> (ou « 🖨️ PDF du cours ») : ouvre le document dans une page mise en forme avec l'en-tête du collège, les formules et schémas correctement affichés, prête pour « Imprimer » ou « Enregistrer en PDF » depuis le navigateur.</li>
       </ul>
       <p>Le bouton <b>🗑️</b> en haut du panneau efface l'historique de la conversation affichée (pour repartir sur une nouvelle demande) — il ne supprime jamais les cours déjà enregistrés dans la banque de cours.</p>
+
+      <h3>10 ter.4 bis Question sans réponse : réenvoyer</h3>
+      <p>Si la réponse ne vient pas, le bouton <b>🔁</b>, à droite de la zone de saisie, renvoie la dernière question sans la retaper. Après 20 secondes d'attente, un bouton <b>« 🔁 Réenvoyer la question »</b> apparaît aussi sous le message « L'assistant réfléchit… ». Si vous renvoyez une question pendant qu'une réponse est encore attendue, seule la plus récente est affichée.</p>
+      <p>Une erreur <b>504</b> signifie que le serveur de l'assistant n'a pas reçu la réponse de l'IA à temps. L'application relance alors la demande automatiquement, une fois, puis affiche un message d'explication. Dans ce cas, réessayez dans une minute, ou demandez un cours plus court (moins de sous-titres, une seule matière à la fois).</p>
+      <div class="guide-callout astuce"><b class="gc-label">💡 Réponses plus rapides</b>L'assistant ne relit que les 8 derniers messages de la conversation. Pour une question sans rapport avec les précédentes, appuyez sur 🗑️ en haut du panneau pour repartir de zéro : la réponse arrive plus vite.</div>
 
       <h3>10 ter.4 Limites à connaître</h3>
       <div class="guide-callout attention"><b class="gc-label">⚠️ Service gratuit à usage limité</b>L'assistant utilise une API d'intelligence artificielle gratuite (Gemini), avec un nombre de requêtes par minute limité. En cas d'usage intensif simultané par plusieurs personnes, un message « quota atteint » peut apparaître — il suffit de réessayer une minute plus tard. L'assistant peut écrire du code informatique dans n'importe quel langage, mais ne l'exécute pas.</div>
@@ -19727,6 +19733,14 @@ function listeImportAnnuler(){
   toast('Import annulé.');
 }
 
+// Liste déroulante des modes : « Corriger un document » et « Archives » ouvrent leur fenêtre, sans changer de mode.
+function assistantChoisirModeListe(valeur){
+  const sel = document.getElementById('assistant-mode-liste');
+  if(valeur === 'corr'){ corrOuvrir(); }
+  else if(valeur === 'archives'){ assistantOuvrirArchives(); }
+  else { assistantChoisirMode(valeur); return; }
+  if(sel) sel.value = assistantMode;
+}
 function assistantChoisirMode(mode){
   assistantMode = mode;
   var formListe = document.getElementById('liste-import-form');
@@ -19734,6 +19748,8 @@ function assistantChoisirMode(mode){
   document.querySelectorAll('.assistant-mode-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.mode===mode);
   });
+  const _selMode = document.getElementById('assistant-mode-liste');
+  if(_selMode && [..._selMode.options].some(o=>o.value===mode)) _selMode.value = mode;
   const champ = document.getElementById('assistant-input');
   const consigne = document.getElementById('assistant-consigne');
   const formCours = document.getElementById('assistant-cours-form');
@@ -20484,7 +20500,8 @@ async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique, fou
   // (toutes les instructions nécessaires y sont déjà incluses) : on ne leur mélange pas
   // l'historique d'une conversation libre sans rapport, pour éviter des réponses
   // incohérentes et pour ne pas alourdir inutilement la requête envoyée à l'IA.
-  const historiquePertinent = (modeEffectif==='cours' || modeEffectif==='projets' || sansHistorique) ? [] : assistantHistorique;
+  // Historique réduit aux 8 derniers messages : moins de texte à lire par l'IA, donc une réponse plus rapide
+  const historiquePertinent = (modeEffectif==='cours' || modeEffectif==='projets' || sansHistorique) ? [] : assistantHistorique.slice(-8);
   // Mode « Traduire un mot » : le champ de saisie sert à taper le mot/l'expression ; on
   // reformule ici la consigne complète envoyée à l'IA, qui répond toujours en français facile.
   let messageEnvoye = message;
@@ -20510,12 +20527,23 @@ async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique, fou
     };
   }
   try{
-    const res = await fetch(TEKOULO_API_URL+'/api/assistant/chat', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+TEKOULO_TOKEN},
-      body: JSON.stringify(corpsRequete)
-    });
-    const data = await res.json();
+    let res = null;
+    for(let essai = 1; essai <= 2; essai++){
+      res = await fetch(TEKOULO_API_URL+'/api/assistant/chat', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+TEKOULO_TOKEN},
+        body: JSON.stringify(corpsRequete)
+      });
+      // 502/503/504 : délai dépassé ou serveur momentanément indisponible → une relance automatique
+      if(![502,503,504].includes(res.status)) break;
+      if(essai === 1) await _pause(3000);
+    }
+    if([502,503,504].includes(res.status)){
+      return {ok:false, error:"Le serveur de l'assistant a mis trop de temps à répondre (erreur 504). La demande est peut-être trop longue : réessayez dans une minute, ou demandez un cours plus court (moins de sous-titres, une seule matière à la fois)."};
+    }
+    const texte = await res.text();
+    let data = null;
+    try{ data = JSON.parse(texte); }catch(_){ return {ok:false, error:"Réponse inattendue du serveur de l'assistant (HTTP "+res.status+"). Réessayez dans un instant."}; }
     if(res.ok) return {ok:true, reponse:data.reponse};
     return {ok:false, error:data.error || 'Erreur inconnue'};
   }catch(e){
@@ -20528,8 +20556,19 @@ async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique, fou
 // la bulle utilisateur (peut être un résumé plus court que le message complet).
 // `pieceJointe` (optionnel) est {nom, mediaType, base64} — ex. la répartition du
 // programme importée — transmise telle quelle à l'API pour que l'IA puisse la lire.
-async function assistantEnvoyerMessage(message, messageAffiche, pieceJointe){
+// Mémoire de la dernière question envoyée (pour le bouton « Réenvoyer ») et compteur de requêtes
+let _assistantDerniereDemande = null;
+let _assistantReqId = 0;
+let _assistantTimerRenvoi = null;
+function assistantReenvoyerDerniere(){
+  if(!_assistantDerniereDemande){ toast('Aucune question à réenvoyer.'); return; }
+  document.getElementById('assistant-attente')?.remove();
+  const d = _assistantDerniereDemande;
+  assistantEnvoyerMessage(d.message, d.messageAffiche, d.pieceJointe, true);
+}
+async function assistantEnvoyerMessage(message, messageAffiche, pieceJointe, reenvoi){
   if(!message) return;
+  if(!reenvoi) _assistantDerniereDemande = {message, messageAffiche, pieceJointe};
   if(assistantComparerActif()) return assistantEnvoyerComparaison(message, messageAffiche, pieceJointe);
   const metaCours = (assistantMode==='cours') ? assistantDernierCoursMeta : null;
   const metaProjet = (assistantMode==='projets') ? assistantDernierProjetMeta : null;
@@ -20537,8 +20576,11 @@ async function assistantEnvoyerMessage(message, messageAffiche, pieceJointe){
   // ajoutée à l'historique partagé, pour ne pas polluer le contexte des échanges suivants
   // en « Question libre » (voir aussi assistantAppelAPI).
   const memoriser = !metaCours && !metaProjet;
-  assistantAjouterMessage('user', messageAffiche || message);
-  if(memoriser) assistantHistorique.push({role:'user', texte:message});
+  const monId = ++_assistantReqId;
+  if(!reenvoi){
+    assistantAjouterMessage('user', messageAffiche || message);
+    if(memoriser) assistantHistorique.push({role:'user', texte:message});
+  }
   const zone = document.getElementById('assistant-messages');
   const attente = document.createElement('div');
   attente.id = 'assistant-attente';
@@ -20547,7 +20589,22 @@ async function assistantEnvoyerMessage(message, messageAffiche, pieceJointe){
   zone.appendChild(attente);
   const corps3 = document.getElementById('assistant-corps');
   if(corps3) corps3.scrollTop = corps3.scrollHeight;
+  // Après 20 secondes sans réponse, propose de réenvoyer la question
+  clearTimeout(_assistantTimerRenvoi);
+  _assistantTimerRenvoi = setTimeout(()=>{
+    const a = document.getElementById('assistant-attente');
+    if(!a || monId !== _assistantReqId) return;
+    a.appendChild(document.createTextNode(' Cela prend plus de temps que prévu. '));
+    const b = document.createElement('button');
+    b.textContent = '🔁 Réenvoyer la question';
+    b.style.cssText = 'background:var(--green-deep); color:#fff; border:none; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:700; cursor:pointer;';
+    b.onclick = assistantReenvoyerDerniere;
+    a.appendChild(b);
+  }, 20000);
   const data = await assistantAppelAPI(message, pieceJointe);
+  clearTimeout(_assistantTimerRenvoi);
+  // Une relance a été lancée entre-temps : on ignore cette réponse, la plus récente seule compte
+  if(monId !== _assistantReqId) return;
   document.getElementById('assistant-attente')?.remove();
   if(data.ok){
     assistantAjouterMessage('assistant', data.reponse, metaCours, metaProjet);
@@ -21120,6 +21177,7 @@ function figerColonnesPlanifier(root){
 }
 .assistant-mode-btn.active{ background:var(--green-deep); color:#fff; border-color:var(--green-deep); box-shadow:0 3px 10px rgba(11,74,50,.25); }
 .assistant-mode-btn:hover:not(.active){ background:var(--line-soft); }
+#assistant-mode-liste{ flex:1 1 auto; min-width:200px; max-width:100%; padding:7px 10px; border-radius:8px; border:1px solid var(--green-deep); font-size:13px; font-weight:600; background:#fff; color:var(--ink,#20241F); }
 #assistant-consigne{ padding:8px 14px; font-size:11.5px; line-height:1.5; color:var(--ink-soft,#666); background:#FAF8F0; border-bottom:1px solid var(--line,#ddd); flex-shrink:0; }
 
 #assistant-corps{ flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; }
@@ -21286,17 +21344,6 @@ function figerColonnesPlanifier(root){
       <button onclick="assistantEffacerHistorique()" title="Effacer l'historique de la conversation">🗑️</button>
       <button onclick="ouvrirFermerAssistant()" title="Fermer">✕</button>
     </span>
-  </div>
-  <div class="ia-modes">
-    <button class="assistant-mode-btn active" data-mode="general" onclick="assistantChoisirMode('general')">💬 Question libre</button>
-    <button class="assistant-mode-btn" data-mode="reunion" onclick="assistantChoisirMode('reunion')">📝 Compte-rendu</button>
-    <button class="assistant-mode-btn" data-mode="lettre" onclick="assistantChoisirMode('lettre')">📄 Lettre officielle</button>
-    <button class="assistant-mode-btn" data-mode="notes" onclick="assistantChoisirMode('notes')">🗒️ Organiser des notes</button>
-    <button class="assistant-mode-btn" data-mode="cours" onclick="assistantChoisirMode('cours')">📘 Créer un cours</button>
-    <button class="assistant-mode-btn" data-mode="projets" onclick="assistantChoisirMode('projets')">🏗️ Projets</button>
-    <button class="assistant-mode-btn" data-mode="traduire" onclick="assistantChoisirMode('traduire')">🈯 Traduire un mot</button>
-    <button class="assistant-mode-btn" data-mode="listes" onclick="assistantChoisirMode('listes')">👥 Importer une liste</button>
-    <button class="assistant-mode-btn" onclick="corrOuvrir()">📑 Corriger un document</button>
   </div>
   <style>
     #assistant-panneau .ia-reglages{ margin:4px 12px 0; font-size:12px; }
@@ -21529,8 +21576,24 @@ function figerColonnesPlanifier(root){
   </details>
   </div>
 
+  <div class="ia-modes" style="border-top:1px solid var(--line,#ddd); border-bottom:none; padding:6px 12px;">
+    <label for="assistant-mode-liste" style="font-weight:600; font-size:12.5px; align-self:center;">🧭 Mode :</label>
+    <select id="assistant-mode-liste" onchange="assistantChoisirModeListe(this.value)">
+      <option value="general" selected>💬 Question libre</option>
+      <option value="reunion">📝 Compte-rendu</option>
+      <option value="lettre">📄 Lettre officielle</option>
+      <option value="notes">🗒️ Organiser des notes</option>
+      <option value="cours">📘 Créer un cours (cours et sujets d'évaluation)</option>
+      <option value="projets">🏗️ Projets</option>
+      <option value="traduire">🈯 Traduire un mot</option>
+      <option value="listes">👥 Importer une liste</option>
+      <option value="corr">📑 Corriger un document</option>
+      <option value="archives">📦 Réponses archivées</option>
+    </select>
+  </div>
   <div id="assistant-input-row">
     <textarea id="assistant-input" rows="1" placeholder="Pose ta question, ou choisis un mode ci-dessus..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); assistantEnvoyer(); }"></textarea>
+    <button id="assistant-reenvoyer-btn" title="Réenvoyer la dernière question" onclick="assistantReenvoyerDerniere()" style="background:#fff; color:var(--green-deep); border:1px solid var(--green-deep); border-radius:9px; padding:0 12px; font-weight:700; cursor:pointer; font-size:15px;">🔁</button>
     <button onclick="assistantEnvoyer()">➤</button>
   </div>
 </div>
