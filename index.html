@@ -2305,7 +2305,7 @@ function dbSet(key, value){
 const TEKOULO_API_URL = 'https://tekoulo-assistant.komahkbaro.workers.dev'; // Ancien serveur Render remplacé par un Cloudflare Worker (assistant IA uniquement ; le stockage des données reste sur Google Drive, voir bloc SYNCHRONISATION GOOGLE DRIVE ci-dessous)
 let TEKOULO_TOKEN = (function(){
   // Jeton de l'assistant : lu dès l'ouverture depuis le stockage de l'appareil (saisi une seule fois).
-  try{ const t = sessionStorage.getItem('tekoulo_token') || localStorage.getItem(DB_PREFIX+'assistant_jeton'); return t ? String(t).trim() : null; }
+  try{ const t = localStorage.getItem(DB_PREFIX+'assistant_jeton') || sessionStorage.getItem('tekoulo_token'); return t ? String(t).trim() : null; }
   catch(e){ return null; }
 })();
 
@@ -4646,7 +4646,7 @@ async function recupererTokenAssistant(identifiant, pass){
   let jeton = null;
   try{ jeton = localStorage.getItem(DB_PREFIX+'assistant_jeton'); }catch(e){}
   try{ sessionStorage.removeItem('tekoulo_token'); }catch(e){}
-  if(jeton){ TEKOULO_TOKEN = jeton; try{ sessionStorage.setItem('tekoulo_token', jeton); }catch(e){} return; }
+  if(jeton){ TEKOULO_TOKEN = jeton; try{ localStorage.setItem(DB_PREFIX+'assistant_jeton', jeton); sessionStorage.setItem('tekoulo_token', jeton); }catch(e){} return; }
   TEKOULO_TOKEN = null;
   if(sessionStorage.getItem('tekoulo_role') === 'fondateur'){
     setTimeout(assistantDemanderJeton, 2500);
@@ -4805,7 +4805,7 @@ const IA_TACHES = {
   document:  {label:'Analyse de document ou image', ia:'gemini'}
 };
 
-/* ---- Clés d'IA : aucune clé n'est plus stockée dans l'application. Les IA « api » passent par le serveur relais Tekoulo. ---- */
+/* ---- Clés d'IA : chaque appareil enregistre ses propres clés (bloc script-ia-cles-appareil). Sans clé, les IA « api » passent par le serveur relais Tekoulo. ---- */
 try{ localStorage.removeItem(DB_PREFIX+'ia_cles'); }catch(e){}
 function assistantFournisseurChoisi(){ const s = document.getElementById('assistant-ia'); return s ? s.value : 'tekoulo'; }
 
@@ -4818,6 +4818,7 @@ function iaMettreAJourStatut(){
   let t;
   if(f === 'tekoulo') t = "Assistant Tekoulo : réponses dans l'application, sans clé personnelle.";
   else if(cfg.mode === 'web') t = cfg.nom + " n'est pas branché à l'application : votre demande sera copiée, puis collez-la sur " + cfg.site + ".";
+  else if(window.iaCleActive && window.iaCleActive(f)) t = '🔑 Clé de cet appareil active pour ' + cfg.nom + '.';
   else t = '✅ ' + cfg.nom + ' répondra via le serveur sécurisé de Tekoulo (aucune clé sur cet appareil).';
   z.textContent = t;
 }
@@ -6109,7 +6110,9 @@ function renderGuide(container){
       <a href="#g14n">14. Emplois du temps</a>
       <a href="#g15n">15. Frais de scolarité et reçus</a>
       <a href="#g15b">15 bis. Salaires (établissements privés)</a>
+      <a href="#g15t">15 ter. Statuts des élèves et cotisations APEAE</a>
       <a href="#g16n">16. Dictionnaire, présence et supervision</a>
+      <a href="#g16b">16 bis. Suivi pédagogique et registre des notes</a>
       <a href="#g17">17. Fermeture de l'application</a>
       <a href="#g17b">17 bis. Installer, désinstaller et transférer l'application</a>
       <a href="#g18">18. Foire aux questions</a>
@@ -6383,6 +6386,10 @@ function renderGuide(container){
       <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>Tous les documents imprimés (fiches, bulletins, certificats, attestations, listes, classement, résultats, bilans, reçus de paiement, pages « Établissement », emplois du temps et documents de l'assistant IA) comportent un en-tête administratif et un code de sécurité (QR code) généré localement, permettant de vérifier leur authenticité sans connexion internet.</div>
       <h3>8.4 Logo et mise en page des documents</h3>
       <p>Le logo de l'établissement affiché en bas à gauche des documents imprimés utilise une écriture bleu foncé, lisible sur une page blanche. Les documents corrigés par l'assistant (chapitre 10 ter.5) comportent une page de garde avec le sceau de l'école, un pied de page et une mise en page professionnelle, imprimables via « 🖨️ Imprimer / Enregistrer en PDF ».</p>
+      <h3>8.2 Mise en page avant impression</h3>
+      <p>Avant chaque impression, un panneau <b>Mise en page</b> s'affiche. Il permet de choisir l'orientation (portrait ou paysage), la taille du document de 50 à 150 %, et d'afficher ou de masquer l'en-tête officiel.</p>
+      <p>L'en-tête officiel comporte le sceau de la République à gauche et le logo de l'établissement à droite. Un encadré d'identification (établissement, année, niveau, classe, matière) peut être ajouté. Le zoom dépend du navigateur : sur certaines versions d'Android, il peut être ignoré.</p>
+      <div class="guide-callout astuce"><b class="gc-label">💡 Astuce</b>Si l'impression s'ouvre dans une nouvelle fenêtre sans rien afficher, autorisez les fenêtres pop-up pour ce site.</div>
     </div>
 
     <div class="guide-chapter" id="g9">
@@ -6691,6 +6698,18 @@ function renderGuide(container){
       <p>Une erreur <b>504</b> signifie que le serveur de l'assistant n'a pas reçu la réponse de l'IA à temps. L'application relance alors la demande automatiquement, une fois, puis affiche un message d'explication. Dans ce cas, réessayez dans une minute, ou demandez un cours plus court (moins de sous-titres, une seule matière à la fois).</p>
       <div class="guide-callout astuce"><b class="gc-label">💡 Réponses plus rapides</b>L'assistant ne relit que les 8 derniers messages de la conversation. Pour une question sans rapport avec les précédentes, appuyez sur 🗑️ en haut du panneau pour repartir de zéro : la réponse arrive plus vite.</div>
 
+      <h3>10 ter.4 ter Clés d'IA propres à cet appareil</h3>
+      <p>Dans <b>Paramètres › Intelligence artificielle</b>, vous pouvez enregistrer votre propre clé API pour Claude, ChatGPT, Gemini, Mistral ou DeepSeek. La clé est mémorisée <b>sur cet appareil uniquement</b> : chaque tablette, téléphone ou ordinateur a la sienne.</p>
+      <ol>
+        <li>Choisir le fournisseur dans la liste <b>« Fournisseur par défaut »</b>.</li>
+        <li>Coller la clé dans le champ <b>« Clé API de … »</b>, qui affiche le nom du fournisseur choisi. Le lien affiché sous le champ permet de l'obtenir auprès du fournisseur.</li>
+        <li>Facultatif : ajouter des <b>clés de secours</b>, une par ligne, de préférence issues d'un autre compte. Elles servent si la première atteint son quota.</li>
+        <li>Appuyer sur <b>« 💾 Enregistrer sur cet appareil »</b>, puis sur <b>« 🔌 Tester l'IA choisie »</b>.</li>
+      </ol>
+      <p>Lorsqu'une clé est enregistrée, les demandes de l'assistant et des fonctions de génération partent directement vers le fournisseur choisi. Sans clé, elles passent par le serveur sécurisé de Tekoulo.</p>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Sécurité</b>La clé reste dans le navigateur de cet appareil. Ne l'enregistrez pas sur un ordinateur partagé et ne la communiquez à personne. Elle n'est ni incluse dans le fichier de sauvegarde, ni synchronisée avec Google Drive. Pour la retirer, appuyer sur <b>« Effacer les clés de cette IA »</b>.</div>
+      <p>Les pièces jointes (photo, PDF) passent toujours par le serveur sécurisé de Tekoulo, même lorsqu'une clé est enregistrée : elles nécessitent donc l'assistant activé sur cet appareil (jeton école).</p>
+
       <h3>10 ter.4 Limites à connaître</h3>
       <div class="guide-callout attention"><b class="gc-label">⚠️ Service gratuit à usage limité</b>L'assistant utilise une API d'intelligence artificielle gratuite (Gemini), avec un nombre de requêtes par minute limité. En cas d'usage intensif simultané par plusieurs personnes, un message « quota atteint » peut apparaître — il suffit de réessayer une minute plus tard. L'assistant peut écrire du code informatique dans n'importe quel langage, mais ne l'exécute pas.</div>
     </div>
@@ -6898,6 +6917,17 @@ function renderGuide(container){
       <p>Pour les mois hors année scolaire (non cochés au chapitre 10.3), le Fondateur peut autoriser, mois par mois, un « salaire de vacances » ; une fois autorisé, tout agent (y compris ceux ayant déjà une prime de responsabilité, qui se cumule alors) peut y avoir droit via le même formulaire que le salaire habituel.</p>
     </div>
 
+    <div class="guide-chapter" id="g15t">
+      <h2>15 ter. Statuts des élèves et cotisations APEAE</h2>
+      <h3>15 ter.1 Statut d'un élève</h3>
+      <p>Chaque élève a un statut : <b>Actif</b>, <b>Retiré</b> ou <b>Transféré</b>, avec la date et le motif. Seuls les élèves actifs comptent dans les effectifs et dans le registre des notes. Les élèves retirés ou transférés restent visibles dans la liste et peuvent être réactivés.</p>
+      <h3>15 ter.2 Vérification avant retrait</h3>
+      <p>Avant un retrait ou un transfert, l'application affiche les sommes encore dues (cotisations APEAE et frais de scolarité) et demande une confirmation. Le montant reste visible ensuite, dans la liste des élèves concernés.</p>
+      <div class="guide-callout attention"><b class="gc-label">⚠️ Reste à payer à jour</b>L'avertissement dépend du champ « Reste à payer » de chaque dossier de frais de scolarité. Si ce champ n'est pas tenu à jour, l'alerte ne s'affichera pas.</div>
+      <h3>15 ter.3 Cotisations APEAE</h3>
+      <p>Le bilan indique l'effectif, le total attendu, le montant déjà payé, le reste à payer et le statut de chaque élève. Des filtres permettent d'afficher les élèves par statut ou par classe. Pour enregistrer un versement, cochez les élèves concernés et saisissez le montant : il est réparti sur leurs versements. Après un retrait, vérifiez les chiffres du bilan.</p>
+    </div>
+
     <div class="guide-chapter" id="g16n">
       <h2>16. Dictionnaire, présence mensuelle et supervision</h2>
       <h3>16.1 Dictionnaire français et correction automatique</h3>
@@ -6910,8 +6940,30 @@ function renderGuide(container){
       <h3>16.2 Présence mensuelle &amp; analyse</h3>
       <p>Ce module permet de saisir la présence par mois, cycle, niveau et classe, à partir du registre d'appel et du cahier de présence des enseignants. Le bouton « 📊 Analyser la présence » compare les deux sources et signale les écarts, qu'il faut vérifier dans les documents originaux.</p>
       <h3>16.3 Supervision des enseignants</h3>
-      <p>Le bouton « 📊 Analyser les données et établir les indicateurs » calcule un indicateur transparent à partir des critères réellement renseignés dans les fiches de supervision et signale la complétude des données. C'est une aide à l'analyse, qui ne remplace pas l'appréciation professionnelle de la direction.</p>
+      <p>La fiche de supervision reprend le bulletin d'inspection : renseignements généraux, visite, <b>18 indicateurs</b> notés de 0 à 4, répartis en 4 parties, et une appréciation. Les anciens champs (qualité de l'enseignement, participation, gestion de la salle, etc.) ne sont plus affichés ; les visites saisies avec l'ancien formulaire restent enregistrées mais ne sont pas visibles.</p>
+      <ul>
+        <li><b>Imprimer</b> un bulletin vierge ou individuel, ou <b>tous les bulletins</b> à la fois.</li>
+        <li><b>Tableau de synthèse</b> des visites.</li>
+        <li><b>Alertes</b> : note inférieure à 10/20, grille incomplète, indicateurs notés 0.</li>
+        <li><b>Appréciation assistée par IA</b> : l'assistant rédige un brouillon à relire et corriger avant enregistrement.</li>
+      </ul>
       <div class="guide-callout attention"><b class="gc-label">⚠️ Vérification</b>Avant une impression officielle ou une analyse pédagogique, vérifiez les données sources saisies : les indicateurs automatiques dépendent de la qualité et de la complétude des informations enregistrées.</div>
+    </div>
+
+    <div class="guide-chapter" id="g16b">
+      <h2>16 bis. Suivi pédagogique et registre des notes</h2>
+      <h3>16 bis.1 Plan de progression</h3>
+      <p>Le plan de progression se présente mois par mois : chapitre, leçon, date prévue, date réalisée et statut. Il peut être créé automatiquement à partir d'une répartition annuelle existante. Pour chaque entrée, l'IA peut générer le cours et le sujet ; ils sont enregistrés dans le Studio pédagogique.</p>
+      <h3>16 bis.2 Cahier journal</h3>
+      <p>Le cahier journal enregistre chaque cours : date, classe, matière, thème, effectif, présents, travail donné et observation.</p>
+      <h3>16 bis.3 Banque d'évaluations</h3>
+      <p>La banque regroupe les devoirs et compositions : titre, type, date, total des points, sujet, corrigé et source.</p>
+      <h3>16 bis.4 Corriger une copie</h3>
+      <p>À partir d'une photo ou d'un PDF de copie, l'IA propose une note et une appréciation. Relisez-les avant d'enregistrer : la correction reste une proposition. La pièce jointe passe par le serveur sécurisé de Tekoulo.</p>
+      <h3>16 bis.5 Fiches questions-réponses et dossier pédagogique</h3>
+      <p>Une fiche de révision peut être générée par l'IA à partir d'un cours, ou saisie à la main. Le dossier pédagogique regroupe, pour une matière et un niveau, les cours, sujets et fiches, avec un sommaire, prêt à imprimer.</p>
+      <h3>16 bis.6 Registre des notes</h3>
+      <p>Le registre mensuel s'imprime par matière, avec tri par nom, numéro d'ordre ou moyenne, masquage du N et du matricule, zoom et impression en paysage. Des statistiques affichent les moyennes, le taux de réussite, le tableau d'honneur et les élèves en difficulté. Le registre peut être exporté en Word. Seuls les élèves actifs y figurent.</p>
     </div>
 
     <div class="guide-chapter" id="g17">
@@ -7316,7 +7368,7 @@ function techniqueContenuHTML(){
 }
 
 /* ===== Guide technique (Paramètres, réservé au Fondateur) ===== */
-const GUIDE_TECHNIQUE_MD = "# Guide technique — Base de Données de Gestion, Collège Tekoulo Centre\n\nDestiné à la personne qui maintient l'application (modifications, nouveaux modules, serveur relais, version Android). Le guide d'utilisation destiné au personnel est intégré à l'application (chapitre « Guide d'utilisation », menu Système).\n\n## 1. Vue d'ensemble\n\n| Élément | Détail |\n|---|---|\n| Application web | Un seul fichier `index.html` (≈ 6,3 Mo), HTML + CSS + JavaScript, sans serveur ni base de données. |\n| Stockage | `localStorage` du navigateur, clés préfixées par `DB_PREFIX`. Fonctions `dbGet(collection)` et `dbSet(collection, valeur)`. |\n| Session | `sessionStorage` : rôle connecté (`tekoulo_role`), espace actif (`TEKOULO_CYCLE_ACTIF`). |\n| Synchronisation | Google Drive (Google Identity Services). Liste des données synchronisées : constante `CLES_SYNCHRONISEES`. |\n| Assistant IA | Passe par un serveur relais Cloudflare Worker (`worker-assistant-tekoulo.js`). Aucune clé d'IA dans l'application. |\n| Version Android | Projet Kotlin dans `android-tekoulo/` : une WebView qui charge `assets/index.html`. |\n| Audit | `rapport-audit-tekoulo.md` (points P0 à P3, état de chaque correction). |\n\nAucune clé d'API, aucun mot de passe administrateur en clair ne doit figurer dans le fichier. Le mot de passe administrateur est stocké sous forme de hachage (`tekouloVerifierMdp`).\n\n## 2. Structure du fichier `index.html`\n\nOrdre général, de haut en bas :\n\n1. `<style>` principaux (thèmes par cycle : Élémentaire orange, Primaire bleu, Collège vert, Lycée violet ; variables CSS sur `:root`).\n2. `<style id=\"style-horloge\">` : cadran analogique, heure, date, météo du tableau de bord.\n3. `<style id=\"style-formulaires\">` : présentation commune de tous les champs de formulaire.\n4. `<\/head>` puis le HTML de l'écran de connexion et de la coquille (menu `#nav`, zone `#content`).\n5. Scripts : constantes de référence, fonctions d'affichage, d'impression, d'assistant, puis le script de démarrage en bas de page.\n\nLe fichier contient aussi des chaînes HTML qui sont elles-mêmes des documents (`<html>…<\/html>` écrits dans une nouvelle fenêtre). Le script de vérification doit donc ignorer le premier bloc `<script>` (faux positif connu, déjà présent dans la version d'origine).\n\n## 3. Référentiels à connaître\n\n| Constante ou fonction | Rôle |\n|---|---|\n| `NAV` | Menu latéral : groupes et entrées (`key`, `label`, `icon`, `badge`). |\n| `PAGE_META` | Titre et fil d'Ariane de chaque page. |\n| `ROLE_MODULES` | Modules autorisés par rôle (`'*'` = tous). |\n| `TOUS_LES_MODULES_ADMIN_CYCLE` | Liste des modules administrés par cycle. |\n| `CYCLE_MODULES_EXCLUS` | Modules masqués par espace (Élémentaire, Primaire, Collège, Lycée). |\n| `moduleEnabled(key)` | Décision finale d'affichage : type d'établissement, rôle, espace. |\n| `CLES_SYNCHRONISEES` | Collections envoyées sur Google Drive et sauvegardées. |\n| `GENERIC_MODULES` | Modules construits à partir d'une liste de champs (voir §4). |\n| `MATRICULE_LINKS` | Remplissage automatique par matricule ou identifiant (liaisons entre modules). |\n| `PARENT_LIENS_ELEVE` | Remplissage des champs de l'élève à partir du code d'une fiche parent. |\n| `UNIQUE_KEY_FIELDS` | Champs dont la valeur doit être unique (identifiant élève, matricule…). |\n| `CRITICAL_KEYS` | Champs obligatoires : signalés par un astérisque et contrôlés à l'enregistrement. |\n| `ELEVE_FIELDS`, `champsEleves()` | Champs du formulaire élève (le module élèves est écrit à la main, pas en générique). |\n\nRoutage : `renderView(key)` appelle `renderDashboard`, `renderEleves`, etc., puis, en dernier recours, `renderGenericModule(target, GENERIC_MODULES[key])`.\n\n## 4. Modules génériques\n\nUn module générique est un objet de `GENERIC_MODULES` :\n\n```js\nparents:{ label:'Parents d’élèves', codePrefix:'PAR',\n  fields:[ {key:'nom', label:'Nom', type:'text'}, … ],   // types : text, date, number, select (options), textarea, photo\n  columns:['nom','prenoms','lienParente','telephone','profession'],  // colonnes du tableau\n  extraFormHTML(record){ … }   // HTML ajouté sous le formulaire (ex. liste des enfants)\n}\n```\n\n- `codePrefix` : préfixe du code automatique (`__code`, ex. PAR001), généré par `nextCode`.\n- `genSave` enregistre ; `cycle` est ajouté automatiquement (filtrage par espace via `cycleModuleVisible`).\n- `extraFormHTML(record)` reçoit l'enregistrement en cours ; il est appelé en ajout (`record` vide) et en modification.\n\n### Checklist pour ajouter un module générique\n\n1. Déclarer le module dans `GENERIC_MODULES` (fields, columns, codePrefix).\n2. Ajouter l'entrée dans `NAV`, avec son icône et son compteur `badge`.\n3. Ajouter le titre dans `PAGE_META`.\n4. Ajouter la clé dans `CLES_SYNCHRONISEES` (sinon le module n'est ni sauvegardé ni synchronisé).\n5. Ajouter la clé dans `TOUS_LES_MODULES_ADMIN_CYCLE` et dans les listes de `ROLE_MODULES` qui doivent y accéder.\n6. Si le module doit se remplir à partir d'un autre, ajouter une entrée dans `MATRICULE_LINKS` ou une fonction dédiée.\n7. Vérifier les espaces où le module doit être masqué (`CYCLE_MODULES_EXCLUS`).\n\nExemple réalisé : le module « Parents d’élèves » (fiches parents) et la liaison avec les élèves (`PARENT_LIENS_ELEVE`, champs `codeParentPere`, `codeParentMere`, `codeParentTuteur` dans `ELEVE_FIELDS`, liste de suggestions `<datalist>` construite dans `fieldInput`).\n\n## 5. Formulaires\n\n- Les champs sont rendus par `fieldInput(f, val, excludeId)`. Il en existe une version par contexte (module générique, élèves, édition d'élève, personnel…).\n- Apparence : `style-formulaires` (champs blancs, focus vert, champs invalides en rouge). Les champs sont reconnus par `.field` et `[data-f]`.\n- Aide et astérisques : script `script-formulaires` en fin de fichier. Il utilise un `MutationObserver` et ajoute, pour chaque `.field` :\n  - un astérisque rouge si la clé figure dans `CRITICAL_KEYS` ;\n  - une aide grise si la clé figure dans le dictionnaire `AIDE` (à compléter pour les nouveaux champs).\n  Ce script ne modifie aucune donnée.\n\n## 6. Impression\n\nTous les documents passent par une seule fonction d'écriture :\n\n```\ndocument imprimable → tekouloDocumentImprimable(o)  ──┐\nautres fonctions d'impression (tekouloOuvrirFenetre)  ─┴→ tekouloEcrireDocument(fenetre, html)\n                                                          └→ tekouloAjouterPageDeGarde(html)  (page d'accueil)\n```\n\n- `tekouloOuvrirFenetre()` ouvre la fenêtre (pop-up) ; si elle est bloquée, un message le signale.\n- `tekouloAjouterPageDeGarde(html)` insère la page d'accueil après `<body>`. Elle reprend le `<title>`, l'établissement (`getParams()`), l'espace, l'année, le nombre de tableaux et de lignes, et un sommaire des `<h2>`/`<h3>` du contenu (après le repère `vue-contenu`).\n- Exclusion : les documents dont le titre commence par `Bulletin`, `Certificat`, `Attestation`, `Fiche`, `Reçu`, `Note de service`, `Acte`, `Badge` ou `Carte` ne reçoivent pas de page d'accueil. Pour modifier cette règle, changer la regex dans `tekouloAjouterPageDeGarde`.\n- `tekouloBarreActions` : barre de boutons (retour, tableau de bord, imprimer), masquée à l'impression (`.no-print`).\n- `tekouloScriptAutoPrint` : lance l'impression une fois les images chargées.\n\n## 7. Horloge et météo du tableau de bord\n\n- `htmlHorloge()` construit la carte (cadran SVG, heure, date, météo) ; les identifiants `horloge-heure`, `horloge-date`, `horloge-meteo` sont utilisés par `majHorloge()`, appelé chaque seconde par `demarrerHorloge()`.\n- Météo : `majMeteo()` interroge l'API Open-Meteo (sans clé) avec la position de l'appareil ou, à défaut, Guéckédou (`METEO_LIEU`). Un cache de 15 minutes limite les appels. En mode hors connexion, la météo n'est pas demandée.\n\n## 8. Assistant IA et serveur relais\n\nFichier : `worker-assistant-tekoulo.js` (Cloudflare Worker).\n\n- Route unique : `POST /api/assistant/chat`. Le navigateur envoie `Authorization: Bearer <jeton école>`.\n- Vérification du jeton (`ECOLE_TOKEN`) en temps constant. Sans jeton valide : réponse 401.\n- Fournisseur par défaut : `gemini`, modèle `gemini-3.8-flash` (constante `FOURNISSEURS`). Les autres fournisseurs (anthropic, openai, mistral, deepseek) sont prêts.\n- Secrets du Worker : `ECOLE_TOKEN` (obligatoire), `GEMINI_API_KEY`, et facultativement `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`. Ils se créent dans Settings › Variables and Secrets (type Secret).\n- Nouvel essai : jusqu'à 3 tentatives, espacées de 1,5 s puis 3 s, sur les erreurs 429 et 5xx (Gemini surchargé ou délai dépassé).\n- Pièces jointes : images (PNG, JPEG, WebP, GIF) et PDF pour Claude et Gemini ; 10 Mo maximum.\n- Côté application : `assistantAppelAPI(...)` envoie la demande au relais. Les fournisseurs « web » (Perplexity, Copilot, Grok) restent gérés par copie de la demande (`assistantAppelFournisseur`).\n- Les anciennes clés d'IA saisies dans Paramètres ont été retirées ; l'application supprime au démarrage l'entrée `ia_cles` si elle existe.\n\nMise à jour du modèle : changer la ligne `gemini: { … modele: … }` dans le Worker, puis `Deploy`. Dans `index.html`, le modèle n'apparaît qu'à titre informatif dans `IA_FOURNISSEURS`.\n\n## 9. Version Android\n\nDossier `android-tekoulo/` :\n\n- `app/src/main/AndroidManifest.xml` : permission `INTERNET`, `android:label=\"Albert Digital Guinée\"`, activité `.MainActivity`.\n- `app/src/main/java/com/tekoulo/centre/MainActivity.kt` : WebView (JavaScript, `localStorage`, accès aux fichiers), pont `AndroidBridge.enregistrerFichier(nom, base64)` pour les téléchargements (enregistrés dans Téléchargements via MediaStore), sélecteur de fichiers (`onShowFileChooser`), bouton Retour.\n- `app/build.gradle.kts` : `namespace` et `applicationId` = `com.tekoulo.centre`, `minSdk` 29 (requis par MediaStore), `versionCode` 2, `versionName` 1.1.\n- `app/src/main/assets/index.html` : copie de l'application à jour. **À recopier à chaque mise à jour de `index.html`**, sinon l'APK garde l'ancienne version.\n\nGénération de l'APK : Build › Generate App Bundles or APKs › Generate APKs (fichier `app/build/outputs/apk/debug/app-debug.apk`). Le build « release » non signé ne s'installe pas sur Android.\n\nLimites connues dans la WebView : connexion Google Drive et impression non garanties.\n\n## 10. Tests et vérifications\n\nTests Python (Playwright, Chromium dans `/opt/pw-browsers/chromium`) :\n\n| Fichier | Contenu | Résultat attendu |\n|---|---|---|\n| `tests/tests_tekoulo.py` | Parcours principaux | 49/49 |\n| `tests/test_sauvegarde.py` | Sauvegarde et restauration | 22/22 |\n| `tests/test_verrou_modules.py` | Verrous des modules et des rôles | 30/30 |\n\nVérification de syntaxe après chaque modification :\n\n1. Extraire chaque bloc `<script>` sans `src` et lancer `node --check` dessus.\n2. Le bloc 0 signale une erreur : c'est le faux positif connu (chaîne HTML de la première page), déjà présent dans la version d'origine.\n3. Les autres blocs doivent passer sans erreur.\n\nVérification fonctionnelle rapide : charger le fichier avec Playwright, appeler `renderView(key)` sur le module modifié et contrôler l'absence d'erreur (`pageerror`).\n\n## 11. Données, sauvegarde et sécurité\n\n- Les données vivent dans le navigateur de chaque appareil. La synchronisation Drive ne concerne que les collections de `CLES_SYNCHRONISEES`.\n- La sauvegarde complète (`⭳ Sauvegarder`) exporte toutes les collections, avec la date et le nom de l'école.\n- Mot de passe administrateur : haché ; à la première ouverture, la création est obligatoire sur chaque appareil.\n- Le module « Parents d’élèves » est réservé au personnel. Un accès des parents exigerait un serveur dédié (décision prise : non construit).\n- Points ouverts : P1-1, P1-4 et P2-1 de l'audit (reportés à la demande de l'école) ; bibliothèques hors ligne (P2-4) ; lenteur ponctuelle de l'assistant IA lors de la charge de Gemini.\n\n## 12. Procédure de livraison\n\n1. Modifier `index.html` ; vérifier la syntaxe (§10).\n2. Lancer les trois suites de tests ; elles doivent rester à 49/49, 22/22 et 30/30 (ou être mises à jour si une fonctionnalité a changé).\n3. Recopier `index.html` dans `android-tekoulo/app/src/main/assets/index.html`, puis générer l'APK.\n4. Publier `index.html` (GitHub Pages ou copie locale de l'école). Les données existantes ne sont pas touchées par une mise à jour du fichier, car elles restent dans le navigateur.\n5. Pour l'assistant : ne modifier le Worker que si le modèle ou le jeton change ; le redéployer et tester les huit contrôles de la fiche de test.\n";
+const GUIDE_TECHNIQUE_MD = "# Guide technique — Base de Données de Gestion, Collège Tekoulo Centre\n\nDestiné à la personne qui maintient l'application (modifications, nouveaux modules, serveur relais, version Android). Le guide d'utilisation destiné au personnel est intégré à l'application (chapitre « Guide d'utilisation », menu Système).\n\n## 1. Vue d'ensemble\n\n| Élément | Détail |\n|---|---|\n| Application web | Un seul fichier `index.html` (≈ 6,3 Mo), HTML + CSS + JavaScript, sans serveur ni base de données. |\n| Stockage | `localStorage` du navigateur, clés préfixées par `DB_PREFIX`. Fonctions `dbGet(collection)` et `dbSet(collection, valeur)`. |\n| Session | `sessionStorage` : rôle connecté (`tekoulo_role`), espace actif (`TEKOULO_CYCLE_ACTIF`). |\n| Synchronisation | Google Drive (Google Identity Services). Liste des données synchronisées : constante `CLES_SYNCHRONISEES`. |\n| Assistant IA | Passe par un serveur relais Cloudflare Worker (`worker-assistant-tekoulo.js`). Aucune clé d'IA dans l'application. |\n| Version Android | Projet Kotlin dans `android-tekoulo/` : une WebView qui charge `assets/index.html`. |\n| Audit | `rapport-audit-tekoulo.md` (points P0 à P3, état de chaque correction). |\n\nAucune clé d'API, aucun mot de passe administrateur en clair ne doit figurer dans le fichier. Le mot de passe administrateur est stocké sous forme de hachage (`tekouloVerifierMdp`).\n\n## 2. Structure du fichier `index.html`\n\nOrdre général, de haut en bas :\n\n1. `<style>` principaux (thèmes par cycle : Élémentaire orange, Primaire bleu, Collège vert, Lycée violet ; variables CSS sur `:root`).\n2. `<style id=\"style-horloge\">` : cadran analogique, heure, date, météo du tableau de bord.\n3. `<style id=\"style-formulaires\">` : présentation commune de tous les champs de formulaire.\n4. `<\/head>` puis le HTML de l'écran de connexion et de la coquille (menu `#nav`, zone `#content`).\n5. Scripts : constantes de référence, fonctions d'affichage, d'impression, d'assistant, puis le script de démarrage en bas de page.\n\nLe fichier contient aussi des chaînes HTML qui sont elles-mêmes des documents (`<html>…<\/html>` écrits dans une nouvelle fenêtre). Le script de vérification doit donc ignorer le premier bloc `<script>` (faux positif connu, déjà présent dans la version d'origine).\n\n## 3. Référentiels à connaître\n\n| Constante ou fonction | Rôle |\n|---|---|\n| `NAV` | Menu latéral : groupes et entrées (`key`, `label`, `icon`, `badge`). |\n| `PAGE_META` | Titre et fil d'Ariane de chaque page. |\n| `ROLE_MODULES` | Modules autorisés par rôle (`'*'` = tous). |\n| `TOUS_LES_MODULES_ADMIN_CYCLE` | Liste des modules administrés par cycle. |\n| `CYCLE_MODULES_EXCLUS` | Modules masqués par espace (Élémentaire, Primaire, Collège, Lycée). |\n| `moduleEnabled(key)` | Décision finale d'affichage : type d'établissement, rôle, espace. |\n| `CLES_SYNCHRONISEES` | Collections envoyées sur Google Drive et sauvegardées. |\n| `GENERIC_MODULES` | Modules construits à partir d'une liste de champs (voir §4). |\n| `MATRICULE_LINKS` | Remplissage automatique par matricule ou identifiant (liaisons entre modules). |\n| `PARENT_LIENS_ELEVE` | Remplissage des champs de l'élève à partir du code d'une fiche parent. |\n| `UNIQUE_KEY_FIELDS` | Champs dont la valeur doit être unique (identifiant élève, matricule…). |\n| `CRITICAL_KEYS` | Champs obligatoires : signalés par un astérisque et contrôlés à l'enregistrement. |\n| `ELEVE_FIELDS`, `champsEleves()` | Champs du formulaire élève (le module élèves est écrit à la main, pas en générique). |\n\nRoutage : `renderView(key)` appelle `renderDashboard`, `renderEleves`, etc., puis, en dernier recours, `renderGenericModule(target, GENERIC_MODULES[key])`.\n\n## 4. Modules génériques\n\nUn module générique est un objet de `GENERIC_MODULES` :\n\n```js\nparents:{ label:'Parents d’élèves', codePrefix:'PAR',\n  fields:[ {key:'nom', label:'Nom', type:'text'}, … ],   // types : text, date, number, select (options), textarea, photo\n  columns:['nom','prenoms','lienParente','telephone','profession'],  // colonnes du tableau\n  extraFormHTML(record){ … }   // HTML ajouté sous le formulaire (ex. liste des enfants)\n}\n```\n\n- `codePrefix` : préfixe du code automatique (`__code`, ex. PAR001), généré par `nextCode`.\n- `genSave` enregistre ; `cycle` est ajouté automatiquement (filtrage par espace via `cycleModuleVisible`).\n- `extraFormHTML(record)` reçoit l'enregistrement en cours ; il est appelé en ajout (`record` vide) et en modification.\n\n### Checklist pour ajouter un module générique\n\n1. Déclarer le module dans `GENERIC_MODULES` (fields, columns, codePrefix).\n2. Ajouter l'entrée dans `NAV`, avec son icône et son compteur `badge`.\n3. Ajouter le titre dans `PAGE_META`.\n4. Ajouter la clé dans `CLES_SYNCHRONISEES` (sinon le module n'est ni sauvegardé ni synchronisé).\n5. Ajouter la clé dans `TOUS_LES_MODULES_ADMIN_CYCLE` et dans les listes de `ROLE_MODULES` qui doivent y accéder.\n6. Si le module doit se remplir à partir d'un autre, ajouter une entrée dans `MATRICULE_LINKS` ou une fonction dédiée.\n7. Vérifier les espaces où le module doit être masqué (`CYCLE_MODULES_EXCLUS`).\n\nExemple réalisé : le module « Parents d’élèves » (fiches parents) et la liaison avec les élèves (`PARENT_LIENS_ELEVE`, champs `codeParentPere`, `codeParentMere`, `codeParentTuteur` dans `ELEVE_FIELDS`, liste de suggestions `<datalist>` construite dans `fieldInput`).\n\n## 5. Formulaires\n\n- Les champs sont rendus par `fieldInput(f, val, excludeId)`. Il en existe une version par contexte (module générique, élèves, édition d'élève, personnel…).\n- Apparence : `style-formulaires` (champs blancs, focus vert, champs invalides en rouge). Les champs sont reconnus par `.field` et `[data-f]`.\n- Aide et astérisques : script `script-formulaires` en fin de fichier. Il utilise un `MutationObserver` et ajoute, pour chaque `.field` :\n  - un astérisque rouge si la clé figure dans `CRITICAL_KEYS` ;\n  - une aide grise si la clé figure dans le dictionnaire `AIDE` (à compléter pour les nouveaux champs).\n  Ce script ne modifie aucune donnée.\n\n## 6. Impression\n\nTous les documents passent par une seule fonction d'écriture :\n\n```\ndocument imprimable → tekouloDocumentImprimable(o)  ──┐\nautres fonctions d'impression (tekouloOuvrirFenetre)  ─┴→ tekouloEcrireDocument(fenetre, html)\n                                                          └→ tekouloAjouterPageDeGarde(html)  (page d'accueil)\n```\n\n- `tekouloOuvrirFenetre()` ouvre la fenêtre (pop-up) ; si elle est bloquée, un message le signale.\n- `tekouloAjouterPageDeGarde(html)` insère la page d'accueil après `<body>`. Elle reprend le `<title>`, l'établissement (`getParams()`), l'espace, l'année, le nombre de tableaux et de lignes, et un sommaire des `<h2>`/`<h3>` du contenu (après le repère `vue-contenu`).\n- Exclusion : les documents dont le titre commence par `Bulletin`, `Certificat`, `Attestation`, `Fiche`, `Reçu`, `Note de service`, `Acte`, `Badge` ou `Carte` ne reçoivent pas de page d'accueil. Pour modifier cette règle, changer la regex dans `tekouloAjouterPageDeGarde`.\n- `tekouloBarreActions` : barre de boutons (retour, tableau de bord, imprimer), masquée à l'impression (`.no-print`).\n- `tekouloScriptAutoPrint` : lance l'impression une fois les images chargées.\n\n## 7. Horloge et météo du tableau de bord\n\n- `htmlHorloge()` construit la carte (cadran SVG, heure, date, météo) ; les identifiants `horloge-heure`, `horloge-date`, `horloge-meteo` sont utilisés par `majHorloge()`, appelé chaque seconde par `demarrerHorloge()`.\n- Météo : `majMeteo()` interroge l'API Open-Meteo (sans clé) avec la position de l'appareil ou, à défaut, Guéckédou (`METEO_LIEU`). Un cache de 15 minutes limite les appels. En mode hors connexion, la météo n'est pas demandée.\n\n## 8. Assistant IA et serveur relais\n\nFichier : `worker-assistant-tekoulo.js` (Cloudflare Worker).\n\n- Route unique : `POST /api/assistant/chat`. Le navigateur envoie `Authorization: Bearer <jeton école>`.\n- Vérification du jeton (`ECOLE_TOKEN`) en temps constant. Sans jeton valide : réponse 401.\n- Fournisseur par défaut : `gemini`, modèle `gemini-3.8-flash` (constante `FOURNISSEURS`). Les autres fournisseurs (anthropic, openai, mistral, deepseek) sont prêts.\n- Secrets du Worker : `ECOLE_TOKEN` (obligatoire), `GEMINI_API_KEY`, et facultativement `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`. Ils se créent dans Settings › Variables and Secrets (type Secret).\n- Nouvel essai : jusqu'à 3 tentatives, espacées de 1,5 s puis 3 s, sur les erreurs 429 et 5xx (Gemini surchargé ou délai dépassé).\n- Pièces jointes : images (PNG, JPEG, WebP, GIF) et PDF pour Claude et Gemini ; 10 Mo maximum.\n- Côté application : `assistantAppelAPI(...)` envoie la demande au relais, sauf si une clé est enregistrée sur l'appareil : dans ce cas elle part directement vers le fournisseur (`requete`, bloc `script-ia-cles-appareil`). Les pièces jointes passent toujours par le relais. Les fournisseurs « web » (Perplexity, Copilot, Grok) restent gérés par copie de la demande (`assistantAppelFournisseur`).\n- Clés d'IA par appareil : stockées dans localStorage sous `DB_PREFIX + 'ia_cles_appareil'` (clé principale et clés de secours). Elles sont exclues de la sauvegarde et de la synchronisation Drive (`CLES_HORS_SAUVEGARDE`, `YEAR_EXEMPT_KEYS`). L'ancienne entrée `ia_cles` est supprimée au démarrage.\n- Jeton de l'assistant : stocké de façon durable dans localStorage (`DB_PREFIX + 'assistant_jeton'`), exclu des sauvegardes, relu en priorité au démarrage.\n- Fonctions de génération (cours, sujets, correction, analyse de répartition) : la disponibilité est vérifiée par `window.iaServiceDisponible()`, qui accepte une clé de l'appareil à la place du jeton école. La correction sans pièce jointe passe alors par la clé de l'appareil.\n\nMise à jour du modèle : changer la ligne `gemini: { … modele: … }` dans le Worker, puis `Deploy`. Dans `index.html`, le modèle n'apparaît qu'à titre informatif dans `IA_FOURNISSEURS`.\n\n## 9. Version Android\n\nDossier `android-tekoulo/` :\n\n- `app/src/main/AndroidManifest.xml` : permission `INTERNET`, `android:label=\"Albert Digital Guinée\"`, activité `.MainActivity`.\n- `app/src/main/java/com/tekoulo/centre/MainActivity.kt` : WebView (JavaScript, `localStorage`, accès aux fichiers), pont `AndroidBridge.enregistrerFichier(nom, base64)` pour les téléchargements (enregistrés dans Téléchargements via MediaStore), sélecteur de fichiers (`onShowFileChooser`), bouton Retour.\n- `app/build.gradle.kts` : `namespace` et `applicationId` = `com.tekoulo.centre`, `minSdk` 29 (requis par MediaStore), `versionCode` 2, `versionName` 1.1.\n- `app/src/main/assets/index.html` : copie de l'application à jour. **À recopier à chaque mise à jour de `index.html`**, sinon l'APK garde l'ancienne version.\n\nGénération de l'APK : Build › Generate App Bundles or APKs › Generate APKs (fichier `app/build/outputs/apk/debug/app-debug.apk`). Le build « release » non signé ne s'installe pas sur Android.\n\nLimites connues dans la WebView : connexion Google Drive et impression non garanties.\n\n## 10. Tests et vérifications\n\nTests Python (Playwright, Chromium dans `/opt/pw-browsers/chromium`) :\n\n| Fichier | Contenu | Résultat attendu |\n|---|---|---|\n| `tests/tests_tekoulo.py` | Parcours principaux | 49/49 |\n| `tests/test_sauvegarde.py` | Sauvegarde et restauration | 22/22 |\n| `tests/test_verrou_modules.py` | Verrous des modules et des rôles | 30/30 |\n\nVérification de syntaxe après chaque modification :\n\n1. Extraire chaque bloc `<script>` sans `src` et lancer `node --check` dessus.\n2. Le bloc 0 signale une erreur : c'est le faux positif connu (chaîne HTML de la première page), déjà présent dans la version d'origine.\n3. Les autres blocs doivent passer sans erreur.\n\nVérification fonctionnelle rapide : charger le fichier avec Playwright, appeler `renderView(key)` sur le module modifié et contrôler l'absence d'erreur (`pageerror`).\n\n## 11. Données, sauvegarde et sécurité\n\n- Les données vivent dans le navigateur de chaque appareil. La synchronisation Drive ne concerne que les collections de `CLES_SYNCHRONISEES`.\n- La sauvegarde complète (`⭳ Sauvegarder`) exporte toutes les collections, avec la date et le nom de l'école.\n- Mot de passe administrateur : haché ; à la première ouverture, la création est obligatoire sur chaque appareil.\n- Le module « Parents d’élèves » est réservé au personnel. Un accès des parents exigerait un serveur dédié (décision prise : non construit).\n- Points ouverts : P1-1, P1-4 et P2-1 de l'audit (reportés à la demande de l'école) ; bibliothèques hors ligne (P2-4) ; lenteur ponctuelle de l'assistant IA lors de la charge de Gemini.\n\n## 12. Procédure de livraison\n\n1. Modifier `index.html` ; vérifier la syntaxe (§10).\n2. Lancer les trois suites de tests ; elles doivent rester à 49/49, 22/22 et 30/30 (ou être mises à jour si une fonctionnalité a changé).\n3. Recopier `index.html` dans `android-tekoulo/app/src/main/assets/index.html`, puis générer l'APK.\n4. Publier `index.html` (GitHub Pages ou copie locale de l'école). Les données existantes ne sont pas touchées par une mise à jour du fichier, car elles restent dans le navigateur.\n5. Pour l'assistant : ne modifier le Worker que si le modèle ou le jeton change ; le redéployer et tester les huit contrôles de la fiche de test.\n";
 function gtInline(t){
   return esc(t).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
 }
@@ -11010,32 +11062,55 @@ const GENERIC_MODULES = {
 
   supervision:{ label:'Supervision des enseignants', codePrefix:'SUP',
     fields:[
-      {key:'matricule', label:'Matricule', type:'text'},
+      {key:'ire', label:'IRE (Inspection régionale)', type:'text', section:'I. Renseignements généraux', default:()=>(getParams().ire||'')},
+      {key:'dpe', label:'DPE / DCE', type:'text'},
+      {key:'etablissement', label:'Établissement', type:'text', span:2},
+      {key:'statut', label:'Statut', type:'select', options:['PUBLIC','PRIVÉ']},
       {key:'anneeScolaire', label:'Année scolaire', type:'text'},
-      {key:'session', label:'Session', type:'text'},
-      {key:'dates', label:'Date', type:'date'},
+      {key:'matricule', label:'N° Mle (matricule)', type:'text'},
       {key:'prenoms', label:'Prénoms', type:'text'},
       {key:'nom', label:'Nom', type:'text'},
+      {key:'dateNaissance', label:'Date de naissance', type:'date'},
+      {key:'lieuNaissance', label:'Lieu de naissance', type:'text'},
+      {key:'sexe', label:'Sexe', type:'select', options:['F','M']},
+      {key:'corps', label:'Corps', type:'text'},
       {key:'specialite', label:'Spécialité', type:'text'},
+      {key:'ancienneteService', label:'Ancienneté de service', type:'text'},
+      {key:'ancienneteFonction', label:'Ancienneté dans la fonction', type:'text'},
+      {key:'telephone', label:'Téléphone', type:'text'},
+      {key:'email', label:'E-mail', type:'text'},
+      {key:'adresse', label:'Adresse / Résidence', type:'text', span:2},
+      {key:'dates', label:'Date de la visite', type:'date', section:'Visite'},
+      {key:'encadreur', label:'Encadreur', type:'select', options:['Directeur','Directeur adjoint','Censeur','Surveillant général','Inspecteur','Autre']},
+      {key:'nomEncadreur', label:"Nom de l'encadreur", type:'text'},
       {key:'matiereEnseignee', label:'Matière enseignée', type:'text'},
-      {key:'classeConcernee', label:'Classe concernée', type:'text'},
-      {key:'nombreHeures', label:"Nombre d'heures effectuées", type:'number'},
-      {key:'nombreElevesPresents', label:"Nombre d'élèves présents", type:'number'},
-      {key:'methodeUtilisee', label:'Méthode utilisée', type:'text'},
-      {key:'qualiteEnseignement', label:"Qualité de l'enseignement", type:'select', options:['EXCELLENTE','BONNE','MOYENNE','FAIBLE']},
-      {key:'participationEleves', label:'Participation des élèves', type:'select', options:['EXCELLENTE','BONNE','MOYENNE','FAIBLE']},
-      {key:'bonneGestionSalle', label:'Gestion de la salle', type:'select', options:['OUI','NON']},
-      {key:'respectProgramme', label:'Respect du programme', type:'select', options:['OUI','NON']},
-      {key:'docPedagExistants', label:'Documents pédagogiques existants', type:'text'},
-      {key:'docPedagManquants', label:'Documents manquants', type:'text'},
-      {key:'problemesIdentifies', label:'Problèmes identifiés', type:'text', span:2},
-      {key:'mesuresCorrectives', label:'Mesures correctives', type:'text', span:2},
-      {key:'recommandations', label:'Recommandations', type:'text', span:2},
-      {key:'responsableSuivi', label:'Responsable du suivi', type:'text'},
-      {key:'noteObtenue', label:'Note obtenue', type:'number'},
-      {key:'observation', label:'Observation', type:'text', span:2},
+      {key:'classeConcernee', label:'Classe visitée', type:'text'},
+      {key:'r1', label:"1 · Planification et suivi-évaluation des objectifs (PDE, CDE)", type:'select', options:['0','1','2','3','4'], section:"II. Fonctionnement administratif et gestion — échelle : 0 non prouvé · 1 peu prouvé · 2 assez bien prouvé · 3 bien prouvé · 4 très bien prouvé"},
+      {key:'r2', label:"2 · Contrôle de l’application des textes officiels", type:'select', options:['0','1','2','3','4']},
+      {key:'r3', label:"3 · Respect de la discipline du travail", type:'select', options:['0','1','2','3','4']},
+      {key:'r4', label:"4 · Registre d’inventaire du matériel à jour", type:'select', options:['0','1','2','3','4']},
+      {key:'r5', label:"5 · Fonctionnement des organes consultatifs", type:'select', options:['0','1','2','3','4']},
+      {key:'r6', label:"6 · Respect des périodiques", type:'select', options:['0','1','2','3','4']},
+      {key:'r7', label:"7 · Circulation de l’information", type:'select', options:['0','1','2','3','4']},
+      {key:'r8', label:"8 · Coordination des personnels d’encadrement", type:'select', options:['0','1','2','3','4']},
+      {key:'r9', label:"9 · Certificats de prise de service", type:'select', options:['0','1','2','3','4']},
+      {key:'r10', label:"10 · Inscription et transfert des élèves", type:'select', options:['0','1','2','3','4']},
+      {key:'r11', label:"11 · Tenue des dossiers personnels et élèves", type:'select', options:['0','1','2','3','4']},
+      {key:'r12', label:"12 · Déroulement de l’enseignement / apprentissage", type:'select', options:['0','1','2','3','4'], section:"III. Fonctionnement pédagogique"},
+      {key:'r13', label:"13 · Unités pédagogiques et animation", type:'select', options:['0','1','2','3','4']},
+      {key:'r14', label:"14 · Transparence des évaluations", type:'select', options:['0','1','2','3','4']},
+      {key:'r15', label:"15 · Formation continue des personnels", type:'select', options:['0','1','2','3','4']},
+      {key:'r16', label:"16 · Activités sportives, culturelles et artistiques", type:'select', options:['0','1','2','3','4']},
+      {key:'r17', label:"17 · Fonctionnement du CDE", type:'select', options:['0','1','2','3','4'], section:"IV. Partenariat"},
+      {key:'r18', label:"18 · Partenariat (APEAE, ONG, autorités)", type:'select', options:['0','1','2','3','4']},
+      {key:'problemesIdentifies', label:'Situations-problèmes identifiés', type:'textarea', span:2, rows:2, section:'V. Situations-problèmes, remédiation et appréciation'},
+      {key:'remediation', label:'Remédiation envisagée', type:'textarea', span:2, rows:2},
+      {key:'appreciationGenerale', label:'Appréciation générale', type:'textarea', span:2, rows:2},
+      {key:'observations', label:'Observations', type:'textarea', span:2, rows:2},
+      {key:'faitA', label:'Fait à', type:'text'},
+      {key:'dateFait', label:'Le', type:'date'},
     ],
-    columns:['dates','matricule','prenoms','nom','matiereEnseignee','classeConcernee','noteObtenue','qualiteEnseignement'],
+    columns:['dates','matricule','prenoms','nom','matiereEnseignee','classeConcernee','encadreur'],
   },
 
   groupestech:{ label:'Chefs de groupe technique', codePrefix:'GRT',
@@ -12551,7 +12626,7 @@ function renderGenericModule(container, mod, filterFn){
           let val = record[f.key];
           if(isNew && val===undefined && f.key==='anneeScolaire') val = getParams().anneeScolaire;
           if(isNew && val===undefined && f.default!==undefined) val = (typeof f.default==='function') ? f.default() : f.default;
-          return `
+          return `${f.section?`<h5 class="form-sec-h" style="grid-column:1/-1;margin:12px 0 4px;font-size:12px;color:var(--green-deep);border-bottom:1px solid var(--line);padding-bottom:4px">${esc(f.section)}</h5>`:''}
           <div class="field ${f.span===2?'span-2':f.span===3?'span-3':''}">
             <label>${esc(f.label)}</label>
             ${fieldInput(f, val, record.__id)}
@@ -18850,7 +18925,7 @@ function coursRepartitionStatut(texte, estErreur){
 // la liste des cours (matière, niveau, chapitre, titre, sous-titres) qu'il programme.
 async function coursRepartitionAnalyser(){
   if(!coursProgrammeFichier){ toast('Importez d\'abord un fichier de répartition.', true); return; }
-  if(!TEKOULO_API_URL || !TEKOULO_TOKEN){
+  if(!(TEKOULO_API_URL && TEKOULO_TOKEN)){
     coursRepartitionStatut('Analyse indisponible pour le moment (assistant IA désactivé, voir Guide chapitre 10 ter).', true);
     return;
   }
@@ -19221,7 +19296,7 @@ function sujetsStatut(texte, estErreur){
 async function sujetsGenererTousParMatiere(){
   if(sujetsGenerationEnCours) return;
   if(!coursRepartitionDetectee.length){ toast("Importez et analysez une répartition, ou choisissez-en une enregistrée.", true); return; }
-  if(!TEKOULO_API_URL || !TEKOULO_TOKEN){ toast("L'assistant IA est indisponible pour le moment (voir Guide, chapitre 10 ter).", true); return; }
+  if(!window.iaServiceDisponible()){ toast("L'assistant IA est indisponible pour le moment (voir Guide, chapitre 10 ter).", true); return; }
   const groupes = sujetsGroupesDepuisRepartition();
   if(!confirm("Générer un sujet d'évaluation avec barème et corrigé pour chacune des " + groupes.length + " matière(s) détectée(s) ?\nCela peut prendre plusieurs minutes.")) return;
   sujetsGenerationEnCours = true;
@@ -20492,7 +20567,8 @@ async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique, fou
   // Le serveur Tekoulo n'est requis que si l'IA choisie est l'assistant Tekoulo : une IA directe avec clé peut répondre sans lui
   const _fournisseurPrevu = fournisseurForce || assistantFournisseurChoisi();
   const _directe = !!IA_FOURNISSEURS[_fournisseurPrevu] && IA_FOURNISSEURS[_fournisseurPrevu].mode === 'web';
-  if((!TEKOULO_API_URL || !TEKOULO_TOKEN) && !_directe){
+  const _disponible = pieceJointe ? (!!TEKOULO_API_URL && !!TEKOULO_TOKEN) : window.iaServiceDisponible();
+  if(!_disponible && !_directe){
     return {ok:false, error:"L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter)."};
   }
   const modeEffectif = mode || assistantMode;
@@ -21971,7 +22047,12 @@ ${texte}
 """`;
 }
 async function corrAppeler(prompt, piece){
-  if(!TEKOULO_API_URL || !TEKOULO_TOKEN) throw new Error("L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter).");
+  if(!piece && window.iaCleActive && window.iaCleActive(window.iaChoixEffectif())){
+    const r = await assistantAppelAPI(prompt);
+    if(!r || !r.ok) throw new Error((r && r.error) || 'Erreur IA.');
+    return r.reponse || '';
+  }
+  if(!(piece ? (TEKOULO_API_URL && TEKOULO_TOKEN) : window.iaServiceDisponible())) throw new Error("L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter).");
   let res;
   try{
     res = await fetch(TEKOULO_API_URL + '/api/assistant/chat', {
@@ -22419,6 +22500,1729 @@ function corrTelecharger(){
   try{ new MutationObserver(() => { clearTimeout(window.__accTimer); window.__accTimer = setTimeout(enrichirAccueil, 60); })
     .observe(document.body, {childList:true, subtree:true}); }catch(e){}
   enrichirAccueil();
+})();
+</script>
+<script id="script-bulletin-supervision">
+/* Bulletin d’inspection des enseignants : grille 0 à 4 sur 18 indicateurs (4 responsabilités),
+   note /20, appréciation et impression conforme au modèle officiel MENA-ETFP.
+   Ce bloc remplace l’analyse et la barre d’impression de la rubrique « Supervision des enseignants ». */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const d = x => x ? fmtDate(x) : '';
+  const IND = [
+    {n:1,  t:"La planification, la mise en œuvre et le suivi-évaluation des objectifs de l’établissement.", s:"PDE disponible ; mise en place du CDE ; outils et programme de suivi ; rapport de suivi du PDE", p:"Sept. · Oct. · Toute l’année"},
+    {n:2,  t:"Le contrôle de l’application des textes et instructions officiels.", s:"Textes officiels (arrêtés, lettres circulaires) ; structures d’élèves ; partenariat APEAE ; outils, programme et rapport de contrôle", p:"Toute l’année"},
+    {n:3,  t:"Le contrôle du respect de la discipline du travail.", s:"Directives de contrôle ; règlement intérieur ; contrôle des présences du personnel et des élèves ; PV du conseil de discipline", p:"Oct. · Toute l’année · Mensuel"},
+    {n:4,  t:"La mise à jour du registre d’inventaire du matériel.", s:"Registre d’inventaire du matériel tenu à jour", p:"Début et fin d’année"},
+    {n:5,  t:"Le contrôle du fonctionnement des organes consultatifs de l’établissement.", s:"Lettre de directives ; programme de contrôle ; PV des sessions avec les organes ; rapport de synthèse", p:"Déc."},
+    {n:6,  t:"Le respect des périodiques.", s:"Tableau des périodiques ; courrier au départ ; rapport de suivi", p:"Chaque trimestre"},
+    {n:7,  t:"Le contrôle de la circulation de l’information dans et hors de l’établissement.", s:"Tableau d’affichage ; cahier de circulaires ; courrier au départ", p:"Toute l’année"},
+    {n:8,  t:"La coordination et le contrôle des activités des personnels d’encadrement.", s:"Notes techniques ; calendrier et outils de contrôle ; rapports d’activités ; rapport de coordination", p:"Toute l’année"},
+    {n:9,  t:"Délivrance des certificats de prise de service aux personnels nouvellement affectés.", s:"Actes d’affectation ; copies des certificats de prise de service", p:"Selon nécessité"},
+    {n:10, t:"L’inscription et le transfert des élèves dans l’établissement.", s:"Registre matricule et registre des transferts (arrivées et départs) à jour", p:"Oct.–nov."},
+    {n:11, t:"Le contrôle de la tenue des dossiers des personnels et des élèves.", s:"Dossiers des personnels ; livrets scolaires", p:"Déc."},
+    {n:12, t:"Le contrôle du déroulement du processus enseignement / apprentissage.", s:"Programme de visites de classe ; rapports de visites disponibles", p:"Toute l’année scolaire"},
+    {n:13, t:"La mise en place et l’animation des unités pédagogiques.", s:"Notes de service (chefs de groupes techniques, conseil des professeurs) ; cahiers d’activités ; rapports d’animation pédagogique", p:"Oct. · Toute l’année scolaire"},
+    {n:14, t:"La transparence des évaluations des apprentissages au sein de l’établissement.", s:"Planification trimestrielle des évaluations ; cahiers de notes à jour ; registre centralisateur ; PV de l’assemblée des parents", p:"Toute l’année · par trimestre"},
+    {n:15, t:"La formation continue des personnels.", s:"Directives ; plan de formation ou programme d’animation ; modules et rapports de formation", p:"Toute l’année scolaire"},
+    {n:16, t:"L’orientation, le contrôle et la coordination des activités sportives, culturelles et artistiques.", s:"Programmes des activités ; programme et procédures de contrôle ; rapport de mise en œuvre", p:"Début d’année · Toute l’année"},
+    {n:17, t:"Le suivi du fonctionnement du CDE de l’établissement.", s:"Textes sur le CDE et le PDE ; programme d’activités et de suivi ; rapport de suivi", p:"Toute l’année scolaire"},
+    {n:18, t:"La promotion d’un partenariat actif et fécond avec l’APEAE, les ONG/projets et les autorités.", s:"Copies de correspondances ; PV de réunions avec les partenaires ; contrat de partenariat", p:"Oct."}
+  ];
+  const GROUPES = [
+    {titre:'II. Fonctionnement administratif et gestion', de:1,  a:11},
+    {titre:'III. Fonctionnement pédagogique',              de:12, a:16},
+    {titre:'IV. Partenariat',                              de:17, a:18}
+  ];
+  const MAX = IND.length * 4;
+  const valeur = (r, n) => { const x = parseInt(r['r'+n], 10); return isNaN(x) ? null : Math.min(4, Math.max(0, x)); };
+
+  function calcul(r){
+    let total = 0, n = 0;
+    IND.forEach(it => { const x = valeur(r, it.n); if(x!==null){ total += x; n++; } });
+    return {total, n, sur20: n ? Math.round(total*20/MAX*100)/100 : null};
+  }
+
+  const cellule = 'border:0.6pt solid #333;padding:3px 5px;font-size:10px;vertical-align:middle;';
+  const entete  = cellule + 'background:#E9EEF5;font-weight:700;text-align:center;';
+  const titreSec = t => `<div style="font-weight:700;font-size:11.5px;margin:12px 0 4px;color:#0B4A32">${t}</div>`;
+  const choix = (opts, val) => opts.map(o => (val===o ? '☒' : '☐') + ' ' + o).join('&nbsp;&nbsp;&nbsp;');
+  const ligne = (a, b, c, d2) => `<tr><td style="${cellule}font-weight:700;width:20%">${a}</td><td style="${cellule}width:30%">${b||'&nbsp;'}</td><td style="${cellule}font-weight:700;width:20%">${c}</td><td style="${cellule}width:30%">${d2||'&nbsp;'}</td></tr>`;
+  const bloc = (lbl, v) => `<div style="margin:6px 0"><b style="font-size:10.5px">${lbl} :</b><div style="border:0.6pt solid #333;min-height:34px;padding:4px 6px;font-size:10.5px;white-space:pre-wrap">${e(v)}</div></div>`;
+
+  function bulletinHTML(r){
+    const c = calcul(r);
+    const sexe = choix(['F','M'], r.sexe);
+    const statut = choix(['Public','Privé'], r.statut==='PUBLIC' ? 'Public' : (r.statut==='PRIVÉ' ? 'Privé' : ''));
+    let grille = '';
+    GROUPES.forEach(g => {
+      grille += `<tr><td colspan="9" style="${cellule}background:#F4F1E6;font-weight:700">${e(g.titre)}</td></tr>`;
+      let somme = 0;
+      IND.filter(it => it.n>=g.de && it.n<=g.a).forEach(it => {
+        const v = valeur(r, it.n); if(v!==null) somme += v;
+        grille += `<tr><td style="${cellule}text-align:center">${it.n}</td><td style="${cellule}">${e(it.t)}</td><td style="${cellule}font-size:9px">${e(it.s)}</td><td style="${cellule}font-size:9px">${e(it.p)}</td>`
+          + [0,1,2,3,4].map(k => `<td style="${cellule}text-align:center;font-weight:700">${v===k?'✕':''}</td>`).join('') + '</tr>';
+      });
+      const max = (g.a-g.de+1)*4;
+      grille += `<tr><td colspan="4" style="${cellule}text-align:right;font-weight:700">Total de la section</td><td colspan="5" style="${cellule}text-align:center;font-weight:700">${somme} / ${max}</td></tr>`;
+    });
+    return `
+      ${titreSec('I- Renseignements généraux')}
+      <table style="width:100%;border-collapse:collapse">
+        ${ligne('IRE', e(r.ire), 'DPE / DCE', e(r.dpe))}
+        ${ligne('Établissement', e(r.etablissement), 'Statut', statut)}
+        ${ligne('Prénoms et nom', e(((r.prenoms||'')+' '+(r.nom||'')).trim()), 'N° Mle', e(r.matricule))}
+        ${ligne('Date et lieu de naissance', e(d(r.dateNaissance) + (r.lieuNaissance ? ' à ' + r.lieuNaissance : '')), 'Sexe', sexe)}
+        ${ligne('Corps', e(r.corps), 'Spécialité', e(r.specialite))}
+        ${ligne('Ancienneté de service', e(r.ancienneteService), 'Ancienneté dans la fonction', e(r.ancienneteFonction))}
+        ${ligne('Tél.', e(r.telephone), 'E-mail', e(r.email))}
+        ${ligne('Adresse / Résidence', e(r.adresse), 'Date de la visite', e(d(r.dates)))}
+        ${ligne('Encadreur', e(r.encadreur), 'Nom de l’encadreur', e(r.nomEncadreur))}
+        ${ligne('Matière enseignée', e(r.matiereEnseignee), 'Classe visitée', e(r.classeConcernee))}
+      </table>
+      ${titreSec('II à IV- Grille d’évaluation (0 = non prouvé · 1 = peu prouvé · 2 = assez bien prouvé · 3 = bien prouvé · 4 = très bien prouvé)')}
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="${entete}width:4%">N°</th><th style="${entete}width:28%">Responsabilités</th><th style="${entete}width:30%">Sources de vérification</th><th style="${entete}width:12%">Périodes</th>
+          <th style="${entete}width:5%">0</th><th style="${entete}width:5%">1</th><th style="${entete}width:5%">2</th><th style="${entete}width:5%">3</th><th style="${entete}width:5%">4</th>
+        </tr></thead>
+        <tbody>${grille}
+          <tr><td colspan="4" style="${cellule}text-align:right;font-weight:700;background:#E9EEF5">Total général</td><td colspan="5" style="${cellule}text-align:center;font-weight:700;background:#E9EEF5">${c.total} / ${MAX} &nbsp;·&nbsp; Note : ${c.sur20==null?'—':c.sur20.toFixed(2)} / 20</td></tr>
+        </tbody>
+      </table>
+      ${titreSec('V- Appréciation')}
+      ${bloc('Situations-problèmes identifiés', r.problemesIdentifies)}
+      ${bloc('Remédiation envisagée', r.remediation)}
+      ${bloc('Appréciation générale', r.appreciationGenerale)}
+      ${bloc('Observations', r.observations)}
+      <table style="width:100%;margin-top:18px;font-size:10.5px;border-collapse:collapse">
+        <tr><td colspan="2" style="padding-bottom:14px">Fait à ${e(r.faitA)||'…………………………'}, le ${e(d(r.dateFait))||'…………………………'}</td></tr>
+        <tr>
+          <td style="width:50%;text-align:center;font-weight:700">L’inspecté<br><br><br><span style="font-weight:400">${e(((r.prenoms||'')+' '+(r.nom||'')).trim())}</span></td>
+          <td style="text-align:center;font-weight:700">L’Inspecteur<br><br><br><span style="font-weight:400">${e(r.nomEncadreur)}</span></td>
+        </tr>
+      </table>`;
+  }
+
+  window.bulletinHTMLExport = bulletinHTML;
+  window.bulletinIND = IND;
+  window.bulletinCalcul = calcul;
+  window.bulletinValeur = valeur;
+  window.imprimerBulletinSupervision = function(vierge){
+    const sel = document.getElementById('sup-bulletin-sel');
+    const liste = (dbGet('supervision', []) || []).filter(Boolean);
+    const r = vierge ? {} : liste.find(x => sel && String(x.__id)===sel.value);
+    if(!r){ toast('Choisissez un enseignant à imprimer.', true); return; }
+    const p = getParams();
+    tekouloDocumentImprimable({
+      titre: 'Bulletin d’inspection du proviseur / principal',
+      sousTitre: 'Supervision des enseignants — ' + (p.anneeScolaire || ''),
+      contenuHTML: bulletinHTML(r), module: 'supervision', avecStylesApp: true, sansSignature: true
+    });
+  };
+
+  function ajouterBarre(){
+    const v = document.getElementById('view-supervision');
+    if(!v || document.getElementById('sup-bulletin-bar')) return;
+    const liste = (dbGet('supervision', []) || []).filter(Boolean);
+    const opts = liste.map(r => `<option value="${e(r.__id)}">${e(((r.nom||'')+' '+(r.prenoms||'')).trim())}${r.dates ? ' — ' + e(fmtDate(r.dates)) : ''}</option>`).join('');
+    const bar = document.createElement('div');
+    bar.id = 'sup-bulletin-bar'; bar.className = 'card';
+    bar.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px;margin:0 0 12px';
+    bar.innerHTML = '<b style="color:var(--green-deep)">🖨️ Bulletin d’inspection</b>'
+      + '<select id="sup-bulletin-sel" style="min-width:220px">' + (opts || '<option value="">Aucun enseignant supervisé</option>') + '</select>'
+      + '<button class="btn" type="button" onclick="imprimerBulletinSupervision(false)">Imprimer le bulletin</button>'
+      + '<button class="btn ghost" type="button" onclick="imprimerBulletinSupervision(true)">Bulletin vierge</button>';
+    v.insertBefore(bar, v.firstChild);
+  }
+
+  window.analyserSupervisionEnseignants = function(){
+    const zone = document.getElementById('supervision-analysis-zone'); if(!zone) return;
+    const rows = (dbGet('supervision', []) || []).filter(Boolean);
+    if(!rows.length){ zone.innerHTML = '<div class="analysis-box">Aucune donnée de supervision à analyser.</div>'; return; }
+    const lignes = rows.map(r => {
+      const c = calcul(r);
+      const faibles = IND.filter(it => { const x = valeur(r, it.n); return x!==null && x<=1; }).length;
+      return {nom: ((r.nom||'')+' '+(r.prenoms||'')).trim() || 'Non identifié', n: c.n, sur20: c.sur20, faibles};
+    }).sort((a,b) => (b.sur20||0) - (a.sur20||0));
+    zone.innerHTML = '<div class="analysis-box"><h4 style="margin:0 0 8px;color:var(--green-deep)">Analyse des bulletins d’inspection</h4>'
+      + '<p style="font-size:11.5px">Note = total des points × 20 / 72 (18 indicateurs notés de 0 à 4). Les indicateurs notés 0 ou 1 sont à renforcer.</p>'
+      + lignes.map(x => `<div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line-soft);padding:8px 0;font-size:12px"><span><b>${e(x.nom)}</b><br><small>${x.n}/18 indicateurs renseignés · ${x.faibles} à renforcer</small></span><span><b>${x.sur20==null?'—':x.sur20.toFixed(2)}/20</b></span></div>`).join('')
+      + '<div class="hint-box" style="margin-top:8px">Ces notes aident à l’analyse ; elles ne remplacent pas l’appréciation professionnelle de l’inspecteur.</div></div>';
+  };
+
+  const _renderView = window.renderView;
+  window.renderView = function(key){
+    _renderView(key);
+    if(key === 'supervision') ajouterBarre();
+  };
+})();
+</script>
+<script id="script-parametres-ia">
+/* Paramètres › Intelligence artificielle : choix du fournisseur, test de la connexion et état
+   par appareil (Android, tablette, ordinateur). Chaque appareil peut enregistrer ses propres clés ;
+   sans clé, les demandes passent par le serveur relais Tekoulo (voir le guide technique). */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const CSS = '<style>'
+    + '.pia-grille{display:grid;grid-template-columns:1fr 1fr;gap:12px}'
+    + '.pia-appareils{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px}'
+    + '.pia-appareils>div{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--paper)}'
+    + '.pia-statut{margin-top:10px;padding:10px 12px;border-radius:9px;background:var(--line-soft);font-size:12.5px;min-height:20px}'
+    + '@media (max-width:820px){.pia-grille{grid-template-columns:1fr}.pia-appareils{grid-template-columns:1fr}}'
+    + '</style>';
+
+  function carte(){
+    const choix = (()=>{ try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } })();
+    const options = Object.keys(IA_FOURNISSEURS).map(k =>
+      `<option value="${k}" ${k===choix?'selected':''}>${e(IA_FOURNISSEURS[k].nom)}</option>`).join('');
+    const cfg = IA_FOURNISSEURS[choix] || IA_FOURNISSEURS.tekoulo;
+    return CSS + `
+    <div id="param-ia-carte" class="card" style="padding:16px 18px;margin:0 0 14px">
+      <h3 style="margin:0 0 4px;color:var(--green-deep)">🤖 Intelligence artificielle</h3>
+      <p class="muted" style="margin:0 0 12px;font-size:12px">Choisissez l’IA utilisée par l’assistant et par les fonctions « Importer via IA » et « Génération IA ». Les clés enregistrées sur cet appareil sont utilisées en priorité ; sans clé, les réponses passent par le serveur sécurisé de Tekoulo.</p>
+      <div class="pia-grille">
+        <div class="field"><label>Fournisseur par défaut</label>
+          <select id="param-ia-choix" onchange="paramIaChoisir(this.value)">${options}</select></div>
+        <div class="field"><label>Tester la connexion</label>
+          <button class="btn" type="button" onclick="paramIaTester()">🔌 Tester l’IA choisie</button></div>
+      </div>
+      <div id="param-ia-statut" class="pia-statut">${e(cfg.mode==='web' ? cfg.nom+" n’est pas branché : la demande est copiée, puis collée sur "+cfg.site+'.' : 'IA prête : '+cfg.nom+' (modèle : '+(cfg.modele||'serveur Tekoulo')+').')}</div>
+      <h4 style="margin:16px 0 8px;color:var(--green-deep)">Utilisation selon l’appareil</h4>
+      <div class="pia-appareils">
+        <div><b>📱 Android</b><br>Ouvrir l’application dans le navigateur ou l’APK. Les pièces jointes passent par le sélecteur de fichiers ; la photo prise directement est acceptée.</div>
+        <div><b>📲 Tablette</b><br>Même affichage que le téléphone, mais avec deux colonnes. Idéal pour lire les bulletins avant de les imprimer.</div>
+        <div><b>💻 Ordinateur</b><br>Affichage complet. L’impression se fait depuis la fenêtre dédiée ; autorisez les fenêtres pop-up pour ce site.</div>
+      </div>
+    </div>`;
+  }
+
+  window.paramIaChoisir = function(f){
+    try{ localStorage.setItem(DB_PREFIX+'ia_choix', f); }catch(x){}
+    const s = document.getElementById('assistant-ia'); if(s && IA_FOURNISSEURS[f]) s.value = f;
+    if(typeof iaMettreAJourStatut === 'function') iaMettreAJourStatut();
+    const z = document.getElementById('param-ia-statut'); const cfg = IA_FOURNISSEURS[f];
+    if(z && cfg) z.textContent = cfg.mode==='web' ? cfg.nom+" n’est pas branché : la demande est copiée, puis collée sur "+cfg.site+'.' : 'IA prête : '+cfg.nom+' (modèle : '+(cfg.modele||'serveur Tekoulo')+').';
+  };
+
+  window.paramIaTester = async function(){
+    const f = document.getElementById('param-ia-choix').value;
+    const cfg = IA_FOURNISSEURS[f];
+    const z = document.getElementById('param-ia-statut');
+    if(cfg.mode === 'web'){ z.textContent = cfg.nom+" ne peut pas être testé ici : ouvrez "+cfg.site+' pour l’utiliser.'; return; }
+    z.textContent = '⏳ Test en cours… (la première réponse peut prendre quelques secondes)';
+    try{
+      const r = await assistantAppelAPI('Réponds uniquement par le mot : OK', undefined, undefined, true, f);
+      z.textContent = (r && r.ok) ? '✅ Connexion réussie avec '+cfg.nom+'.' : '⚠ '+((r && (r.error||r.reponse)) || 'Pas de réponse. Vérifiez la connexion internet.');
+    }catch(err){ z.textContent = '⚠ Échec du test : '+(err && err.message ? err.message : 'erreur inconnue')+'.'; }
+  };
+
+  const _renderView = window.renderView;
+  window.renderView = function(key){
+    _renderView(key);
+    if(key !== 'parametres') return;
+    const v = document.getElementById('view-parametres');
+    if(!v || document.getElementById('param-ia-carte')) return;
+    const div = document.createElement('div'); div.innerHTML = carte();
+    v.insertBefore(div.firstElementChild || div, v.firstChild);
+  };
+})();
+</script>
+<script id="script-ia-cles-appareil">
+/* Clés d'IA propres à cet appareil, saisies par l'utilisateur. Elles sont stockées uniquement dans le
+   localStorage de ce navigateur, sous une clé distincte de « ia_cles » (effacée au démarrage) ; elles
+   ne font partie d'aucune collection synchronisée sur Drive. Pour les fournisseurs directs, les demandes
+   partent du navigateur vers le fournisseur choisi. Pour les autres, le serveur relais reste utilisé. */
+(function(){
+  const CLE_STOCK = DB_PREFIX + 'ia_cles_appareil';
+  /* Hors sauvegarde, hors migration annuelle : la clé ne quitte jamais l'appareil. */
+  try{ if(!CLES_HORS_SAUVEGARDE.includes('ia_cles_appareil')) CLES_HORS_SAUVEGARDE.push('ia_cles_appareil'); }catch(x){}
+  try{ if(!YEAR_EXEMPT_KEYS.includes('ia_cles_appareil')) YEAR_EXEMPT_KEYS.push('ia_cles_appareil'); }catch(x){}
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const DIRECT = ['anthropic','openai','gemini','mistral','deepseek'];
+  const CSS = '<style>'
+    + '.pia-grille{display:grid;grid-template-columns:1fr 1fr;gap:12px}'
+    + '.pia-appareils{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px}'
+    + '.pia-appareils>div{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--paper)}'
+    + '.pia-statut{margin-top:10px;padding:10px 12px;border-radius:9px;background:var(--line-soft);font-size:12.5px;min-height:20px}'
+    + '@media (max-width:820px){.pia-grille{grid-template-columns:1fr}.pia-appareils{grid-template-columns:1fr}}'
+    + '</style>';
+
+  function lire(){ try{ return JSON.parse(localStorage.getItem(CLE_STOCK) || '{}') || {}; }catch(x){ return {}; } }
+  function ecrire(o){ try{ localStorage.setItem(CLE_STOCK, JSON.stringify(o)); }catch(x){} }
+  function cleInfo(f){ const o = lire()[f] || {}; return {principale: o.principale || '', supp: Array.isArray(o.supp) ? o.supp : []}; }
+  function masque(k){ return k ? '•••• ' + String(k).slice(-4) : ''; }
+  function choixCourant(){ try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } }
+
+  window.iaCleActive = f => { const i = cleInfo(f); return DIRECT.includes(f) && !!(i.principale || i.supp.length); };
+  window.iaChoixEffectif = () => { if(document.getElementById('assistant-ia')) return assistantFournisseurChoisi(); try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } };
+  window.iaServiceDisponible = () => !!TEKOULO_API_URL && (!!TEKOULO_TOKEN || window.iaCleActive(window.iaChoixEffectif()));
+
+  async function requete(f, cfg, cle, message){
+    let url, headers = {'Content-Type':'application/json'}, body, extraire;
+    if(f === 'anthropic'){
+      url = 'https://api.anthropic.com/v1/messages';
+      headers['x-api-key'] = cle; headers['anthropic-version'] = '2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+      body = {model: cfg.modele, max_tokens: 4096, messages: [{role:'user', content: message}]};
+      extraire = d => (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+    } else if(f === 'gemini'){
+      url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(cfg.modele) + ':generateContent?key=' + encodeURIComponent(cle);
+      body = {contents: [{parts: [{text: message}]}]};
+      extraire = d => (d.candidates && d.candidates[0] && d.candidates[0].content) ? d.candidates[0].content.parts.map(p => p.text || '').join('') : '';
+    } else {
+      const urls = {openai:'https://api.openai.com/v1/chat/completions', mistral:'https://api.mistral.ai/v1/chat/completions', deepseek:'https://api.deepseek.com/chat/completions'};
+      url = urls[f]; headers['Authorization'] = 'Bearer ' + cle;
+      body = {model: cfg.modele, messages: [{role:'user', content: message}]};
+      extraire = d => (d.choices && d.choices[0] && d.choices[0].message) ? d.choices[0].message.content : '';
+    }
+    const rep = await fetch(url, {method:'POST', headers, body: JSON.stringify(body)});
+    let d = {}; try{ d = await rep.json(); }catch(x){}
+    if(!rep.ok){
+      const msg = (d.error && (d.error.message || d.error)) || ('erreur HTTP ' + rep.status);
+      const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg)); err.status = rep.status; throw err;
+    }
+    return (extraire(d) || '').trim();
+  }
+
+  async function appelDirect(f, message){
+    const cfg = IA_FOURNISSEURS[f];
+    const info = cleInfo(f);
+    const cles = [info.principale].concat(info.supp).map(k => String(k || '').trim()).filter(Boolean);
+    if(!cles.length) throw new Error('aucune clé enregistrée pour cette IA');
+    let derniere = null;
+    for(const cle of cles){
+      try{ return await requete(f, cfg, cle, message); }
+      catch(err){ derniere = err; if(![401, 403, 429].includes(err.status)) break; }
+    }
+    throw derniere;
+  }
+
+  // Les demandes de l'assistant partent directement vers le fournisseur quand une clé est enregistrée ici.
+  // Les pièces jointes restent gérées par le serveur relais.
+  const _appel = window.assistantAppelAPI;
+  window.assistantAppelAPI = async function(message, pieceJointe, mode, sansHistorique, fournisseurForce){
+    const f = fournisseurForce || window.iaChoixEffectif();
+    if(window.iaCleActive(f) && !pieceJointe){
+      try{ return {ok: true, reponse: await appelDirect(f, message)}; }
+      catch(err){ return {ok: false, error: 'Échec avec ' + IA_FOURNISSEURS[f].nom + ' : ' + err.message + '. Vérifiez la clé ou le quota.'}; }
+    }
+    return _appel.apply(this, arguments);
+  };
+
+  function statut(t){ const z = document.getElementById('param-ia-statut'); if(z) z.textContent = t; }
+  function texteStatutChoix(f){
+    const cfg = IA_FOURNISSEURS[f]; const i = cleInfo(f);
+    if(cfg.mode === 'web') return cfg.nom + " n’est pas branché : la demande est copiée, puis collée sur " + cfg.site + '.';
+    if(window.iaCleActive(f)) return '🔑 Clé de cet appareil active pour ' + cfg.nom + ' (' + masque(i.principale || i.supp[0]) + ').';
+    return '✅ ' + cfg.nom + ' répondra via le serveur sécurisé de Tekoulo (modèle : ' + (cfg.modele || 'serveur') + ').';
+  }
+
+  function carte(){
+    const choix = choixCourant();
+    const cfg = IA_FOURNISSEURS[choix] || IA_FOURNISSEURS.tekoulo;
+    const info = cleInfo(choix);
+    const options = Object.keys(IA_FOURNISSEURS).map(k => `<option value="${k}" ${k===choix?'selected':''}>${e(IA_FOURNISSEURS[k].nom)}</option>`).join('');
+    const blocCle = DIRECT.includes(choix) ? `
+      <div class="pia-grille" style="margin-top:12px">
+        <div class="field" style="grid-column:1/-1"><label>Clé API de ${e(cfg.nom)} — cet appareil uniquement</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="param-ia-cle" type="password" autocomplete="new-password" spellcheck="false" placeholder="${info.principale ? 'Clé enregistrée : ' + masque(info.principale) + ' (saisir pour remplacer)' : 'Collez votre clé ici'}" style="flex:1">
+            <button class="btn ghost sm" type="button" onclick="paramIaAfficher()">Afficher</button>
+          </div>
+          <small class="muted">Obtenir une clé : <a href="${e(cfg.lienCle)}" target="_blank" rel="noopener">${e(cfg.lienCle)}</a></small>
+        </div>
+        <div class="field" style="grid-column:1/-1"><label>Clés supplémentaires (facultatif, une par ligne)</label>
+          <textarea id="param-ia-supp" rows="2" autocomplete="off" spellcheck="false" placeholder="Une clé par ligne, de préférence d’un autre compte : utilisée si la première atteint son quota. Laisser vide pour garder les actuelles.${info.supp.length ? ' (' + info.supp.length + ' enregistrée(s))' : ''}"></textarea>
+        </div>
+        <div style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" type="button" onclick="paramIaEnregistrerCle()">💾 Enregistrer sur cet appareil</button>
+          <button class="btn ghost" type="button" onclick="paramIaEffacerCle()">Effacer les clés de cette IA</button>
+        </div>
+      </div>
+      <p class="muted" style="font-size:11.5px;margin:8px 0 0">⚠ La clé reste dans le navigateur de cet appareil. Ne l’enregistrez pas sur un ordinateur partagé, et ne la communiquez à personne. Elle n’est ni sauvegardée ni synchronisée avec Drive.</p>` : '';
+    return CSS + `
+    <div id="param-ia-carte" class="card" style="padding:16px 18px;margin:0 0 14px">
+      <h3 style="margin:0 0 4px;color:var(--green-deep)">🤖 Intelligence artificielle</h3>
+      <p class="muted" style="margin:0 0 12px;font-size:12px">Choisissez l’IA utilisée par l’assistant et par les fonctions « Importer via IA » et « Génération IA ».</p>
+      <div class="pia-grille">
+        <div class="field"><label>Fournisseur par défaut</label>
+          <select id="param-ia-choix" onchange="paramIaChoisir(this.value)">${options}</select></div>
+        <div class="field"><label>Tester la connexion</label>
+          <button class="btn" type="button" onclick="paramIaTester()">🔌 Tester l’IA choisie</button></div>
+      </div>
+      ${blocCle}
+      <div id="param-ia-statut" class="pia-statut">${e(texteStatutChoix(choix))}</div>
+      <h4 style="margin:16px 0 8px;color:var(--green-deep)">Utilisation selon l’appareil</h4>
+      <div class="pia-appareils">
+        <div><b>📱 Android</b><br>Dans le navigateur ou l’APK. Les pièces jointes passent par le sélecteur de fichiers ; la photo prise directement est acceptée.</div>
+        <div><b>📲 Tablette</b><br>Même affichage que le téléphone, sur deux colonnes. Pratique pour relire les bulletins avant impression.</div>
+        <div><b>💻 Ordinateur</b><br>Affichage complet. Autorisez les fenêtres pop-up pour ce site afin d’imprimer.</div>
+      </div>
+    </div>`;
+  }
+
+  function poserCarte(){
+    const v = document.getElementById('view-parametres'); if(!v) return;
+    const div = document.createElement('div'); div.innerHTML = carte();
+    const neuve = div.firstElementChild;
+    const ancienne = document.getElementById('param-ia-carte');
+    if(ancienne) ancienne.replaceWith(neuve); else v.insertBefore(neuve, v.firstChild);
+  }
+
+  window.paramIaChoisir = function(f){
+    try{ localStorage.setItem(DB_PREFIX+'ia_choix', f); }catch(x){}
+    const s = document.getElementById('assistant-ia'); if(s && IA_FOURNISSEURS[f]) s.value = f;
+    if(typeof iaMettreAJourStatut === 'function') iaMettreAJourStatut();
+    poserCarte();
+  };
+
+  window.paramIaAfficher = function(){
+    const c = document.getElementById('param-ia-cle'); if(!c) return;
+    c.type = c.type === 'password' ? 'text' : 'password';
+  };
+
+  window.paramIaEnregistrerCle = function(){
+    const f = document.getElementById('param-ia-choix').value;
+    const princ = (document.getElementById('param-ia-cle').value || '').trim();
+    const supp = (document.getElementById('param-ia-supp').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const o = lire(); const ancien = o[f] || {};
+    const nouvelle = {principale: princ || ancien.principale || '', supp: supp.length ? supp : (ancien.supp || [])};
+    if(!nouvelle.principale && !nouvelle.supp.length){ statut('Saisissez au moins une clé avant d’enregistrer.'); return; }
+    o[f] = nouvelle; ecrire(o);
+    poserCarte();
+    statut('✅ Clé enregistrée sur cet appareil (' + masque(nouvelle.principale || nouvelle.supp[0]) + '). Testez-la avec le bouton ci-dessus.');
+  };
+
+  window.paramIaEffacerCle = function(){
+    const f = document.getElementById('param-ia-choix').value;
+    const o = lire(); delete o[f]; ecrire(o);
+    poserCarte();
+    statut('Clés effacées de cet appareil pour ' + IA_FOURNISSEURS[f].nom + '.');
+  };
+
+  window.paramIaTester = async function(){
+    const f = document.getElementById('param-ia-choix').value;
+    const cfg = IA_FOURNISSEURS[f];
+    if(cfg.mode === 'web'){ statut(cfg.nom + ' ne peut pas être testé ici : ouvrez ' + cfg.site + ' pour l’utiliser.'); return; }
+    statut('⏳ Test en cours… (la première réponse peut prendre quelques secondes)');
+    try{
+      if(window.iaCleActive(f)){
+        await appelDirect(f, 'Réponds uniquement par le mot : OK');
+        statut('✅ Connexion directe réussie avec ' + cfg.nom + ' (clé de cet appareil).');
+      } else {
+        const r = await assistantAppelAPI('Réponds uniquement par le mot : OK', undefined, undefined, true, f);
+        statut((r && r.ok) ? '✅ Connexion réussie avec ' + cfg.nom + ' (serveur Tekoulo).' : '⚠ ' + ((r && (r.error || r.reponse)) || 'Pas de réponse.'));
+      }
+    }catch(err){ statut('⚠ Échec du test : ' + (err && err.message ? err.message : 'erreur inconnue') + '.'); }
+  };
+
+  const _renderView = window.renderView;
+  window.renderView = function(key){
+    _renderView(key);
+    if(key === 'parametres') poserCarte();
+  };
+})();
+</script>
+<script id="script-fonctions-complementaires">
+/* Fonctions complémentaires : rédaction IA de l’appréciation, tableau de synthèse et impression
+   de tous les bulletins, alertes de supervision, et trois modules (cahier de participation,
+   travail de groupe, plan de progression) enregistrés comme les autres modules génériques. */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const nomDe = r => ((r.nom||'')+' '+(r.prenoms||'')).trim() || 'Non identifié';
+  const rows = () => (dbGet('supervision', []) || []).filter(Boolean);
+  const cle  = () => { try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } };
+
+  /* ---------- Alertes de supervision ---------- */
+  function alertes(liste){
+    const out = [];
+    liste.forEach(r => {
+      const c = bulletinCalcul(r);
+      if(c.n < 18) out.push({gravite:'info', t: nomDe(r)+' : grille incomplète ('+c.n+'/18 indicateurs).'});
+      if(c.sur20 != null && c.sur20 < 10) out.push({gravite:'alerte', t: nomDe(r)+' : note '+c.sur20.toFixed(2)+'/20 — accompagnement recommandé.'});
+      const zeros = bulletinIND.filter(it => bulletinValeur(r, it.n) === 0).length;
+      if(zeros) out.push({gravite:'alerte', t: nomDe(r)+' : '+zeros+' indicateur(s) non prouvé(s) (note 0).'});
+    });
+    return out;
+  }
+
+  /* ---------- Synthèse et impression ---------- */
+  function tableauSynthese(liste){
+    const cel = 'border:0.6pt solid #333;padding:3px 5px;font-size:10.5px;vertical-align:middle;';
+    const ent = cel + 'background:#E9EEF5;font-weight:700;text-align:center;';
+    const corps = liste.map((r,i) => {
+      const c = bulletinCalcul(r);
+      return `<tr><td style="${cel}text-align:center">${i+1}</td><td style="${cel}">${e(nomDe(r))}</td><td style="${cel}">${e(r.matricule)}</td><td style="${cel}">${e(r.matiereEnseignee)}</td><td style="${cel}">${e(r.classeConcernee)}</td><td style="${cel}text-align:center">${r.dates ? e(fmtDate(r.dates)) : ''}</td><td style="${cel}text-align:center">${c.total} / 72</td><td style="${cel}text-align:center;font-weight:700">${c.sur20==null?'—':c.sur20.toFixed(2)}</td><td style="${cel}text-align:center">${c.n}/18</td></tr>`;
+    }).join('');
+    const moyennes = liste.map(r => bulletinCalcul(r)).filter(c => c.sur20 != null);
+    const moy = moyennes.length ? (moyennes.reduce((a,c) => a + c.sur20, 0) / moyennes.length).toFixed(2) : '—';
+    return `<table style="width:100%;border-collapse:collapse">
+      <thead><tr><th style="${ent}">N°</th><th style="${ent}">Enseignant</th><th style="${ent}">N° Mle</th><th style="${ent}">Matière</th><th style="${ent}">Classe</th><th style="${ent}">Visite</th><th style="${ent}">Points</th><th style="${ent}">Note /20</th><th style="${ent}">Indicateurs</th></tr></thead>
+      <tbody>${corps || `<tr><td colspan="9" style="${cel}text-align:center">Aucune visite enregistrée.</td></tr>`}</tbody>
+      <tfoot><tr><td colspan="7" style="${cel}text-align:right;font-weight:700;background:#E9EEF5">Moyenne de l’établissement</td><td colspan="2" style="${cel}text-align:center;font-weight:700;background:#E9EEF5">${moy} / 20</td></tr></tfoot>
+    </table>
+    <p style="font-size:10px;margin-top:10px">Note = total des points × 20 / 72 (18 indicateurs notés de 0 à 4). Document de synthèse ; il ne remplace pas les bulletins individuels.</p>`;
+  }
+  function ouvrir(titre, sous, html){
+    const p = getParams();
+    tekouloDocumentImprimable({titre, sousTitre: sous || ('Année scolaire '+(p.anneeScolaire||'')), contenuHTML: html, module:'supervision', avecStylesApp:true, sansSignature:true});
+  }
+  window.supImprimerSynthese = function(){
+    ouvrir('Tableau de synthèse de la supervision des enseignants', '', tableauSynthese(rows()));
+  };
+  window.supImprimerTous = function(){
+    const liste = rows();
+    if(!liste.length){ toast('Aucune visite à imprimer.', true); return; }
+    const html = liste.map(r => `<div style="page-break-after:always">${bulletinHTMLExport(r)}</div>`).join('');
+    ouvrir('Bulletins d’inspection — ensemble des enseignants supervisés', '', html);
+  };
+
+  /* ---------- Rédaction assistée de l’appréciation (IA) ---------- */
+  function consigne(r){
+    const c = bulletinCalcul(r);
+    const grille = bulletinIND.map(it => { const v = bulletinValeur(r, it.n); return `${it.n}. ${it.t} : ${v==null?'non renseigné':v+'/4'}`; }).join('\n');
+    return 'Tu es inspecteur pédagogique dans un collège en Guinée. À partir de la grille ci-dessous, rédige en français, de façon professionnelle, concise et constructive, les trois rubriques demandées. Ne donne pas de jugement sur la personne ; décris les faits constatés.\n\n'
+      + `Enseignant : ${nomDe(r)}\nMatière : ${r.matiereEnseignee||'—'}\nClasse visitée : ${r.classeConcernee||'—'}\nDate de la visite : ${r.dates ? fmtDate(r.dates) : '—'}\n`
+      + `Total : ${c.total}/72 ; note : ${c.sur20==null?'—':c.sur20.toFixed(2)}/20 (échelle 0 = non prouvé à 4 = très bien prouvé).\n\nGrille :\n${grille}\n\n`
+      + 'Réponds exactement sous cette forme, sans introduction :\nSituations-problèmes identifiés : ...\nRemédiation envisagée : ...\nAppréciation générale : ...';
+  }
+  window.supProposerAppreciation = async function(){
+    const sel = document.getElementById('sup-bulletin-sel');
+    const r = rows().find(x => sel && String(x.__id) === sel.value);
+    const sortie = document.getElementById('sup-ia-sortie');
+    if(!r){ toast('Choisissez un enseignant.', true); return; }
+    if(!sortie) return;
+    sortie.style.display = 'block';
+    sortie.value = '⏳ Rédaction en cours…';
+    try{
+      const res = await assistantAppelAPI(consigne(r), undefined, undefined, true, cle());
+      sortie.value = (res && res.ok) ? res.reponse : ('⚠ ' + ((res && res.error) || 'Pas de réponse de l’IA.'));
+    }catch(err){ sortie.value = '⚠ ' + (err && err.message ? err.message : 'erreur inconnue'); }
+  };
+  window.supCopierAppreciation = function(){
+    const s = document.getElementById('sup-ia-sortie'); if(!s) return;
+    try{ navigator.clipboard.writeText(s.value); toast('Texte copié. Collez-le dans le champ correspondant du formulaire.'); }
+    catch(x){ s.select(); }
+  };
+
+  /* ---------- Barre complémentaire et alertes sur la rubrique Supervision ---------- */
+  function poserComplements(){
+    const v = document.getElementById('view-supervision');
+    if(!v || document.getElementById('sup-extra')) return;
+    const bar = document.getElementById('sup-bulletin-bar');
+    const div = document.createElement('div');
+    div.id = 'sup-extra'; div.className = 'card'; div.style.cssText = 'padding:12px 14px;margin:0 0 12px';
+    div.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">'
+      + '<b style="color:var(--green-deep)">📊 Synthèse et rédaction</b>'
+      + '<button class="btn" type="button" onclick="supProposerAppreciation()">✨ Proposer l’appréciation (IA)</button>'
+      + '<button class="btn ghost" type="button" onclick="supImprimerSynthese()">Tableau de synthèse</button>'
+      + '<button class="btn ghost" type="button" onclick="supImprimerTous()">Tous les bulletins</button>'
+      + '</div>'
+      + '<textarea id="sup-ia-sortie" rows="6" style="display:none;width:100%;margin-top:10px" placeholder="La proposition apparaîtra ici. Relisez-la avant de la reporter dans le formulaire."></textarea>'
+      + '<div style="display:none;margin-top:6px"><button class="btn ghost sm" type="button" onclick="supCopierAppreciation()">Copier le texte</button></div>'
+      + '<p class="muted" style="font-size:11.5px;margin:8px 0 0">La proposition de l’IA est une aide : elle doit être relue et corrigée par l’inspecteur.</p>';
+    const alertesBox = document.createElement('div');
+    alertesBox.id = 'sup-alertes';
+    const liste = alertes(rows());
+    alertesBox.innerHTML = liste.length
+      ? '<div class="card" style="padding:12px 14px;margin:0 0 12px"><b style="color:var(--green-deep)">🔔 Points d’attention</b>'
+        + liste.slice(0, 12).map(a => `<div style="margin-top:6px;padding:7px 10px;border-radius:8px;font-size:12px;background:${a.gravite==='alerte'?'#FBE9E7':'#FFF8E1'}">${a.gravite==='alerte'?'⚠ ':'ℹ '}${e(a.t)}</div>`).join('')
+        + (liste.length > 12 ? `<div class="muted" style="font-size:11.5px;margin-top:6px">… et ${liste.length-12} autre(s).</div>` : '')
+        + '</div>' : '';
+    const anchor = bar ? bar.nextSibling : v.firstChild;
+    v.insertBefore(div, anchor);
+    if(alertesBox.innerHTML) v.insertBefore(alertesBox, div.nextSibling);
+    const btn = div.querySelector('#sup-ia-sortie + div'); if(btn) btn.style.display = 'block';
+  }
+
+  const _renderView = window.renderView;
+  window.renderView = function(key){
+    _renderView(key);
+    if(key === 'supervision') poserComplements();
+  };
+})();
+</script>
+<script id="script-plan-progression">
+/* Plan de progression : suivi mois par mois des chapitres et leçons, et génération IA
+   du cours et du sujet correspondant à chaque entrée. Les résultats sont enregistrés dans le
+   Studio pédagogique (cours générés et sujets générés), comme les autres créations de l'IA. */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const cle = () => { try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } };
+  const entrees = () => (dbGet('planProgression', []) || []).filter(Boolean);
+  const libelle = r => [r.classe, r.matiere, r.chapitre].filter(Boolean).join(' · ') || 'Entrée sans titre';
+
+  /* ---------- Enregistrement du module ---------- */
+  const MODULE = {
+    label:'Plan de progression', codePrefix:'PPR',
+    fields:[
+      {key:'classe', label:'Classe', type:'text'},
+      {key:'matiere', label:'Matière', type:'text'},
+      {key:'periode', label:'Mois', type:'select', options:['Octobre','Novembre','Décembre','Janvier','Février','Mars','Avril','Mai','Juin']},
+      {key:'chapitre', label:'Chapitre', type:'text', span:2},
+      {key:'leconPrevue', label:'Leçon ou contenu prévu', type:'text', span:2},
+      {key:'datePrevue', label:'Date prévue', type:'date'},
+      {key:'dateRealisee', label:'Date réalisée', type:'date'},
+      {key:'statut', label:'Statut', type:'select', options:['PRÉVU','RÉALISÉ','EN RETARD','REPORTÉ']},
+      {key:'observation', label:'Observation', type:'text', span:2}
+    ],
+    columns:['classe','matiere','periode','chapitre','datePrevue','statut']
+  };
+  try{
+    if(typeof GENERIC_MODULES === 'object' && !GENERIC_MODULES.planProgression) GENERIC_MODULES.planProgression = MODULE;
+    if(typeof CLES_SYNCHRONISEES !== 'undefined' && !CLES_SYNCHRONISEES.includes('planProgression')) CLES_SYNCHRONISEES.push('planProgression');
+    if(typeof PAGE_META === 'object' && !PAGE_META.planProgression) PAGE_META.planProgression = {title:'Plan de progression', crumb:'Enseignement / Plan de progression'};
+    if(typeof NAV !== 'undefined' && !NAV.some(g => g.items.some(i => i.key === 'planProgression'))){
+      const groupe = NAV.find(g => g.items.some(i => i.key === 'supervision')) || NAV[NAV.length-1];
+      groupe.items.push({key:'planProgression', label:'Plan de progression', icon:'📅'});
+    }
+    if(typeof ROLE_MODULES === 'object') Object.keys(ROLE_MODULES).forEach(role => {
+      const l = ROLE_MODULES[role];
+      if(Array.isArray(l) && l.includes('supervision') && !l.includes('planProgression')) l.push('planProgression');
+    });
+    if(typeof TOUS_LES_MODULES_ADMIN_CYCLE !== 'undefined' && Array.isArray(TOUS_LES_MODULES_ADMIN_CYCLE) && !TOUS_LES_MODULES_ADMIN_CYCLE.includes('planProgression')) TOUS_LES_MODULES_ADMIN_CYCLE.push('planProgression');
+  }catch(x){ console.warn('Plan de progression : enregistrement partiel', x); }
+
+  /* ---------- Consignes données à l’IA ---------- */
+  function consigneCours(r){
+    return 'Tu es professeur expérimenté dans un établissement en Guinée.\n'
+      + `Classe : ${r.classe||'—'} · Matière : ${r.matiere||'—'} · Mois prévu : ${r.periode||'—'}\n`
+      + `Chapitre : ${r.chapitre||'—'}\nLeçon prévue : ${r.leconPrevue||'—'}\n${r.observation ? 'Remarque : '+r.observation+'\n' : ''}\n`
+      + 'Rédige le cours complet de cette leçon, en français clair et adapté au niveau de la classe. Structure-le avec des titres « ## » : objectifs, introduction, notions (définitions et exemples), schéma ou tableau décrit en texte si utile, résumé, puis trois exercices corrigés.';
+  }
+  function consigneSujet(r){
+    return 'Tu es professeur expérimenté dans un établissement en Guinée.\n'
+      + `Classe : ${r.classe||'—'} · Matière : ${r.matiere||'—'} · Mois : ${r.periode||'—'}\n`
+      + `Chapitre : ${r.chapitre||'—'}\nLeçon : ${r.leconPrevue||'—'}\n\n`
+      + 'Rédige un sujet d’évaluation de 1 heure sur cette leçon, total 20 points : consignes générales, puis des exercices numérotés (Exercice 1, Exercice 2…) avec le nombre de points entre parenthèses, par exemple « (1,5 pt) ». Termine par la section « ## Corrigé » avec les réponses attendues et le barème.';
+  }
+
+  async function generer(type){
+    const sel = document.getElementById('pp-sel');
+    const r = entrees().find(x => sel && String(x.__id) === sel.value);
+    const z = document.getElementById('pp-statut');
+    if(!r){ if(z) z.textContent = 'Choisissez une entrée du plan.'; return; }
+    if(z) z.textContent = '⏳ Génération en cours : ' + (type==='cours' ? 'le cours' : 'le sujet') + ' (quelques secondes)…';
+    try{
+      const res = await assistantAppelAPI(type==='cours' ? consigneCours(r) : consigneSujet(r), undefined, undefined, true, cle());
+      if(!res || !res.ok){ if(z) z.textContent = '⚠ ' + ((res && res.error) || 'Pas de réponse de l’IA.'); return; }
+      const titre = (type==='cours' ? 'Cours : ' : 'Sujet : ') + (r.chapitre || r.matiere || 'sans titre') + (r.leconPrevue ? ' — ' + r.leconPrevue : '');
+      const base = {titre, matiere: r.matiere||'', niveau: r.classe||'', chapitre: r.chapitre||'', dateGeneration: new Date().toISOString(), source:'plan', contenu: res.reponse, planId: r.__id};
+      if(type === 'cours') coursGeneresAjouter(base); else sujetsGeneresAjouter(base);
+      if(z) z.textContent = '✅ ' + (type==='cours' ? 'Cours' : 'Sujet') + ' enregistré dans le Studio pédagogique (' + (type==='cours' ? 'cours générés' : 'sujets générés') + ').';
+    }catch(err){ if(z) z.textContent = '⚠ ' + (err && err.message ? err.message : 'erreur inconnue'); }
+  }
+  window.ppGenererCours = () => generer('cours');
+  window.ppGenererSujet = () => generer('sujet');
+
+  /* ---------- Barre IA dans la rubrique Plan de progression ---------- */
+  function poser(){
+    const v = document.getElementById('view-planProgression');
+    if(!v || document.getElementById('pp-bar')) return;
+    const liste = entrees();
+    const opts = liste.map(r => `<option value="${e(r.__id)}">${e(libelle(r))}${r.periode ? ' — ' + e(r.periode) : ''}</option>`).join('');
+    const bar = document.createElement('div');
+    bar.id = 'pp-bar'; bar.className = 'card';
+    bar.style.cssText = 'padding:12px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
+    bar.innerHTML = '<b style="color:var(--green-deep)">✨ Générer depuis le plan</b>'
+      + `<select id="pp-sel" style="min-width:240px">${opts || '<option value="">Ajoutez d’abord une entrée au plan</option>'}</select>`
+      + '<button class="btn" type="button" onclick="ppGenererCours()">Générer le cours</button>'
+      + '<button class="btn ghost" type="button" onclick="ppGenererSujet()">Générer le sujet</button>'
+      + '<div id="pp-statut" class="muted" style="width:100%;font-size:12px;margin-top:4px"></div>';
+    v.insertBefore(bar, v.firstChild);
+  }
+  const _renderView = window.renderView;
+  window.renderView = function(key){
+    _renderView(key);
+    if(key === 'planProgression') poser();
+  };
+})();
+</script>
+<script id="script-modules-enseignant">
+/* Liaison plan de progression ↔ répartition annuelle, et deux modules issus des captures :
+   cahier journal et banque d’évaluations. Mêmes principes que les modules génériques. */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const cycle = () => (typeof TEKOULO_CYCLE_ACTIF !== 'undefined' ? TEKOULO_CYCLE_ACTIF : '');
+
+  /* ---------- 1. Plan ← répartition ---------- */
+  window.ppCreerDepuisRepartition = function(){
+    const sel = document.getElementById('pp-rep-sel');
+    const z = document.getElementById('pp-statut');
+    const rep = (dbGet('repartitionsProgramme', []) || []).find(r => sel && r.id === sel.value);
+    if(!rep){ if(z) z.textContent = 'Choisissez une répartition enregistrée (Créer un cours › Répartition annuelle).'; return; }
+    const plan = (dbGet('planProgression', []) || []).filter(Boolean);
+    let ajoutes = 0, deja = 0;
+    const nouveaux = [];
+    (rep.cours || []).forEach((c, i) => {
+      const doublon = plan.concat(nouveaux).some(p => p.classe === c.niveau && p.matiere === c.matiere && p.leconPrevue === c.titre);
+      if(doublon){ deja++; return; }
+      const n = plan.length + nouveaux.length + 1;
+      nouveaux.push({
+        __id: 'pp' + Date.now() + i + Math.random().toString(36).slice(2,6),
+        __code: 'PPR' + String(n).padStart(3, '0'),
+        cycle: cycle(), classe: c.niveau || '', matiere: c.matiere || '', periode: '', chapitre: c.chapitre || '',
+        leconPrevue: c.titre || '', datePrevue: '', dateRealisee: '', statut: 'PRÉVU',
+        observation: (c.sousTitres || []).join(' ; '), source: 'repartition'
+      });
+      ajoutes++;
+    });
+    dbSet('planProgression', plan.concat(nouveaux));
+    if(z) z.textContent = '✅ ' + ajoutes + ' entrée(s) ajoutée(s) au plan depuis « ' + rep.nom + ' »' + (deja ? ' ; ' + deja + ' déjà présente(s), ignorée(s).' : '.') + ' Rechargez la rubrique pour les voir.';
+  };
+
+  /* ---------- 2. Deux modules des captures ---------- */
+  const MODULES = {
+    cahierJournal: {
+      label:'Cahier journal', codePrefix:'CJO', icon:'📓',
+      fields:[
+        {key:'date', label:'Date', type:'date'},
+        {key:'classe', label:'Classe', type:'text'},
+        {key:'matiere', label:'Matière', type:'text'},
+        {key:'theme', label:'Thème ou leçon traitée', type:'text', span:2},
+        {key:'presents', label:'Élèves présents', type:'number'},
+        {key:'effectif', label:'Effectif', type:'number'},
+        {key:'travailDonne', label:'Travail donné aux élèves', type:'text', span:2},
+        {key:'observation', label:'Observation', type:'text', span:2}
+      ],
+      columns:['date','classe','matiere','theme','presents','effectif']
+    },
+    banqueEvaluations: {
+      label:'Banque d’évaluations', codePrefix:'BEV', icon:'🧾',
+      fields:[
+        {key:'titre', label:'Titre', type:'text', span:2},
+        {key:'matiere', label:'Matière', type:'text'},
+        {key:'classe', label:'Classe', type:'text'},
+        {key:'type', label:'Type', type:'select', options:['Devoir','Interrogation','Composition','Examen blanc']},
+        {key:'date', label:'Date', type:'date'},
+        {key:'points', label:'Total des points', type:'number'},
+        {key:'contenu', label:'Sujet et corrigé', type:'textarea', rows:6, span:2},
+        {key:'source', label:'Source', type:'select', options:['Saisi à la main','Généré par l’IA']}
+      ],
+      columns:['titre','matiere','classe','type','date','points']
+    }
+  };
+  const LIB = {cahierJournal:'Cahier journal', banqueEvaluations:'Banque d’évaluations'};
+  try{
+    Object.keys(MODULES).forEach(k => {
+      const m = MODULES[k];
+      if(typeof GENERIC_MODULES === 'object' && !GENERIC_MODULES[k]) GENERIC_MODULES[k] = m;
+      if(typeof CLES_SYNCHRONISEES !== 'undefined' && !CLES_SYNCHRONISEES.includes(k)) CLES_SYNCHRONISEES.push(k);
+      if(typeof PAGE_META === 'object' && !PAGE_META[k]) PAGE_META[k] = {title: LIB[k], crumb: 'Enseignement / ' + LIB[k]};
+      if(typeof NAV !== 'undefined' && !NAV.some(g => g.items.some(i => i.key === k))){
+        const groupe = NAV.find(g => g.items.some(i => i.key === 'supervision')) || NAV[NAV.length-1];
+        groupe.items.push({key:k, label:LIB[k], icon:m.icon});
+      }
+      if(typeof ROLE_MODULES === 'object') Object.keys(ROLE_MODULES).forEach(role => {
+        const l = ROLE_MODULES[role];
+        if(Array.isArray(l) && l.includes('supervision') && !l.includes(k)) l.push(k);
+      });
+      if(typeof TOUS_LES_MODULES_ADMIN_CYCLE !== 'undefined' && Array.isArray(TOUS_LES_MODULES_ADMIN_CYCLE) && !TOUS_LES_MODULES_ADMIN_CYCLE.includes(k)) TOUS_LES_MODULES_ADMIN_CYCLE.push(k);
+    });
+  }catch(x){ console.warn('Modules enseignant : enregistrement partiel', x); }
+
+  /* ---------- 3. Barre de liaison dans la rubrique Plan de progression ---------- */
+  function poser(){
+    const v = document.getElementById('view-planProgression');
+    if(!v || document.getElementById('pp-link-bar')) return;
+    const reps = dbGet('repartitionsProgramme', []) || [];
+    const opts = reps.map(r => `<option value="${e(r.id)}">${e(r.nom)}${r.annee ? ' (' + e(r.annee) + ')' : ''} — ${(r.cours||[]).length} cours</option>`).join('');
+    const bar = document.createElement('div');
+    bar.id = 'pp-link-bar'; bar.className = 'card';
+    bar.style.cssText = 'padding:12px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
+    bar.innerHTML = '<b style="color:var(--green-deep)">📥 Remplir depuis la répartition</b>'
+      + (reps.length ? `<select id="pp-rep-sel" style="min-width:240px">${opts}</select><button class="btn ghost" type="button" onclick="ppCreerDepuisRepartition()">Créer les entrées du plan</button>`
+                     : '<span class="muted" style="font-size:12px">Aucune répartition enregistrée. Importez-la dans « Créer un cours ».</span>');
+    const ancre = document.getElementById('pp-bar');
+    if(ancre) ancre.after(bar); else v.insertBefore(bar, v.firstChild);
+  }
+  const _renderView = window.renderView;
+  window.renderView = function(key){
+    _renderView(key);
+    if(key === 'planProgression') poser();
+  };
+})();
+</script>
+<script id="script-registre-mensuel">
+/* Registre des notes — saisie mensuelle imprimable (capture « Registre de notes »).
+   Barre d’options au-dessus du tableau des notes : matière, tri, masquer N° et matricule, zoom.
+   Le registre imprimé est vierge : les notes se saisissent ensuite à la main ou dans le registre. */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const MOIS = ['Octobre','Novembre','Décembre','Janvier'];
+
+  function elevesDuNiveau(){
+    try{ if(typeof notesElevesFiltres === 'function') return notesElevesFiltres() || []; }catch(x){}
+    return (dbGet('eleves', []) || []).filter(Boolean);
+  }
+  function matieres(){
+    try{ if(typeof notesMatieres === 'function') return (notesMatieres() || []).map(m => m.label); }catch(x){}
+    return [];
+  }
+  const nomComplet = x => ((x.nom||'') + ' ' + (x.prenoms||'')).trim();
+
+  window.regMensImprimer = function(){
+    const mat = (document.getElementById('rm-mat')||{}).value || '';
+    const tri = (document.getElementById('rm-tri')||{}).value || 'alpha';
+    const sansNo = !!(document.getElementById('rm-sans-no')||{}).checked;
+    const sansMat = !!(document.getElementById('rm-sans-mat')||{}).checked;
+    const zoom = (document.getElementById('rm-zoom')||{}).value || '100';
+    if(!mat){ toast('Choisissez une matière.', true); return; }
+    let liste = elevesDuNiveau().slice();
+    liste.sort((a,b) => tri === 'mat' ? String(a.identifiant||'').localeCompare(String(b.identifiant||'')) : nomComplet(a).localeCompare(nomComplet(b), 'fr'));
+    const niveau = (typeof NOTES_STATE !== 'undefined' && NOTES_STATE.niveau) ? NOTES_STATE.niveau : '';
+    const p = getParams();
+    const cel = 'border:0.6pt solid #333;padding:2px 3px;font-size:10px;text-align:center;vertical-align:middle;';
+    const ent = cel + 'background:#E9EEF5;font-weight:700;';
+    const colsMois = MOIS.map(m => `<th colspan="3" style="${ent}">${m}</th>`).join('');
+    const sousMois = MOIS.map(() => `<th style="${ent}font-size:9px">ORAL</th><th style="${ent}font-size:9px">ÉCRIT</th><th style="${ent}font-size:9px">MOY.</th>`).join('');
+    const vide = MOIS.length * 3 + 1;
+    const lignes = liste.map((x,i) => `<tr>`
+      + (sansNo ? '' : `<td style="${cel}">${i+1}</td>`)
+      + (sansMat ? '' : `<td style="${cel}">${e(x.identifiant)}</td>`)
+      + `<td style="${cel}text-align:left">${e(x.prenoms)}</td><td style="${cel}text-align:left;font-weight:700">${e(x.nom)}</td>`
+      + Array(vide).fill(`<td style="${cel}">&nbsp;</td>`).join('') + '</tr>').join('');
+    const nbCases = liste.length * vide;
+    const enteteCols = (sansNo ? '' : `<th rowspan="2" style="${ent}">N°</th>`) + (sansMat ? '' : `<th rowspan="2" style="${ent}">MATRICULE</th>`);
+    const html = `
+      <div style="zoom:${Number(zoom)/100};margin-top:4px">
+        <div style="text-align:center;font-weight:800;font-size:13px;margin:6px 0">REGISTRE DE NOTES — SAISIE MENSUELLE EN ${e(mat).toUpperCase()}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr>${enteteCols}<th rowspan="2" style="${ent}">PRÉNOM</th><th rowspan="2" style="${ent}">NOM</th>${colsMois}<th rowspan="2" style="${ent}">COMPOSITION</th></tr>
+            <tr>${sousMois}</tr>
+          </thead>
+          <tbody>${lignes || `<tr><td colspan="20" style="${cel}">Aucun élève enregistré${niveau ? ' en ' + e(niveau) : ''}.</td></tr>`}</tbody>
+        </table>
+        <p style="font-size:10px;margin-top:8px">${liste.length} élève(s) · ${nbCases} cases à remplir (oral, écrit, moyenne et composition pour chaque mois).</p>
+      </div>`;
+    tekouloDocumentImprimable({
+      titre: 'Registre de notes — saisie mensuelle',
+      sousTitre: [niveau, p.anneeScolaire ? 'Année scolaire ' + p.anneeScolaire : ''].filter(Boolean).join(' · '),
+      contenuHTML: html, module: 'notes', paysage: true, avecStylesApp: true,
+      encadre: [['Établissement', p.nomEcole], ['Année scolaire', p.anneeScolaire], ['Niveau', niveau], ['Classe', niveau], ['Matière', mat], ['IRE', p.ire], ['DPE', p.dpe]]
+    });
+  };
+
+  function barre(){
+    if(document.getElementById('reg-mens-bar')) return;
+    const outils = document.querySelector('#content .toolbar');
+    if(!outils || !outils.querySelector('[onclick="notesPrintTable()"]')) return;
+    const mats = matieres();
+    const bar = document.createElement('div');
+    bar.id = 'reg-mens-bar'; bar.className = 'card';
+    bar.style.cssText = 'padding:12px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center';
+    bar.innerHTML = '<b style="color:var(--green-deep)">🧾 Registre mensuel</b>'
+      + `<select id="rm-mat" style="min-width:180px">${mats.length ? mats.map(m => `<option value="${e(m)}">${e(m)}</option>`).join('') : '<option value="">Aucune matière pour ce niveau</option>'}</select>`
+      + '<select id="rm-tri"><option value="alpha">Ordre alphabétique</option><option value="mat">Par matricule</option></select>'
+      + '<label style="font-size:12px"><input type="checkbox" id="rm-sans-no"> Masquer N° d’ordre</label>'
+      + '<label style="font-size:12px"><input type="checkbox" id="rm-sans-mat"> Masquer matricule</label>'
+      + '<select id="rm-zoom"><option value="90">Zoom 90 %</option><option value="100" selected>Zoom 100 %</option><option value="110">Zoom 110 %</option></select>'
+      + '<button class="btn" type="button" onclick="regMensImprimer()">⎙ Imprimer le registre</button>';
+    outils.after(bar);
+  }
+
+  let minuterie = null;
+  try{
+    new MutationObserver(() => { clearTimeout(minuterie); minuterie = setTimeout(barre, 80); })
+      .observe(document.getElementById('content') || document.body, {childList:true, subtree:true});
+  }catch(x){}
+})();
+</script>
+<script id="script-apeae-bilan">
+/* APEAE — Cotisations : amélioration du module existant (capture « Cotisation sociale »).
+   Ajoute au-dessus de la liste un bilan, un filtre par statut et l’ajout d’un montant aux élèves cochés.
+   Les données et les colonnes existantes ne sont pas modifiées : seuls les versements sont complétés. */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const n = x => Number(x) || 0;
+  const horsIdentifiants = () => {
+    const eleves = dbGet('eleves', []) || [];
+    const stat = (dbGet('statutsEleves', []) || []).filter(x => x && x.statut && x.statut !== 'ACTIF');
+    return new Set(stat.map(s => { const el = eleves.find(x => x && x.__id === s.eleveId); return el ? String(el.identifiant||'') : ''; }).filter(Boolean));
+  };
+  const lignes = () => { const hors = horsIdentifiants(); return (dbGet('apeae', []) || []).filter(r => r && (typeof cycleModuleVisible !== 'function' || cycleModuleVisible(r)) && !hors.has(String(r.identifiantEleve||''))); };
+  function signalementRetires(){
+    const eleves = dbGet('eleves', []) || [];
+    const stat = (dbGet('statutsEleves', []) || []).filter(x => x && x.statut && x.statut !== 'ACTIF');
+    const lig = stat.map(s => { const el = eleves.find(x => x && x.__id === s.eleveId); if(!el) return null;
+      const reste = (dbGet('apeae', []) || []).filter(r => r && String(r.identifiantEleve) === String(el.identifiant)).reduce((a,r) => a + Math.max(0, n(r.montantApeae) - paye(r)), 0);
+      return reste > 0 ? {nom: nomEleve(el), statut: s.statut, reste} : null; }).filter(Boolean);
+    if(!lig.length) return '';
+    const total = lig.reduce((a,x) => a + x.reste, 0);
+    return '<div style="border:1px solid #E0A800;background:#FFF8E1;border-radius:10px;padding:10px 12px;margin-bottom:12px"><b>⚠ À recouvrer auprès d’élèves retirés ou transférés : ' + fmt(total) + '</b>'
+      + lig.map(x => '<div style="font-size:12.5px;padding:4px 0;border-top:1px solid #F0DFA0">' + x.nom + ' (' + (x.statut==='RETIRE'?'retiré':'transféré') + ') — reste ' + fmt(x.reste) + '</div>').join('') + '</div>';
+  }
+  const nom = r => ((r.nom||'') + ' ' + (r.prenom||'')).trim() || 'Sans nom';
+  const nomEleve = el => ((el.nom||'') + ' ' + (el.prenoms||'')).trim() || 'Sans nom';
+  const paye = r => n(r.versement1) + n(r.versement2);
+  function statut(r){
+    const p = paye(r), m = n(r.montantApeae);
+    if(p <= 0) return 'Non payé';
+    if(m > 0 && p >= m) return 'Payé';
+    return 'Partiellement';
+  }
+  const fmt = x => Number(x||0).toLocaleString('fr-FR') + ' GNF';
+
+  window.apeaeAjouterMontant = function(){
+    const montant = n((document.getElementById('apeae-montant')||{}).value);
+    const cochés = Array.from(document.querySelectorAll('.apeae-coche:checked')).map(c => c.value);
+    if(!cochés.length){ toast('Cochez au moins un élève.', true); return; }
+    if(montant <= 0){ toast('Saisissez un montant supérieur à 0.', true); return; }
+    const aujourdhui = new Date().toISOString().slice(0,10);
+    const liste = dbGet('apeae', []) || [];
+    let ajoutes = 0, plafonnes = 0;
+    liste.forEach(r => {
+      if(!r || !cochés.includes(String(r.__id))) return;
+      const reste = Math.max(0, n(r.montantApeae) - paye(r));
+      if(reste <= 0){ plafonnes++; return; }
+      const ajout = Math.min(montant, reste);
+      if(ajout < montant) plafonnes++;
+      // Le versement est enregistré sur le 1er versement tant qu'il n'est pas soldé, sinon sur le 2e.
+      const reste1 = Math.max(0, n(r.montantApeae) - n(r.versement1));
+      if(reste1 > 0){
+        const a1 = Math.min(ajout, reste1);
+        r.versement1 = n(r.versement1) + a1;
+        if(!r.dateVersement1) r.dateVersement1 = aujourdhui;
+        const reste2 = ajout - a1;
+        if(reste2 > 0){ r.versement2 = n(r.versement2) + reste2; if(!r.dateVersement2) r.dateVersement2 = aujourdhui; }
+      } else {
+        r.versement2 = n(r.versement2) + ajout;
+        if(!r.dateVersement2) r.dateVersement2 = aujourdhui;
+      }
+      ajoutes++;
+    });
+    dbSet('apeae', liste);
+    toast(ajoutes + ' versement(s) enregistré(s)' + (plafonnes ? ' ; ' + plafonnes + ' élève(s) ajusté(s) au reste à payer.' : '.'));
+    poser(true);
+    if(typeof renderView === 'function') renderView('apeae');
+  };
+
+  function poser(recharger){
+    const v = document.getElementById('view-apeae');
+    if(!v) return;
+    const ancien = document.getElementById('apeae-bilan');
+    if(ancien && !recharger) return;
+    if(ancien) ancien.remove();
+    const liste = lignes();
+    const total = liste.reduce((s,r) => s + n(r.montantApeae), 0);
+    const dejaPaye = liste.reduce((s,r) => s + paye(r), 0);
+    const cpt = {'Payé':0,'Partiellement':0,'Non payé':0};
+    liste.forEach(r => cpt[statut(r)]++);
+    const classes = Array.from(new Set(liste.map(r => r.classe).filter(Boolean))).sort();
+    const sig = signalementRetires();
+    const bloc = document.createElement('div');
+    bloc.id = 'apeae-bilan'; bloc.className = 'card';
+    bloc.style.cssText = 'padding:14px 16px;margin:0 0 12px';
+    bloc.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px">
+        <div><div class="muted" style="font-size:11.5px">Effectif</div><b>${liste.length} élève(s)</b></div>
+        <div><div class="muted" style="font-size:11.5px">Total à mobiliser</div><b>${fmt(total)}</b></div>
+        <div><div class="muted" style="font-size:11.5px">Déjà payé</div><b>${fmt(dejaPaye)}</b></div>
+        <div><div class="muted" style="font-size:11.5px">Reste à payer</div><b>${fmt(Math.max(0,total-dejaPaye))}</b></div>
+      </div>
+      ${sig}
+      <div class="muted" style="font-size:12px;margin-bottom:12px">Payé : ${cpt['Payé']} · Partiellement : ${cpt['Partiellement']} · Non payé : ${cpt['Non payé']}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px">
+        <label style="font-size:12px">Statut
+          <select id="apeae-filtre-statut" onchange="apeaeRafraichirListe()">
+            <option value="">Tous les statuts</option><option>Payé</option><option>Partiellement</option><option>Non payé</option>
+          </select></label>
+        <label style="font-size:12px">Classe
+          <select id="apeae-filtre-classe" onchange="apeaeRafraichirListe()">
+            <option value="">Toutes les classes</option>${classes.map(c => `<option>${e(c)}</option>`).join('')}
+          </select></label>
+      </div>
+      <div id="apeae-liste" style="max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper)"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px">
+        <label style="font-size:12px"><input type="checkbox" onchange="apeaeToutCocher(this.checked)"> Tout cocher</label>
+        <span id="apeae-nb" class="muted" style="font-size:12px">0 élève coché</span>
+        <input id="apeae-montant" type="number" min="0" step="1" placeholder="Montant à ajouter (GNF)" style="max-width:200px">
+        <button class="btn" type="button" onclick="apeaeAjouterMontant()">+ Ajouter aux élèves cochés</button>
+      </div>`;
+    const premier = v.querySelector('.hint-box') || v.firstChild;
+    v.insertBefore(bloc, premier);
+    window.apeaeRafraichirListe();
+  }
+
+  window.apeaeRafraichirListe = function(){
+    const zone = document.getElementById('apeae-liste'); if(!zone) return;
+    const fs = (document.getElementById('apeae-filtre-statut')||{}).value || '';
+    const fc = (document.getElementById('apeae-filtre-classe')||{}).value || '';
+    const l = lignes().filter(r => (!fs || statut(r) === fs) && (!fc || r.classe === fc))
+      .sort((a,b) => nom(a).localeCompare(nom(b), 'fr'));
+    zone.innerHTML = l.length ? l.map(r => `<label style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line-soft);font-size:12.5px">
+        <input type="checkbox" class="apeae-coche" value="${e(r.__id)}" onchange="apeaeCompter()">
+        <span style="flex:1"><b>${e(nom(r))}</b> <span class="muted">${e(r.identifiantEleve||'')}${r.classe ? ' · ' + e(r.classe) : ''}</span></span>
+        <span style="font-size:11.5px">${e(statut(r))} · ${fmt(paye(r))} / ${fmt(r.montantApeae)}</span></label>`).join('')
+      : '<div class="muted" style="font-size:12px">Aucun élève pour ce filtre.</div>';
+    apeaeCompter();
+  };
+  window.apeaeCompter = function(){
+    const k = document.querySelectorAll('.apeae-coche:checked').length;
+    const z = document.getElementById('apeae-nb'); if(z) z.textContent = k + ' élève' + (k>1?'s':'') + ' coché' + (k>1?'s':'');
+  };
+  window.apeaeToutCocher = function(on){
+    document.querySelectorAll('.apeae-coche').forEach(c => c.checked = on);
+    apeaeCompter();
+  };
+
+  const _renderView = window.renderView;
+  window.renderView = function(key){
+    _renderView(key);
+    if(key === 'apeae') poser(false);
+  };
+})();
+</script>
+<script id="script-suite-enseignant">
+/* Suite enseignant : (1) statistiques et listes du registre des notes (analyse des évaluations) ;
+   (2) module « Corriger une copie » : correction assistée par IA à partir d’une photo ou d’un PDF.
+   Ces fonctions s’ajoutent aux écrans existants ; aucune donnée n’est modifiée sans action de l’utilisateur. */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const cle = () => { try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } };
+  const nomE = x => ((x.nom||'')+' '+(x.prenoms||'')).trim();
+
+  /* ---------- 1. Statistiques et listes du registre ---------- */
+  function statistiques(){
+    const eleves = (typeof notesElevesFiltres === 'function' ? notesElevesFiltres() : []) || [];
+    const sem = NOTES_STATE.semestre;
+    const B = baremeCtx();
+    const seuil = B / 2;
+    const mats = (notesMatieres() || []);
+    const par = mats.map(m => {
+      const vals = eleves.map(x => moyenneMatiere(getNoteRec(x.__id, sem), m.code)).filter(v => v !== null);
+      const moy = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+      const reussite = vals.length ? Math.round(vals.filter(v => v >= seuil).length / vals.length * 100) : null;
+      return {label: m.label, moy, reussite, n: vals.length};
+    });
+    const gen = eleves.map(x => ({x, moy: moyenneGenerale(getNoteRec(x.__id, sem))})).filter(o => o.moy !== null);
+    gen.sort((a,b) => b.moy - a.moy);
+    const moyClasse = gen.length ? gen.reduce((a,o)=>a+o.moy,0)/gen.length : null;
+    return {effectif: eleves.length, B, seuil, par, moyClasse, reussiteGen: gen.length ? Math.round(gen.filter(o=>o.moy>=seuil).length/gen.length*100) : null,
+            honneur: gen.slice(0,5), difficulte: gen.filter(o => o.moy < seuil).slice(-10).reverse()};
+  }
+  window.notesStatsAfficher = function(){
+    const zone = document.getElementById('notes-stats'); if(!zone) return;
+    if(zone.dataset.ouvert === '1'){ zone.style.display = 'none'; zone.dataset.ouvert = '0'; return; }
+    const s = statistiques();
+    const f = v => v==null ? '—' : v.toFixed(2);
+    zone.innerHTML = `<div class="card" style="padding:14px 16px;margin:0 0 12px">
+      <h4 style="margin:0 0 10px;color:var(--green-deep)">📈 Statistiques et listes — ${e(NOTES_STATE.niveau)} · ${e(periodeLabel(NOTES_STATE.niveau, NOTES_STATE.semestre))}</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
+        <div><div class="muted" style="font-size:11.5px">Effectif</div><b>${s.effectif}</b></div>
+        <div><div class="muted" style="font-size:11.5px">Moyenne de la classe</div><b>${f(s.moyClasse)} / ${s.B}</b></div>
+        <div><div class="muted" style="font-size:11.5px">Taux de réussite</div><b>${s.reussiteGen==null?'—':s.reussiteGen+' %'}</b></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left">Matière</th><th>Moyenne</th><th>Réussite</th><th>Notes saisies</th></tr></thead><tbody>
+        ${s.par.map(p => `<tr><td>${e(p.label)}</td><td style="text-align:center">${f(p.moy)}</td><td style="text-align:center">${p.reussite==null?'—':p.reussite+' %'}</td><td style="text-align:center">${p.n}</td></tr>`).join('')}
+      </tbody></table>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+        <div><b style="font-size:12.5px">🏆 Tableau d’honneur</b>${s.honneur.length ? s.honneur.map((o,i)=>`<div style="font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line-soft)">${i+1}. ${e(nomE(o.x))} — <b>${o.moy.toFixed(2)}</b></div>`).join('') : '<div class="muted" style="font-size:12px">Aucune note saisie.</div>'}</div>
+        <div><b style="font-size:12.5px">⚠ Élèves en difficulté (sous ${s.seuil})</b>${s.difficulte.length ? s.difficulte.map(o=>`<div style="font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line-soft)">${e(nomE(o.x))} — <b>${o.moy.toFixed(2)}</b></div>`).join('') : '<div class="muted" style="font-size:12px">Aucun élève sous le seuil.</div>'}</div>
+      </div></div>`;
+    zone.style.display = 'block'; zone.dataset.ouvert = '1';
+  };
+  function barreStats(){
+    const outils = document.querySelector('#content .toolbar');
+    if(!outils || !outils.querySelector('[onclick="notesPrintTable()"]') || document.getElementById('notes-stats-btn')) return;
+    const b = document.createElement('button');
+    b.id = 'notes-stats-btn'; b.className = 'btn ghost sm'; b.type = 'button'; b.textContent = '📈 Statistiques et listes';
+    b.onclick = notesStatsAfficher;
+    outils.insertBefore(b, outils.querySelector('[onclick="notesPrintTable()"]'));
+    const zone = document.createElement('div'); zone.id = 'notes-stats'; zone.style.display = 'none'; zone.dataset.ouvert = '0';
+    outils.after(zone);
+  }
+  let t1 = null;
+  try{ new MutationObserver(() => { clearTimeout(t1); t1 = setTimeout(barreStats, 90); })
+    .observe(document.getElementById('content') || document.body, {childList:true, subtree:true}); }catch(x){}
+
+  /* ---------- 2. Corriger une copie (module + IA) ---------- */
+  const MODULE = {
+    label:'Corriger une copie', codePrefix:'COP',
+    fields:[
+      {key:'eleve', label:'Nom de l’élève', type:'text', span:2},
+      {key:'matiere', label:'Matière', type:'text'},
+      {key:'classe', label:'Classe', type:'text'},
+      {key:'date', label:'Date', type:'date'},
+      {key:'bareme', label:'Barème (sur)', type:'number'},
+      {key:'noteProposee', label:'Note proposée', type:'number'},
+      {key:'appreciation', label:'Appréciation (relue)', type:'textarea', rows:4, span:2},
+      {key:'source', label:'Source', type:'select', options:['Saisie manuelle','Proposée par l’IA et relue']}
+    ],
+    columns:['eleve','matiere','classe','date','noteProposee','source']
+  };
+  try{
+    if(typeof GENERIC_MODULES === 'object' && !GENERIC_MODULES.corrigerCopie) GENERIC_MODULES.corrigerCopie = MODULE;
+    if(typeof CLES_SYNCHRONISEES !== 'undefined' && !CLES_SYNCHRONISEES.includes('corrigerCopie')) CLES_SYNCHRONISEES.push('corrigerCopie');
+    if(typeof PAGE_META === 'object' && !PAGE_META.corrigerCopie) PAGE_META.corrigerCopie = {title:'Corriger une copie', crumb:'Enseignement / Corriger une copie'};
+    if(typeof NAV !== 'undefined' && !NAV.some(g => g.items.some(i => i.key === 'corrigerCopie'))){
+      const groupe = NAV.find(g => g.items.some(i => i.key === 'supervision')) || NAV[NAV.length-1];
+      groupe.items.push({key:'corrigerCopie', label:'Corriger une copie', icon:'📝'});
+    }
+    if(typeof ROLE_MODULES === 'object') Object.keys(ROLE_MODULES).forEach(role => {
+      const l = ROLE_MODULES[role];
+      if(Array.isArray(l) && l.includes('supervision') && !l.includes('corrigerCopie')) l.push('corrigerCopie');
+    });
+  }catch(x){ console.warn('Corriger une copie : enregistrement partiel', x); }
+
+  function lireFichier(f){
+    return new Promise((ok, ko) => {
+      const r = new FileReader();
+      r.onload = () => ok({nom: f.name, mediaType: f.type || 'image/jpeg', base64: String(r.result).split(',')[1]});
+      r.onerror = () => ko(new Error('lecture du fichier impossible'));
+      r.readAsDataURL(f);
+    });
+  }
+  window.copieCorriger = async function(){
+    const f = (document.getElementById('cop-fichier')||{}).files;
+    const z = document.getElementById('cop-statut');
+    const sortie = document.getElementById('cop-sortie');
+    const matiere = (document.getElementById('cop-matiere')||{}).value || '';
+    const bareme = (document.getElementById('cop-bareme')||{}).value || '20';
+    const consignes = (document.getElementById('cop-consignes')||{}).value || '';
+    if(!f || !f[0]){ z.textContent = 'Joignez d’abord la photo ou le PDF de la copie.'; return; }
+    if(f[0].size > 10 * 1024 * 1024){ z.textContent = 'Fichier trop lourd (10 Mo maximum).'; return; }
+    z.textContent = '⏳ Lecture de la copie et correction en cours…';
+    try{
+      const piece = await lireFichier(f[0]);
+      const consigne = 'Tu es professeur correcteur dans un établissement en Guinée. Lis la copie jointe (écriture manuscrite possible), corrige-la à partir du barème et des consignes ci-dessous, sans inventer de réponse absente de la copie.\n\n'
+        + `Matière : ${matiere || '—'} · Barème : ${bareme} points\n`
+        + (consignes ? `Corrigé ou consignes du professeur :\n${consignes}\n\n` : 'Aucun corrigé fourni : juge la copie d’après le niveau attendu.\n\n')
+        + 'Réponds exactement sous cette forme :\nNote proposée : X/' + bareme + '\nPoints forts : ...\nErreurs relevées : ...\nAppréciation : ...';
+      const res = await assistantAppelAPI(consigne, piece, undefined, true, cle());
+      if(!res || !res.ok){ z.textContent = '⚠ ' + ((res && res.error) || 'Pas de réponse de l’IA.'); return; }
+      sortie.style.display = 'block'; sortie.value = res.reponse;
+      const m = /Note proposée\s*:\s*([0-9]+(?:[.,][0-9]+)?)/i.exec(res.reponse || '');
+      document.getElementById('cop-note').value = m ? m[1].replace(',', '.') : '';
+      z.textContent = '✅ Proposition prête. Relisez-la, puis enregistrez-la si elle vous convient.';
+    }catch(err){ z.textContent = '⚠ ' + (err && err.message ? err.message : 'erreur inconnue'); }
+  };
+  window.copieEnregistrer = function(){
+    const sortie = document.getElementById('cop-sortie');
+    if(!sortie || !sortie.value.trim()){ toast('Lancez d’abord la correction.', true); return; }
+    const liste = dbGet('corrigerCopie', []) || [];
+    const bareme = (document.getElementById('cop-bareme')||{}).value || '20';
+    const eleve = (document.getElementById('cop-eleve')||{}).value || '';
+    const m = (document.getElementById('cop-matiere')||{}).value || '';
+    const note = (document.getElementById('cop-note')||{}).value || '';
+    const n = liste.length + 1;
+    liste.unshift({__id: 'cop'+Date.now()+Math.random().toString(36).slice(2,6), __code:'COP'+String(n).padStart(3,'0'),
+      cycle: (typeof TEKOULO_CYCLE_ACTIF !== 'undefined' ? TEKOULO_CYCLE_ACTIF : ''), eleve, matiere: m, classe: '', date: new Date().toISOString().slice(0,10),
+      bareme, noteProposee: note, appreciation: sortie.value, source: 'Proposée par l’IA et relue'});
+    dbSet('corrigerCopie', liste);
+    toast('Copie corrigée enregistrée.');
+    if(typeof renderView === 'function') renderView('corrigerCopie');
+  };
+  function poserCorrection(){
+    const v = document.getElementById('view-corrigerCopie');
+    if(!v || document.getElementById('cop-bar')) return;
+    const bar = document.createElement('div');
+    bar.id = 'cop-bar'; bar.className = 'card'; bar.style.cssText = 'padding:14px 16px;margin:0 0 12px';
+    bar.innerHTML = '<b style="color:var(--green-deep)">📝 Correction assistée par IA</b>'
+      + '<p class="muted" style="font-size:12px;margin:6px 0 10px">Joignez la photo ou le PDF de la copie. L’IA propose une note et une appréciation ; vous relisez et enregistrez.</p>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="pia-grille">'
+      + '<div class="field"><label>Nom de l’élève</label><input id="cop-eleve" type="text"></div>'
+      + '<div class="field"><label>Matière</label><input id="cop-matiere" type="text"></div>'
+      + '<div class="field"><label>Barème (sur)</label><input id="cop-bareme" type="number" value="20" min="1"></div>'
+      + '<div class="field"><label>Copie (photo ou PDF)</label><input id="cop-fichier" type="file" accept="image/*,application/pdf"></div>'
+      + '<div class="field" style="grid-column:1/-1"><label>Corrigé ou consignes (facultatif)</label><textarea id="cop-consignes" rows="3" placeholder="Réponses attendues, barème détaillé…"></textarea></div>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><button class="btn" type="button" onclick="copieCorriger()">✨ Corriger par IA</button><span id="cop-statut" class="muted" style="font-size:12px"></span></div>'
+      + '<textarea id="cop-sortie" rows="7" style="display:none;width:100%;margin-top:10px"></textarea>'
+      + '<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><label style="font-size:12px">Note retenue <input id="cop-note" type="number" step="0.25" style="max-width:110px"></label><button class="btn ghost" type="button" onclick="copieEnregistrer()">💾 Enregistrer la copie corrigée</button></div>'
+      + '<p class="muted" style="font-size:11.5px;margin:8px 0 0">La note et l’appréciation proposées par l’IA doivent être vérifiées par le professeur.</p>';
+    v.insertBefore(bar, v.firstChild);
+  }
+  const _renderView = window.renderView;
+  window.renderView = function(key){
+    _renderView(key);
+    if(key === 'corrigerCopie') poserCorrection();
+  };
+})();
+</script>
+<script id="script-dossier-pedagogique">
+/* Fiches questions-réponses (génération IA à partir d’un cours généré) et dossier pédagogique complet
+   (impression qui rassemble cours, sujets et fiches d’une matière et d’un niveau).
+   Modules ajoutés à l’application existante ; les listes de cours et de sujets ne sont pas modifiées. */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const cle = () => { try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } };
+  const coursL = () => (dbGet('coursGeneres', []) || []).filter(Boolean);
+  const sujetsL = () => (dbGet('sujetsGeneres', []) || []).filter(Boolean);
+  const fichesL = () => (dbGet('fichesQR', []) || []).filter(Boolean);
+
+  const MODULES = {
+    fichesQR: {
+      label:'Fiches questions-réponses', codePrefix:'QRP', icon:'🧠',
+      fields:[
+        {key:'titre', label:'Titre de la fiche', type:'text', span:2},
+        {key:'matiere', label:'Matière', type:'text'},
+        {key:'niveau', label:'Niveau', type:'text'},
+        {key:'dateCreation', label:'Date de création', type:'date'},
+        {key:'contenu', label:'Questions et réponses', type:'textarea', rows:8, span:2},
+        {key:'source', label:'Origine', type:'select', options:['Saisie manuelle','Générée par l’IA à partir d’un cours']}
+      ],
+      columns:['titre','matiere','niveau','dateCreation','source']
+    },
+    dossierPedagogique: {
+      label:'Dossier pédagogique complet', codePrefix:'DOS', icon:'🗂️',
+      fields:[
+        {key:'matiere', label:'Matière', type:'text'},
+        {key:'niveau', label:'Niveau', type:'text'},
+        {key:'annee', label:'Année scolaire', type:'text'},
+        {key:'observation', label:'Observation', type:'text', span:2}
+      ],
+      columns:['matiere','niveau','annee']
+    }
+  };
+  const LIB = {fichesQR:'Fiches questions-réponses', dossierPedagogique:'Dossier pédagogique complet'};
+  try{
+    Object.keys(MODULES).forEach(k => {
+      if(typeof GENERIC_MODULES === 'object' && !GENERIC_MODULES[k]) GENERIC_MODULES[k] = MODULES[k];
+      if(typeof CLES_SYNCHRONISEES !== 'undefined' && !CLES_SYNCHRONISEES.includes(k)) CLES_SYNCHRONISEES.push(k);
+      if(typeof PAGE_META === 'object' && !PAGE_META[k]) PAGE_META[k] = {title: LIB[k], crumb: 'Enseignement / ' + LIB[k]};
+      if(typeof NAV !== 'undefined' && !NAV.some(g => g.items.some(i => i.key === k))){
+        const groupe = NAV.find(g => g.items.some(i => i.key === 'supervision')) || NAV[NAV.length-1];
+        groupe.items.push({key:k, label:LIB[k], icon:MODULES[k].icon});
+      }
+      if(typeof ROLE_MODULES === 'object') Object.keys(ROLE_MODULES).forEach(role => {
+        const l = ROLE_MODULES[role];
+        if(Array.isArray(l) && l.includes('supervision') && !l.includes(k)) l.push(k);
+      });
+    });
+  }catch(x){ console.warn('Dossier pédagogique : enregistrement partiel', x); }
+
+  /* ---------- Fiches questions-réponses (IA) ---------- */
+  window.qrGenerer = async function(){
+    const sel = document.getElementById('qr-cours');
+    const z = document.getElementById('qr-statut');
+    const cours = coursL().find(c => sel && c.id === sel.value);
+    if(!cours){ z.textContent = 'Choisissez d’abord un cours généré (Studio pédagogique).'; return; }
+    z.textContent = '⏳ Rédaction des questions-réponses…';
+    const texte = String(cours.contenu || '').slice(0, 12000);
+    const consigne = 'Tu es professeur dans un établissement en Guinée. À partir du cours ci-dessous, rédige une fiche de révision de 15 questions-réponses courtes, groupées par thème (titres « ## »), en français clair et adapté au niveau. Les réponses doivent être exactes et tirées du cours. Commence directement par la fiche, sans introduction.\n\n'
+      + `Matière : ${cours.matiere||'—'} · Niveau : ${cours.niveau||'—'}\n\nCOURS :\n${texte}`;
+    try{
+      const res = await assistantAppelAPI(consigne, undefined, undefined, true, cle());
+      if(!res || !res.ok){ z.textContent = '⚠ ' + ((res && res.error) || 'Pas de réponse de l’IA.'); return; }
+      const liste = fichesL();
+      liste.unshift({id:'q'+Date.now()+Math.random().toString(36).slice(2,6), titre: 'Révision : ' + (cours.titre || cours.chapitre || 'cours'),
+        matiere: cours.matiere||'', niveau: cours.niveau||'', dateCreation: new Date().toISOString().slice(0,10),
+        contenu: res.reponse, source: 'Générée par l’IA à partir d’un cours', coursId: cours.id});
+      dbSet('fichesQR', liste);
+      z.textContent = '✅ Fiche enregistrée dans « Fiches questions-réponses ».';
+      if(typeof renderView === 'function') renderView('fichesQR');
+    }catch(err){ z.textContent = '⚠ ' + (err && err.message ? err.message : 'erreur inconnue'); }
+  };
+  function barreQR(){
+    const v = document.getElementById('view-fichesQR');
+    if(!v || document.getElementById('qr-bar')) return;
+    const liste = coursL();
+    const opts = liste.map(c => `<option value="${e(c.id)}">${e(c.titre||'Cours sans titre')}${c.matiere ? ' — ' + e(c.matiere) : ''}</option>`).join('');
+    const bar = document.createElement('div');
+    bar.id = 'qr-bar'; bar.className = 'card'; bar.style.cssText = 'padding:12px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
+    bar.innerHTML = '<b style="color:var(--green-deep)">🧠 Générer depuis un cours</b>'
+      + (liste.length ? `<select id="qr-cours" style="min-width:240px">${opts}</select><button class="btn" type="button" onclick="qrGenerer()">Générer les questions-réponses</button>`
+                      : '<span class="muted" style="font-size:12px">Aucun cours généré. Créez-en un dans le Studio pédagogique.</span>')
+      + '<div id="qr-statut" class="muted" style="width:100%;font-size:12px"></div>';
+    v.insertBefore(bar, v.firstChild);
+  }
+
+  /* ---------- Dossier pédagogique complet (impression) ---------- */
+  function rendre(texte){
+    const tmp = document.createElement('div');
+    try{ assistantRendreContenu(tmp, texte || ''); }catch(x){ tmp.textContent = texte || ''; }
+    return tmp.innerHTML;
+  }
+  window.dossierImprimer = function(){
+    const mat = (document.getElementById('dos-mat')||{}).value || '';
+    const niv = (document.getElementById('dos-niv')||{}).value || '';
+    const z = document.getElementById('dos-statut');
+    const cours = coursL().filter(c => (!mat || c.matiere === mat) && (!niv || c.niveau === niv));
+    const sujets = sujetsL().filter(s => (!mat || s.matiere === mat) && (!niv || s.niveau === niv));
+    const fiches = fichesL().filter(f => (!mat || f.matiere === mat) && (!niv || f.niveau === niv));
+    if(!cours.length && !sujets.length && !fiches.length){ if(z) z.textContent = 'Aucun document pour cette matière et ce niveau.'; return; }
+    const section = (titre, items, fn) => items.length ? `<h2 style="page-break-before:always">${e(titre)}</h2>` + items.map(fn).join('') : '';
+    const sommaire = `<h2>Sommaire</h2><ol>${cours.map(c => `<li>Cours : ${e(c.titre||'sans titre')}</li>`).join('')}${sujets.map(s => `<li>Sujet : ${e(s.titre||'sans titre')}</li>`).join('')}${fiches.map(f => `<li>Fiche : ${e(f.titre||'sans titre')}</li>`).join('')}</ol>`;
+    const html = `<p>Matière : <b>${e(mat||'toutes')}</b> · Niveau : <b>${e(niv||'tous')}</b> · ${cours.length} cours, ${sujets.length} sujet(s), ${fiches.length} fiche(s).</p>${sommaire}`
+      + section('Cours', cours, c => `<div style="page-break-before:always"><h3>${e(c.titre||'Cours')}</h3>${rendre(c.contenu)}</div>`)
+      + section('Sujets d’évaluation', sujets, s => `<div style="page-break-before:always"><h3>${e(s.titre||'Sujet')}</h3>${rendre(s.contenu)}</div>`)
+      + section('Fiches questions-réponses', fiches, f => `<div style="page-break-before:always"><h3>${e(f.titre||'Fiche')}</h3>${rendre(f.contenu)}</div>`);
+    const p = getParams();
+    tekouloDocumentImprimable({titre: 'Dossier pédagogique' + (mat ? ' — ' + mat : ''), sousTitre: [niv, p.anneeScolaire].filter(Boolean).join(' · '),
+      contenuHTML: html, module: 'dossierPedagogique', avecStylesApp: true});
+    if(z) z.textContent = '';
+  };
+  function barreDossier(){
+    const v = document.getElementById('view-dossierPedagogique');
+    if(!v || document.getElementById('dos-bar')) return;
+    const mats = Array.from(new Set([].concat(coursL(), sujetsL(), fichesL()).map(x => x.matiere).filter(Boolean))).sort();
+    const nivs = Array.from(new Set([].concat(coursL(), sujetsL(), fichesL()).map(x => x.niveau).filter(Boolean))).sort();
+    const bar = document.createElement('div');
+    bar.id = 'dos-bar'; bar.className = 'card'; bar.style.cssText = 'padding:12px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
+    bar.innerHTML = '<b style="color:var(--green-deep)">🗂️ Imprimer le dossier</b>'
+      + `<select id="dos-mat"><option value="">Toutes les matières</option>${mats.map(m => `<option>${e(m)}</option>`).join('')}</select>`
+      + `<select id="dos-niv"><option value="">Tous les niveaux</option>${nivs.map(m => `<option>${e(m)}</option>`).join('')}</select>`
+      + '<button class="btn" type="button" onclick="dossierImprimer()">⎙ Imprimer le dossier</button>'
+      + '<span id="dos-statut" class="muted" style="width:100%;font-size:12px"></span>';
+    v.insertBefore(bar, v.firstChild);
+  }
+
+  const _renderView = window.renderView;
+  window.renderView = function(key){
+    _renderView(key);
+    if(key === 'fichesQR') barreQR();
+    if(key === 'dossierPedagogique') barreDossier();
+  };
+})();
+</script>
+<script id="script-boutons-manquants">
+/* Boutons des captures absents de l’application, ajoutés là où ils servent :
+   — « Rechercher un formulaire » dans le menu (recherche dans les rubriques, sans modifier le menu) ;
+   — « Exporter en Word » dans le registre des notes (à côté de l’export Excel existant). */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sansAccents = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+
+  /* ---------- Recherche dans le menu ---------- */
+  function rubriques(){
+    const out = [];
+    try{ NAV.forEach(g => g.items.forEach(i => { if(!i.hidden && i.label) out.push(i); })); }catch(x){}
+    return out;
+  }
+  window.menuRechercher = function(q){
+    const zone = document.getElementById('menu-recherche-resultats'); if(!zone) return;
+    const t = sansAccents(q).trim();
+    if(!t){ zone.innerHTML = ''; return; }
+    const res = rubriques().filter(i => sansAccents(i.label).includes(t)).slice(0, 8);
+    zone.innerHTML = res.length
+      ? res.map(i => `<div onclick="menuOuvrir('${e(i.key)}')" style="padding:7px 10px;cursor:pointer;border-radius:8px;font-size:13px" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background=''">${e(i.icon||'')} ${e(i.label)}</div>`).join('')
+      : '<div style="padding:7px 10px;font-size:12.5px;opacity:.75">Aucune rubrique trouvée.</div>';
+  };
+  window.menuOuvrir = function(key){
+    const champ = document.getElementById('menu-recherche'); if(champ) champ.value = '';
+    const zone = document.getElementById('menu-recherche-resultats'); if(zone) zone.innerHTML = '';
+    if(typeof goTo === 'function') goTo(key);
+  };
+  function posterRecherche(){
+    const nav = document.getElementById('nav');
+    if(!nav || document.getElementById('menu-recherche')) return;
+    const bloc = document.createElement('div');
+    bloc.style.cssText = 'padding:8px 12px';
+    bloc.innerHTML = '<input id="menu-recherche" type="search" placeholder="🔍 Rechercher un formulaire…" oninput="menuRechercher(this.value)" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:inherit;font-size:13px">'
+      + '<div id="menu-recherche-resultats" style="margin-top:4px"></div>';
+    nav.insertBefore(bloc, nav.firstChild);
+  }
+  let t1 = null;
+  try{ new MutationObserver(() => { clearTimeout(t1); t1 = setTimeout(posterRecherche, 90); })
+    .observe(document.body, {childList:true, subtree:true}); }catch(x){}
+
+  /* ---------- Export Word du registre des notes ---------- */
+  function enregistrerFichier(nom, texte, typeMime){
+    const bloc = new Blob(['\ufeff', texte], {type: typeMime});
+    if(window.AndroidBridge && typeof AndroidBridge.enregistrerFichier === 'function'){
+      const r = new FileReader();
+      r.onload = () => AndroidBridge.enregistrerFichier(nom, String(r.result).split(',')[1]);
+      r.readAsDataURL(bloc);
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(bloc); a.download = nom;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  window.notesExportWord = function(){
+    const tab = document.querySelector('#content .table-wrap');
+    if(!tab){ toast('Aucun tableau de notes à exporter.', true); return; }
+    const titre = (typeof NOTES_STATE !== 'undefined' ? NOTES_STATE.niveau : '') + ' — ' + (typeof periodeLabel === 'function' ? periodeLabel(NOTES_STATE.niveau, NOTES_STATE.semestre) : '');
+    const doc = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+      + '<head><meta charset="utf-8"><title>' + e(titre) + '</title><style>table{border-collapse:collapse;width:100%}td,th{border:1px solid #333;padding:3px;font-size:10pt}</style></head>'
+      + '<body><h2>Registre des notes — ' + e(titre) + '</h2>' + tab.innerHTML.replace(/<button[\s\S]*?<\/button>/g, '') + '</body></html>';
+    enregistrerFichier('registre-notes-' + Date.now() + '.doc', doc, 'application/msword');
+  };
+  function barreWord(){
+    const outils = document.querySelector('#content .toolbar');
+    if(!outils || document.getElementById('notes-word-btn')) return;
+    const excel = outils.querySelector('[onclick="notesExportXLSX()"]');
+    if(!excel) return;
+    const b = document.createElement('button');
+    b.id = 'notes-word-btn'; b.className = 'btn ghost sm'; b.type = 'button'; b.textContent = '📄 Exporter en Word';
+    b.onclick = notesExportWord;
+    excel.after(b);
+  }
+  let t2 = null;
+  try{ new MutationObserver(() => { clearTimeout(t2); t2 = setTimeout(barreWord, 90); })
+    .observe(document.getElementById('content') || document.body, {childList:true, subtree:true}); }catch(x){}
+})();
+</script>
+<script id="script-impression-amelioree">
+/* Améliorations des pages imprimables, par enveloppe autour des fonctions existantes :
+   — en-tête : sceau de la République à gauche, logo de l’établissement à droite ;
+   — encadré d’identification (établissement, année, niveau, classe, matière) si le document le demande
+     (option « encadre » de tekouloDocumentImprimable). Le code d’origine n’est pas modifié. */
+(function(){
+  const _entete = window.tekouloEnteteAdminHTML;
+  if(typeof _entete === 'function'){
+    window.tekouloEnteteAdminHTML = function(p, titre, sousTitre){
+      const h = _entete(p, titre, sousTitre);
+      const logoEcole = (typeof logoEcoleActuel === 'function') ? logoEcoleActuel() : '';
+      const gauche = `<img src="${TEKOULO_SEAL_DATAURI}" alt="" style="position:absolute;left:0;top:2px;width:66px;height:66px;object-fit:contain">`;
+      const droite = logoEcole ? `<img src="${logoEcole}" alt="" style="position:absolute;right:0;top:2px;width:66px;height:66px;object-fit:contain">` : '';
+      return h.replace('<div class="header">', '<div class="header" style="position:relative;padding-left:78px;padding-right:78px">' + gauche + droite);
+    };
+  }
+
+  const _imprimer = window.tekouloDocumentImprimable;
+  if(typeof _imprimer === 'function'){
+    window.tekouloDocumentImprimable = function(o){
+      if(o && Array.isArray(o.encadre) && o.encadre.length){
+        const cases = o.encadre.filter(x => x && x[1]).map(x => `<span><b>${esc(x[0])} :</b> ${esc(x[1])}</span>`).join('&nbsp;&nbsp;&nbsp;');
+        if(cases){
+          const encadre = `<div style="border:1px solid #E4B426;background:#FBF6E4;padding:8px 12px;margin:0 0 14px;font-size:12px;text-align:center;line-height:1.8;border-radius:4px">${cases}</div>`;
+          o = Object.assign({}, o, {contenuHTML: encadre + o.contenuHTML});
+        }
+      }
+      return _imprimer(o);
+    };
+  }
+})();
+</script>
+<script id="script-mise-en-page">
+/* Mise en page à l’impression : orientation (portrait / paysage), taille (50 à 150 %) et affichage
+   de l’en-tête officiel. Un panneau s’ouvre avant chaque impression ; le dernier choix est retenu
+   sur cet appareil (clé hors sauvegarde). Enveloppe de tekouloDocumentImprimable : code d’origine intact. */
+(function(){
+  const _imprimer = window.tekouloDocumentImprimable;
+  if(typeof _imprimer !== 'function') return;
+  const CLE = 'tk_mise_en_page';
+  const lire = () => { try{ return JSON.parse(localStorage.getItem(CLE) || '{}') || {}; }catch(x){ return {}; } };
+  const ecrire = v => { try{ localStorage.setItem(CLE, JSON.stringify(v)); }catch(x){} };
+  const bouton = (txt, actif) => `<button type="button" class="mep-b" style="flex:1;padding:9px 6px;border-radius:9px;cursor:pointer;font:inherit;font-size:13px;border:1.5px solid ${actif?'#B98A12':'#C9C2AE'};background:${actif?'#FBF1CF':'#fff'};color:#20241F;font-weight:${actif?'700':'500'}">${txt}</button>`;
+
+  function panneau(o){
+    const prefs = lire();
+    const etat = {
+      orient: prefs.orient || (o.paysage ? 'paysage' : 'portrait'),
+      zoom: Number(prefs.zoom) || 100,
+      entete: prefs.entete !== false
+    };
+    const ancien = document.getElementById('mep-panneau'); if(ancien) ancien.remove();
+    const fond = document.createElement('div');
+    fond.id = 'mep-panneau';
+    fond.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,15,.45);z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px';
+    fond.innerHTML = `<div style="background:#fff;color:#20241F;border-radius:14px;padding:18px 18px 16px;max-width:360px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)">
+      <h3 style="margin:0 0 14px;font-size:16px">⎙ Mise en page</h3>
+      <div style="font-size:12px;color:#5B6259;margin-bottom:6px">Orientation de la page</div>
+      <div id="mep-orient" style="display:flex;gap:8px;margin-bottom:14px">${bouton('▯ Portrait', etat.orient==='portrait')}${bouton('▭ Paysage', etat.orient==='paysage')}</div>
+      <div style="font-size:12px;color:#5B6259;margin-bottom:6px">Taille à l’impression</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <button type="button" id="mep-moins" style="width:40px;height:36px;border-radius:9px;border:1.5px solid #C9C2AE;background:#fff;font-size:18px;cursor:pointer">−</button>
+        <span id="mep-zoom" style="flex:1;text-align:center;font-weight:700;font-size:15px">${etat.zoom} %</span>
+        <button type="button" id="mep-plus" style="width:40px;height:36px;border-radius:9px;border:1.5px solid #C9C2AE;background:#fff;font-size:18px;cursor:pointer">+</button>
+        <button type="button" id="mep-reset" style="padding:8px 10px;border-radius:9px;border:1.5px solid #C9C2AE;background:#fff;font-size:12px;cursor:pointer">100 %</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:16px;cursor:pointer"><input type="checkbox" id="mep-entete" ${etat.entete?'checked':''}> Afficher l’en-tête officiel</label>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" id="mep-annuler" style="padding:10px 14px;border-radius:9px;border:1.5px solid #C9C2AE;background:#fff;cursor:pointer;font:inherit">Annuler</button>
+        <button type="button" id="mep-ok" style="padding:10px 16px;border-radius:9px;border:1px solid #A67A00;background:linear-gradient(135deg,#F4C948,#E4B426 60%,#B98A12);font:inherit;font-weight:700;cursor:pointer">⎙ Imprimer</button>
+      </div></div>`;
+    document.body.appendChild(fond);
+
+    const refaire = () => {
+      fond.querySelector('#mep-orient').innerHTML = bouton('▯ Portrait', etat.orient==='portrait') + bouton('▭ Paysage', etat.orient==='paysage');
+      fond.querySelector('#mep-zoom').textContent = etat.zoom + ' %';
+    };
+    fond.querySelector('#mep-orient').addEventListener('click', ev => {
+      const b = ev.target.closest('.mep-b'); if(!b) return;
+      etat.orient = b.textContent.includes('Paysage') ? 'paysage' : 'portrait'; refaire();
+    });
+    fond.querySelector('#mep-moins').onclick = () => { etat.zoom = Math.max(50, etat.zoom - 10); refaire(); };
+    fond.querySelector('#mep-plus').onclick = () => { etat.zoom = Math.min(150, etat.zoom + 10); refaire(); };
+    fond.querySelector('#mep-reset').onclick = () => { etat.zoom = 100; refaire(); };
+    fond.querySelector('#mep-annuler').onclick = () => fond.remove();
+    fond.addEventListener('click', ev => { if(ev.target === fond) fond.remove(); });
+    fond.querySelector('#mep-ok').onclick = () => {
+      etat.entete = fond.querySelector('#mep-entete').checked;
+      ecrire({orient: etat.orient, zoom: etat.zoom, entete: etat.entete});
+      fond.remove();
+      const extra = (o.extraCss || '')
+        + `.vue-contenu{zoom:${etat.zoom/100};}`
+        + (etat.entete ? '' : '.header{display:none !important;}');
+      // Le clic sur « Imprimer » est un geste utilisateur : la fenêtre d’impression peut s’ouvrir.
+      _imprimer(Object.assign({}, o, {paysage: etat.orient === 'paysage', extraCss: extra}));
+    };
+  }
+
+  window.tekouloDocumentImprimable = function(o){
+    if(!o || o.miseEnPage === false) return _imprimer(o);
+    panneau(o);
+  };
+})();
+</script>
+<script id="script-tri-notes">
+/* Registre des notes : « Trier par » (ordre alphabétique, numéro d’ordre, moyenne décroissante).
+   Le tri réordonne seulement les lignes affichées ; aucune note n’est modifiée. */
+(function(){
+  let mode = 'alpha';
+  const corps = () => document.querySelector('#content .table-wrap tbody');
+  const cellules = tr => Array.from(tr.children);
+  const texte = td => (td ? td.textContent.trim() : '');
+  const cle = {
+    alpha: tr => texte(cellules(tr)[1]).toLowerCase(),
+    num:   tr => parseFloat(texte(cellules(tr)[0])) || 0,
+    moy:   tr => { const c = cellules(tr); const v = parseFloat(texte(c[c.length-4]).replace(',', '.')); return isNaN(v) ? -1 : v; }
+  };
+  function trier(){
+    const tb = corps(); if(!tb) return;
+    const lignes = Array.from(tb.querySelectorAll(':scope > tr'));
+    if(lignes.length < 2) return;
+    const k = cle[mode] || cle.alpha;
+    const triees = lignes.slice().sort((a,b) => {
+      const x = k(a), y = k(b);
+      if(typeof x === 'string') return x.localeCompare(y, 'fr');
+      return mode === 'moy' ? y - x : x - y;
+    });
+    // Ne réécrit le DOM que si l’ordre change : évite une boucle avec l’observateur.
+    if(triees.every((tr, i) => tr === lignes[i])) return;
+    triees.forEach(tr => tb.appendChild(tr));
+  }
+  function barre(){
+    const outils = document.querySelector('#content .toolbar');
+    if(!outils || document.getElementById('notes-tri')) return;
+    const recherche = outils.querySelector('input.search');
+    if(!recherche) return;
+    const s = document.createElement('select');
+    s.id = 'notes-tri';
+    s.title = 'Trier par';
+    s.innerHTML = '<option value="alpha">Trier par : nom</option><option value="num">Trier par : N° d’ordre</option><option value="moy">Trier par : moyenne (décroissante)</option>';
+    s.value = mode;
+    s.onchange = () => { mode = s.value; trier(); };
+    recherche.after(s);
+  }
+  let t = null;
+  try{
+    new MutationObserver(() => { clearTimeout(t); t = setTimeout(() => { barre(); trier(); }, 120); })
+      .observe(document.getElementById('content') || document.body, {childList:true, subtree:true});
+  }catch(x){}
+})();
+</script>
+<script id="script-statuts-eleves">
+/* Statuts des élèves : Actif (par défaut), Retiré, Transféré.
+   Le statut est conservé dans la collection « statutsEleves » (fiche élève et formulaire inchangés).
+   La liste des élèves reçoit des boutons de filtre ; un panneau permet de changer le statut. */
+(function(){
+  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const COLL = 'statutsEleves';
+  const LIB = {ACTIF:'Actifs', RETIRE:'Retirés', TRANSFERE:'Transférés'};
+  let filtre = 'TOUS';
+  try{ if(typeof CLES_SYNCHRONISEES !== 'undefined' && !CLES_SYNCHRONISEES.includes(COLL)) CLES_SYNCHRONISEES.push(COLL); }catch(x){}
+
+  const eleves = () => (dbGet('eleves', []) || []).filter(Boolean);
+  const statuts = () => (dbGet(COLL, []) || []).filter(Boolean);
+  const statutDe = el => { const s = statuts().find(x => x.eleveId === el.__id); return s ? s.statut : 'ACTIF'; };
+
+  function appliquer(){
+    const tbl = Array.from(document.querySelectorAll('#content table')).find(t => {
+      const h = Array.from(t.querySelectorAll('thead th')).map(th => th.textContent.trim());
+      return h.includes('Identifiant') && h.includes('Prénoms');
+    });
+    if(!tbl) return;
+    const iIdent = Array.from(tbl.querySelectorAll('thead th')).map(th => th.textContent.trim()).indexOf('Identifiant');
+    const liste = eleves();
+    tbl.querySelectorAll('tbody tr').forEach(tr => {
+      const id = (tr.children[iIdent] ? tr.children[iIdent].textContent.trim() : '');
+      const el = liste.find(x => String(x.identifiant||'') === id);
+      const st = el ? statutDe(el) : 'ACTIF';
+      tr.style.display = (filtre === 'TOUS' || filtre === st) ? '' : 'none';
+    });
+    const z = document.getElementById('statuts-compte');
+    if(z){
+      const c = {ACTIF:0, RETIRE:0, TRANSFERE:0};
+      liste.forEach(x => c[statutDe(x)]++);
+      z.textContent = 'Actifs ' + c.ACTIF + ' · Retirés ' + c.RETIRE + ' · Transférés ' + c.TRANSFERE;
+    }
+  }
+
+  window.statutsFiltrer = function(f){ filtre = f; appliquer(); barre(true); };
+
+  window.statutsEnregistrer = function(){
+    const id = (document.getElementById('statuts-eleve')||{}).value || '';
+    const st = (document.getElementById('statuts-choix')||{}).value || 'ACTIF';
+    const date = (document.getElementById('statuts-date')||{}).value || new Date().toISOString().slice(0,10);
+    const motif = (document.getElementById('statuts-motif')||{}).value || '';
+    if(!id){ toast('Choisissez un élève.', true); return; }
+    const reste = statuts().filter(x => x.eleveId !== id);
+    if(st !== 'ACTIF') reste.push({eleveId: id, statut: st, date, motif});
+    dbSet(COLL, reste);
+    toast('Statut enregistré : ' + ({ACTIF:'actif',RETIRE:'retiré',TRANSFERE:'transféré'})[st] + '.');
+    appliquer(); barre(true);
+  };
+  window.statutsReactiver = function(id){
+    dbSet(COLL, statuts().filter(x => x.eleveId !== id));
+    toast('Élève réactivé.');
+    appliquer(); barre(true);
+  };
+
+  function barre(refaire){
+    const tbl = Array.from(document.querySelectorAll('#content table')).find(t => {
+      const h = Array.from(t.querySelectorAll('thead th')).map(th => th.textContent.trim());
+      return h.includes('Identifiant') && h.includes('Prénoms');
+    });
+    if(!tbl) return;
+    const wrap = tbl.closest('.table-wrap');
+    if(!wrap) return;
+    const ancien = document.getElementById('statuts-bar');
+    if(ancien && !refaire) return;
+    if(ancien) ancien.remove();
+    const liste = eleves();
+    const hors = liste.filter(x => statutDe(x) !== 'ACTIF');
+    const pill = (f, txt) => `<span class="pill-tab ${filtre===f?'active':''}" onclick="statutsFiltrer('${f}')">${txt}</span>`;
+    const bar = document.createElement('div');
+    bar.id = 'statuts-bar'; bar.className = 'card';
+    bar.style.cssText = 'padding:12px 14px;margin:0 0 12px';
+    bar.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px"><b style="color:var(--green-deep)">Statut des élèves</b>'
+      + '<div class="pillbar" style="margin-left:6px">' + pill('TOUS','Tous') + pill('ACTIF','Actifs') + pill('RETIRE','Retirés') + pill('TRANSFERE','Transférés') + '</div>'
+      + '<span id="statuts-compte" class="muted" style="font-size:12px"></span></div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">'
+      + `<select id="statuts-eleve" style="min-width:220px"><option value="">Choisir un élève…</option>${liste.map(x => `<option value="${e(x.__id)}">${e(x.identifiant||'')} — ${e(((x.nom||'')+' '+(x.prenoms||'')).trim())}</option>`).join('')}</select>`
+      + '<select id="statuts-choix"><option value="ACTIF">Actif</option><option value="RETIRE">Retiré</option><option value="TRANSFERE">Transféré</option></select>'
+      + '<input id="statuts-date" type="date" value="' + new Date().toISOString().slice(0,10) + '">'
+      + '<input id="statuts-motif" type="text" placeholder="Motif (facultatif)" style="max-width:220px">'
+      + '<button class="btn" type="button" onclick="statutsEnregistrer()">Enregistrer le statut</button></div>'
+      + (hors.length ? '<div style="margin-top:10px;font-size:12.5px">' + hors.map(x => `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-top:1px solid var(--line-soft)"><span style="flex:1">${e(((x.nom||'')+' '+(x.prenoms||'')).trim())} — <b>${LIB[statutDe(x)].replace(/s$/,'')}</b>${(statuts().find(s=>s.eleveId===x.__id)||{}).date ? ' le ' + e((statuts().find(s=>s.eleveId===x.__id)||{}).date) : ''}</span><button class="btn ghost sm" type="button" onclick="statutsReactiver('${e(x.__id)}')">Réactiver</button></div>`).join('') + '</div>' : '');
+    wrap.parentNode.insertBefore(bar, wrap);
+    appliquer();
+  }
+
+  let t = null;
+  try{
+    new MutationObserver(() => { clearTimeout(t); t = setTimeout(() => { barre(false); appliquer(); }, 120); })
+      .observe(document.getElementById('content') || document.body, {childList:true, subtree:true});
+  }catch(x){}
+})();
+</script>
+<script id="script-effectifs-actifs">
+/* Seuls les élèves actifs sont comptés dans les effectifs et dans le registre des notes.
+   Le filtre n’est appliqué que pendant le calcul (la liste des élèves est rétablie ensuite) ;
+   aucune donnée n’est modifiée. Les élèves retirés ou transférés restent visibles dans la liste des élèves. */
+(function(){
+  const COLL = 'statutsEleves';
+  function actifsIds(){
+    const stat = (dbGet(COLL, []) || []).filter(Boolean);
+    const hors = new Set(stat.filter(s => s.statut && s.statut !== 'ACTIF').map(s => s.eleveId));
+    return hors;
+  }
+  // Exécute fn avec, pour la clé « eleves », seulement les élèves actifs.
+  function avecActifs(fn){
+    const hors = actifsIds();
+    if(!hors.size) return fn();
+    const original = window.dbGet;
+    window.dbGet = function(cle, defaut){
+      const val = original.apply(this, arguments);
+      if(cle === 'eleves' && Array.isArray(val)) return val.filter(x => !(x && hors.has(x.__id)));
+      return val;
+    };
+    try{ return fn(); }
+    finally{ window.dbGet = original; }
+  }
+  if(typeof computeEffectifsStats === 'function'){
+    const _eff = computeEffectifsStats;
+    window.computeEffectifsStats = function(){ return avecActifs(() => _eff.apply(this, arguments)); };
+  }
+  if(typeof notesElevesFiltres === 'function'){
+    const _nef = notesElevesFiltres;
+    window.notesElevesFiltres = function(){ return avecActifs(() => _nef.apply(this, arguments)); };
+  }
+})();
+</script>
+<script id="script-signalement-dus">
+/* Avant de retirer ou transférer un élève : affichage des sommes encore dues (APEAE) et confirmation.
+   Le montant dû est conservé avec le statut, pour rester visible dans le bilan. */
+(function(){
+  const COLL = 'statutsEleves';
+  const n = x => Number(x) || 0;
+  const paye = r => n(r.versement1) + n(r.versement2);
+  const fmt = x => Number(x||0).toLocaleString('fr-FR') + ' GNF';
+  function duApeae(el){
+    return (dbGet('apeae', []) || []).filter(r => r && String(r.identifiantEleve) === String(el.identifiant))
+      .reduce((a,r) => a + Math.max(0, n(r.montantApeae) - paye(r)), 0);
+  }
+  function duScolarite(el){
+    return (dbGet('fraisscolarite', []) || []).filter(r => r && String(r.identifiantEleve) === String(el.identifiant))
+      .reduce((a,r) => a + Math.max(0, n(r.resteAPayer)), 0);
+  }
+  // Somme encore due par l'élève, tous modules financiers liés à l'élève confondus.
+  function duDe(el){ return duApeae(el) + duScolarite(el); }
+  window.financesDuesEleve = duDe;
+  function eleveChoisi(){
+    const id = (document.getElementById('statuts-eleve')||{}).value || '';
+    return (dbGet('eleves', []) || []).find(x => x && x.__id === id) || null;
+  }
+  function majAvis(){
+    const z = document.getElementById('statuts-dus'); if(!z) return;
+    const el = eleveChoisi(); const st = (document.getElementById('statuts-choix')||{}).value || 'ACTIF';
+    if(!el){ z.innerHTML = ''; return; }
+    const du = duDe(el);
+    if(st === 'ACTIF' || du <= 0){ z.innerHTML = du > 0 ? '<span class="muted">Somme due (APEAE) : ' + fmt(du) + '</span>' : '<span class="muted">Aucune somme due (APEAE).</span>'; return; }
+    z.innerHTML = '<div style="border:1px solid #E0A800;background:#FFF8E1;border-radius:9px;padding:8px 10px">⚠ Cet élève doit encore <b>' + fmt(du) + '</b> (APEAE). Le retrait sera signalé dans le bilan.</div>';
+  }
+  window.statutsEnregistrer = function(){
+    const el = eleveChoisi();
+    const st = (document.getElementById('statuts-choix')||{}).value || 'ACTIF';
+    const date = (document.getElementById('statuts-date')||{}).value || new Date().toISOString().slice(0,10);
+    const motif = (document.getElementById('statuts-motif')||{}).value || '';
+    if(!el){ toast('Choisissez un élève.', true); return; }
+    const du = duDe(el);
+    if(st !== 'ACTIF' && du > 0 && !confirm('Cet élève doit encore ' + fmt(du) + ' (APEAE).\nLe retrait sera signalé dans le bilan des cotisations. Confirmer ?')) return;
+    const reste = (dbGet(COLL, []) || []).filter(x => x && x.eleveId !== el.__id);
+    if(st !== 'ACTIF') reste.push({eleveId: el.__id, statut: st, date, motif, montantDu: du});
+    dbSet(COLL, reste);
+    toast('Statut enregistré : ' + ({ACTIF:'actif',RETIRE:'retiré',TRANSFERE:'transféré'})[st] + '.');
+    if(typeof renderView === 'function') renderView(CURRENT_VIEW || 'eleves');
+  };
+  let t = null;
+  function greffer(){
+    const bar = document.getElementById('statuts-bar');
+    if(!bar || document.getElementById('statuts-dus')) return;
+    const z = document.createElement('div'); z.id = 'statuts-dus'; z.style.cssText = 'margin-top:10px;font-size:12.5px';
+    bar.appendChild(z);
+  }
+  document.addEventListener('change', ev => {
+    if(ev.target && (ev.target.id === 'statuts-eleve' || ev.target.id === 'statuts-choix')) majAvis();
+  });
+  try{ new MutationObserver(() => { clearTimeout(t); t = setTimeout(() => { greffer(); majAvis(); }, 120); })
+    .observe(document.getElementById('content') || document.body, {childList:true, subtree:true}); }catch(x){}
+})();
+</script>
+<script id="script-frais-signalement">
+/* Frais de scolarité : signalement des élèves retirés ou transférés qui ont encore un reste à payer. */
+(function(){
+  const n = x => Number(x) || 0;
+  const fmt = x => Number(x||0).toLocaleString('fr-FR') + ' GNF';
+  function poser(){
+    const v = document.getElementById('view-fraisscolarite');
+    if(!v || document.getElementById('frais-signalement')) return;
+    const eleves = dbGet('eleves', []) || [];
+    const stat = (dbGet('statutsEleves', []) || []).filter(x => x && x.statut && x.statut !== 'ACTIF');
+    const lig = stat.map(s => {
+      const el = eleves.find(x => x && x.__id === s.eleveId); if(!el) return null;
+      const reste = (dbGet('fraisscolarite', []) || []).filter(r => r && String(r.identifiantEleve) === String(el.identifiant))
+        .reduce((a,r) => a + Math.max(0, n(r.resteAPayer)), 0);
+      return reste > 0 ? {nom: ((el.nom||'')+' '+(el.prenoms||'')).trim(), statut: s.statut, reste} : null;
+    }).filter(Boolean);
+    if(!lig.length) return;
+    const total = lig.reduce((a,x) => a + x.reste, 0);
+    const bloc = document.createElement('div');
+    bloc.id = 'frais-signalement'; bloc.className = 'card';
+    bloc.style.cssText = 'padding:12px 14px;margin:0 0 12px;border:1px solid #E0A800;background:#FFF8E1';
+    bloc.innerHTML = '<b>⚠ Scolarité due par des élèves retirés ou transférés : ' + fmt(total) + '</b>'
+      + lig.map(x => '<div style="font-size:12.5px;padding:4px 0;border-top:1px solid #F0DFA0">' + x.nom + ' (' + (x.statut==='RETIRE'?'retiré':'transféré') + ') — reste ' + fmt(x.reste) + '</div>').join('');
+    v.insertBefore(bloc, v.firstChild);
+  }
+  const _renderView = window.renderView;
+  window.renderView = function(key){ _renderView(key); if(key === 'fraisscolarite') poser(); };
 })();
 </script>
 </html>
