@@ -22851,7 +22851,10 @@ function corrTelecharger(){
     const f = fournisseurForce || window.iaChoixEffectif();
     if(window.iaCleActive(f) && !pieceJointe){
       try{ return {ok: true, reponse: await appelDirect(f, message)}; }
-      catch(err){ return {ok: false, error: 'Échec avec ' + IA_FOURNISSEURS[f].nom + ' : ' + err.message + '. Vérifiez la clé ou le quota.'}; }
+      catch(err){
+        if([500, 502, 503, 504].includes(err.status)) return {ok: false, error: IA_FOURNISSEURS[f].nom + ' est surchargé en ce moment (' + err.message + '). Réessayez dans quelques minutes, ou choisissez un autre fournisseur.'};
+        return {ok: false, error: 'Échec avec ' + IA_FOURNISSEURS[f].nom + ' : ' + err.message + '. Vérifiez la clé ou le quota.'};
+      }
     }
     return _appel.apply(this, arguments);
   };
@@ -22932,7 +22935,14 @@ function corrTelecharger(){
 
   window.paramIaAfficher = function(){
     const c = document.getElementById('param-ia-cle'); if(!c) return;
+    /* Si le champ est vide, il affiche la clé enregistrée sur cet appareil */
+    if(!c.value){
+      const f = document.getElementById('param-ia-choix').value;
+      const enreg = cleInfo(f).principale;
+      if(enreg){ c.value = enreg; c.dataset.recopiee = '1'; }
+    }
     c.type = c.type === 'password' ? 'text' : 'password';
+    const b = c.parentElement && c.parentElement.querySelector('button'); if(b) b.textContent = c.type === 'password' ? 'Afficher' : 'Masquer';
   };
 
   window.paramIaEnregistrerCle = function(){
@@ -22940,11 +22950,13 @@ function corrTelecharger(){
     const princ = (document.getElementById('param-ia-cle').value || '').trim();
     const supp = (document.getElementById('param-ia-supp').value || '').split('\n').map(s => s.trim()).filter(Boolean);
     const o = lire(); const ancien = o[f] || {};
-    const nouvelle = {principale: princ || ancien.principale || '', supp: supp.length ? supp : (ancien.supp || [])};
+    /* Les clés de secours saisies s'ajoutent à celles déjà enregistrées (sans doublon) */
+    const suppFusion = Array.from(new Set([...(ancien.supp || []), ...supp]));
+    const nouvelle = {principale: princ || ancien.principale || '', supp: suppFusion};
     if(!nouvelle.principale && !nouvelle.supp.length){ statut('Saisissez au moins une clé avant d’enregistrer.'); return; }
     o[f] = nouvelle; ecrire(o);
     poserCarte();
-    statut('✅ Clé enregistrée sur cet appareil (' + masque(nouvelle.principale || nouvelle.supp[0]) + '). Testez-la avec le bouton ci-dessus.');
+    statut('✅ Clés enregistrées sur cet appareil : clé principale' + (nouvelle.principale ? ' (' + masque(nouvelle.principale) + ')' : ' absente') + ', ' + nouvelle.supp.length + ' clé(s) de secours. Testez-la avec le bouton ci-dessus.');
   };
 
   window.paramIaEffacerCle = function(){
@@ -22959,14 +22971,12 @@ function corrTelecharger(){
     const cfg = IA_FOURNISSEURS[f];
     if(cfg.mode === 'web'){ statut(cfg.nom + ' ne peut pas être testé ici : ouvrez ' + cfg.site + ' pour l’utiliser.'); return; }
     statut('⏳ Test en cours… (la première réponse peut prendre quelques secondes)');
+    /* Même chemin que l'assistant (messages en français, réessais, bascule entre les clés) */
+    const direct = window.iaCleActive(f);
     try{
-      if(window.iaCleActive(f)){
-        await appelDirect(f, 'Réponds uniquement par le mot : OK');
-        statut('✅ Connexion directe réussie avec ' + cfg.nom + ' (clé de cet appareil).');
-      } else {
-        const r = await assistantAppelAPI('Réponds uniquement par le mot : OK', undefined, undefined, true, f);
-        statut((r && r.ok) ? '✅ Connexion réussie avec ' + cfg.nom + ' (serveur Tekoulo).' : '⚠ ' + ((r && (r.error || r.reponse)) || 'Pas de réponse.'));
-      }
+      const r = await assistantAppelAPI('Réponds uniquement par le mot : OK', undefined, undefined, true, f);
+      if(r && r.ok) statut('✅ Connexion réussie avec ' + cfg.nom + (direct ? ' (clé de cet appareil).' : ' (serveur Tekoulo).'));
+      else statut('⚠ ' + ((r && (r.error || r.reponse)) || 'Pas de réponse. Vérifiez la connexion internet.'));
     }catch(err){ statut('⚠ Échec du test : ' + (err && err.message ? err.message : 'erreur inconnue') + '.'); }
   };
 
