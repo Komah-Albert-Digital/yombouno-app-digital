@@ -22904,6 +22904,18 @@ function corrTelecharger(){
           <button class="btn" type="button" onclick="paramIaTester()">🔌 Tester l’IA choisie</button></div>
       </div>
       ${blocCle}
+      ${(sessionStorage.getItem('tekoulo_role') === 'fondateur') ? `
+      <div class="pia-jeton" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)">
+        <label style="font-weight:600;font-size:13px">Jeton de l’assistant Tekoulo (fondateur)</label>
+        <p class="muted" style="margin:4px 0 8px;font-size:11.5px">Jeton accepté par le serveur Tekoulo (ECOLE_TOKEN). Il ne s’affiche jamais en clair et n’est pas inclus dans la sauvegarde.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="jeton-saisie" type="password" autocomplete="new-password" spellcheck="false" placeholder="${TEKOULO_TOKEN ? 'Jeton enregistré (saisir pour remplacer)' : 'Collez le jeton ici'}" style="flex:1;min-width:180px">
+          <button class="btn sm" type="button" onclick="jetonEnregistrer()">💾 Enregistrer le jeton</button>
+          <button class="btn ghost sm" type="button" onclick="jetonTester()">🔌 Tester le jeton</button>
+          <button class="btn ghost sm" type="button" onclick="jetonEffacer()">Supprimer le jeton</button>
+        </div>
+        <div id="jeton-statut" class="pia-statut" style="margin-top:8px">${TEKOULO_TOKEN ? '✅ Un jeton est enregistré sur cet appareil.' : '⚠ Aucun jeton enregistré : l’assistant sans clé est désactivé.'}</div>
+      </div>` : ''}
       <div id="param-ia-statut" class="pia-statut">${e(texteStatutChoix(choix))}</div>
       <h4 style="margin:16px 0 8px;color:var(--green-deep)">Utilisation selon l’appareil</h4>
       <div class="pia-appareils">
@@ -22960,6 +22972,48 @@ function corrTelecharger(){
     o[f] = nouvelle; ecrire(o);
     poserCarte();
     statut('✅ Clés enregistrées sur cet appareil : clé principale' + (nouvelle.principale ? ' (' + masque(nouvelle.principale) + ')' : ' absente') + ', ' + nouvelle.supp.length + ' clé(s) de secours. Testez-la avec le bouton ci-dessus.');
+  };
+
+
+  /* ---- Jeton de l'assistant Tekoulo : saisie, test et suppression (fondateur) ---- */
+  function jetonStatut(t){ const z = document.getElementById('jeton-statut'); if(z) z.textContent = t; }
+  function jetonEstFondateur(){ try{ return sessionStorage.getItem('tekoulo_role') === 'fondateur'; }catch(e){ return false; } }
+  window.jetonEnregistrer = function(){
+    if(!jetonEstFondateur()){ jetonStatut('Action réservée au compte fondateur.'); return; }
+    const v = (document.getElementById('jeton-saisie').value || '').trim();
+    if(!v){ jetonStatut('Saisissez le jeton avant d’enregistrer.'); return; }
+    try{ localStorage.setItem(DB_PREFIX + 'assistant_jeton', v); sessionStorage.setItem('tekoulo_token', v); }catch(e){}
+    TEKOULO_TOKEN = v;
+    poserCarte();
+    jetonStatut('✅ Jeton enregistré sur cet appareil. Cliquez sur « Tester le jeton » pour vérifier.');
+  };
+  window.jetonTester = async function(){
+    if(!jetonEstFondateur()){ jetonStatut('Action réservée au compte fondateur.'); return; }
+    const saisi = (document.getElementById('jeton-saisie').value || '').trim();
+    const jeton = saisi || TEKOULO_TOKEN;
+    if(!jeton){ jetonStatut('Aucun jeton à tester.'); return; }
+    if(!TEKOULO_API_URL){ jetonStatut('Adresse du serveur Tekoulo manquante dans l’application.'); return; }
+    jetonStatut('⏳ Test du jeton en cours…');
+    let res;
+    try{
+      res = await fetch(TEKOULO_API_URL + '/api/assistant/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jeton},
+        body: JSON.stringify({message: 'Réponds uniquement par le mot : OK', historique: [], mode: 'general'})
+      });
+    }catch(e){ jetonStatut('⚠ Serveur injoignable : vérifiez la connexion internet de la tablette.'); return; }
+    let d = {}; try{ d = await res.json(); }catch(x){}
+    if(res.ok){ jetonStatut('✅ Jeton accepté par le serveur Tekoulo.' + (saisi ? ' Pensez à l’enregistrer.' : '')); return; }
+    if(res.status === 401 || res.status === 403){ jetonStatut('⚠ Jeton refusé par le serveur : il ne correspond pas à ECOLE_TOKEN dans Cloudflare.'); return; }
+    jetonStatut('⚠ Erreur du serveur (' + res.status + ') : ' + ((d && (d.error || d.message)) || 'sans détail') + '.');
+  };
+  window.jetonEffacer = function(){
+    if(!jetonEstFondateur()){ jetonStatut('Action réservée au compte fondateur.'); return; }
+    if(!confirm('Supprimer le jeton de l’assistant sur cet appareil ?')) return;
+    try{ localStorage.removeItem(DB_PREFIX + 'assistant_jeton'); sessionStorage.removeItem('tekoulo_token'); }catch(e){}
+    TEKOULO_TOKEN = null;
+    poserCarte();
+    jetonStatut('Jeton supprimé de cet appareil.');
   };
 
   window.paramIaEffacerCle = function(){
