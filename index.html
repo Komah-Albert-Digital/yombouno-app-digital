@@ -22829,8 +22829,17 @@ function corrTelecharger(){
     if(!cles.length) throw new Error('aucune clé enregistrée pour cette IA');
     let derniere = null;
     for(const cle of cles){
-      try{ return await requete(f, cfg, cle, message); }
-      catch(err){ derniere = err; if(![401, 403, 429].includes(err.status)) break; }
+      let derniereCle = null;
+      /* Réessai (3 essais) si le fournisseur est surchargé (500, 502, 503, 504), comme le serveur relais */
+      for(let essai = 1; essai <= 3; essai++){
+        try{ return await requete(f, cfg, cle, message); }
+        catch(err){
+          derniere = err; derniereCle = err;
+          if([500, 502, 503, 504].includes(err.status) && essai < 3){ await new Promise(r => setTimeout(r, essai * 1500)); continue; }
+          break;
+        }
+      }
+      if(!derniereCle || ![401, 403, 429].includes(derniereCle.status)) break;
     }
     throw derniere;
   }
