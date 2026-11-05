@@ -22852,6 +22852,9 @@ function corrTelecharger(){
     if(window.iaCleActive(f) && !pieceJointe){
       try{ return {ok: true, reponse: await appelDirect(f, message)}; }
       catch(err){
+        /* « Failed to fetch » : la requête n'a pas atteint le fournisseur (réseau, VPN, DNS, filtre) */
+        if(err instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(err.message || ''))
+          return {ok: false, error: 'Impossible de joindre ' + IA_FOURNISSEURS[f].nom + '. Vérifiez la connexion internet de la tablette, et désactivez le VPN ou le DNS privé si besoin.'};
         if([500, 502, 503, 504].includes(err.status)) return {ok: false, error: IA_FOURNISSEURS[f].nom + ' est surchargé en ce moment (' + err.message + '). Réessayez dans quelques minutes, ou choisissez un autre fournisseur.'};
         return {ok: false, error: 'Échec avec ' + IA_FOURNISSEURS[f].nom + ' : ' + err.message + '. Vérifiez la clé ou le quota.'};
       }
