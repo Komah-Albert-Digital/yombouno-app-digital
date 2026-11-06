@@ -2322,11 +2322,17 @@ function dbSet(key, value){
    - une synchronisation périodique récupère ce que d'autres appareils ont écrit et met à jour le local.
    Tant que TEKOULO_API_URL n'est pas configuré (ou que le serveur est injoignable), l'application
    continue de fonctionner en 100% local comme avant — aucune fonctionnalité n'est cassée. */
-const TEKOULO_API_URL = 'https://tekoulo-assistant.komahkbaro.workers.dev'; // Ancien serveur Render remplacé par un Cloudflare Worker (assistant IA uniquement ; le stockage des données reste sur Google Drive, voir bloc SYNCHRONISATION GOOGLE DRIVE ci-dessous)
-let TEKOULO_TOKEN = (function(){
-  // Jeton de l'assistant : lu dès l'ouverture depuis le stockage de l'appareil (saisi une seule fois).
-  try{ const t = localStorage.getItem(DB_PREFIX+'assistant_jeton') || sessionStorage.getItem('tekoulo_token'); return t ? String(t).trim() : null; }
-  catch(e){ return null; }
+let TEKOULO_API_URL = null; // renseignée par la configuration de l'assistant (Paramètres, fondateur) // Ancien serveur Render remplacé par un Cloudflare Worker (assistant IA uniquement ; le stockage des données reste sur Google Drive, voir bloc SYNCHRONISATION GOOGLE DRIVE ci-dessous)
+let TEKOULO_TOKEN = null;
+/* Configuration de l'assistant IA : stockage durable sur l'appareil, exclu des sauvegardes */
+let IA_CONFIG = {url:'', jeton:'', fournisseur:'tekoulo'};
+(function(){
+  try{
+    const c = JSON.parse(localStorage.getItem(DB_PREFIX+'ia_config') || 'null');
+    if(c && typeof c === 'object') IA_CONFIG = Object.assign(IA_CONFIG, c);
+  }catch(e){}
+  TEKOULO_API_URL = IA_CONFIG.url ? String(IA_CONFIG.url).trim().replace(/\/+$/,'') : null;
+  TEKOULO_TOKEN = IA_CONFIG.jeton ? String(IA_CONFIG.jeton).trim() : null;
 })();
 
 /* ==================== SYNCHRONISATION GOOGLE DRIVE ====================
@@ -4663,16 +4669,15 @@ async function recupererTokenAssistant(identifiant, pass){
   // Audit P0-2 : le mot de passe administrateur n'est plus envoyé au serveur de l'assistant.
   // L'assistant utilise le jeton propre à l'école, saisi une fois par l'administrateur sur cet appareil.
   // Ce jeton est révocable (il suffit de le changer sur le serveur). Les clés d'IA restent côté serveur.
-  let jeton = null;
-  try{ jeton = localStorage.getItem(DB_PREFIX+'assistant_jeton'); }catch(e){}
-  try{ sessionStorage.removeItem('tekoulo_token'); }catch(e){}
-  if(jeton){ TEKOULO_TOKEN = jeton; try{ localStorage.setItem(DB_PREFIX+'assistant_jeton', jeton); sessionStorage.setItem('tekoulo_token', jeton); }catch(e){} return; }
+  const jeton = (IA_CONFIG && IA_CONFIG.jeton) || null;
+  if(jeton){ TEKOULO_TOKEN = jeton; return; }
   TEKOULO_TOKEN = null;
   if(sessionStorage.getItem('tekoulo_role') === 'fondateur'){
-    setTimeout(assistantDemanderJeton, 2500);
+    /* demande de jeton supprimée (configuration IA retirée) */
   }
 }
 function assistantDemanderJeton(){
+  return; // configuration IA supprimée
   if(TEKOULO_TOKEN) return;
   const saisi = prompt("Jeton de l'assistant IA Tekoulo (fourni par le responsable informatique). Laissez vide pour ne pas l'activer maintenant :");
   if(!saisi || !saisi.trim()) return;
@@ -4838,7 +4843,6 @@ function iaMettreAJourStatut(){
   let t;
   if(f === 'tekoulo') t = "Assistant Tekoulo : réponses dans l'application, sans clé personnelle.";
   else if(cfg.mode === 'web') t = cfg.nom + " n'est pas branché à l'application : votre demande sera copiée, puis collez-la sur " + cfg.site + ".";
-  else if(window.iaCleActive && window.iaCleActive(f)) t = '🔑 Clé de cet appareil active pour ' + cfg.nom + '.';
   else t = '✅ ' + cfg.nom + ' répondra via le serveur sécurisé de Tekoulo (aucune clé sur cet appareil).';
   z.textContent = t;
 }
@@ -5205,7 +5209,7 @@ document.getElementById('login-pass').addEventListener('keydown', e=>{ if(e.key=
 /* ============================ EXPORT / IMPORT (sauvegarde manuelle, .json téléchargé) ============================ */
 /* Clés qui ne sortent jamais dans une sauvegarde (audit P1-4 / P0-2) : clés d'IA et jeton de l'assistant.
    Elles restent sur l'appareil ; après une restauration sur un autre appareil, il faut les saisir à nouveau. */
-const CLES_HORS_SAUVEGARDE = ['ia_cles','assistant_jeton'];
+const CLES_HORS_SAUVEGARDE = ['ia_cles','assistant_jeton','ia_config','ia_cles_appareil','ia_choix'];
 function collectAllDataSnapshot(){
   const all = {};
   Object.keys(localStorage).forEach(k=>{
@@ -6649,6 +6653,7 @@ function renderGuide(container){
     <div class="guide-chapter" id="g10ter">
       <h2>10 ter. Assistant IA intégré 🤖</h2>
       <p>Une bulle <b>💬</b> est visible dans la barre supérieure une fois connecté. Elle ouvre un panneau de discussion avec un assistant intelligent, capable de répondre à des questions, de rédiger des documents administratifs, de traduire ou d'expliquer des mots difficiles, et de préparer des cours complets pour les enseignants — via un petit serveur relais dédié (Cloudflare Worker) qui appelle l'API Gemini, indépendant de la synchronisation des données (chapitre 10 bis).</p>
+      <div class="guide-callout attention"><b class="gc-label">🔧 Configuration</b>Le fondateur renseigne l'adresse du serveur et le jeton de l'école dans <b>Paramètres › Intelligence artificielle</b>, puis clique sur « Tester ». Ces réglages restent sur cet appareil et ne sont pas inclus dans la sauvegarde.</div>
 
       <h3>10 ter.1 Les modes de l'assistant</h3>
       <table>
@@ -6717,18 +6722,6 @@ function renderGuide(container){
       <p>Si la réponse ne vient pas, le bouton <b>🔁</b>, à droite de la zone de saisie, renvoie la dernière question sans la retaper. Après 20 secondes d'attente, un bouton <b>« 🔁 Réenvoyer la question »</b> apparaît aussi sous le message « L'assistant réfléchit… ». Si vous renvoyez une question pendant qu'une réponse est encore attendue, seule la plus récente est affichée.</p>
       <p>Une erreur <b>504</b> signifie que le serveur de l'assistant n'a pas reçu la réponse de l'IA à temps. L'application relance alors la demande automatiquement, une fois, puis affiche un message d'explication. Dans ce cas, réessayez dans une minute, ou demandez un cours plus court (moins de sous-titres, une seule matière à la fois).</p>
       <div class="guide-callout astuce"><b class="gc-label">💡 Réponses plus rapides</b>L'assistant ne relit que les 8 derniers messages de la conversation. Pour une question sans rapport avec les précédentes, appuyez sur 🗑️ en haut du panneau pour repartir de zéro : la réponse arrive plus vite.</div>
-
-      <h3>10 ter.4 ter Clés d'IA propres à cet appareil</h3>
-      <p>Dans <b>Paramètres › Intelligence artificielle</b>, vous pouvez enregistrer votre propre clé API pour Claude, ChatGPT, Gemini, Mistral ou DeepSeek. La clé est mémorisée <b>sur cet appareil uniquement</b> : chaque tablette, téléphone ou ordinateur a la sienne.</p>
-      <ol>
-        <li>Choisir le fournisseur dans la liste <b>« Fournisseur par défaut »</b>.</li>
-        <li>Coller la clé dans le champ <b>« Clé API de … »</b>, qui affiche le nom du fournisseur choisi. Le lien affiché sous le champ permet de l'obtenir auprès du fournisseur.</li>
-        <li>Facultatif : ajouter des <b>clés de secours</b>, une par ligne, de préférence issues d'un autre compte. Elles servent si la première atteint son quota.</li>
-        <li>Appuyer sur <b>« 💾 Enregistrer sur cet appareil »</b>, puis sur <b>« 🔌 Tester l'IA choisie »</b>.</li>
-      </ol>
-      <p>Lorsqu'une clé est enregistrée, les demandes de l'assistant et des fonctions de génération partent directement vers le fournisseur choisi. Sans clé, elles passent par le serveur sécurisé de Tekoulo.</p>
-      <div class="guide-callout attention"><b class="gc-label">⚠️ Sécurité</b>La clé reste dans le navigateur de cet appareil. Ne l'enregistrez pas sur un ordinateur partagé et ne la communiquez à personne. Elle n'est ni incluse dans le fichier de sauvegarde, ni synchronisée avec Google Drive. Pour la retirer, appuyer sur <b>« Effacer les clés de cette IA »</b>.</div>
-      <p>Les pièces jointes (photo, PDF) passent toujours par le serveur sécurisé de Tekoulo, même lorsqu'une clé est enregistrée : elles nécessitent donc l'assistant activé sur cet appareil (jeton école).</p>
 
       <h3>10 ter.4 Limites à connaître</h3>
       <div class="guide-callout attention"><b class="gc-label">⚠️ Service gratuit à usage limité</b>L'assistant utilise une API d'intelligence artificielle gratuite (Gemini), avec un nombre de requêtes par minute limité. En cas d'usage intensif simultané par plusieurs personnes, un message « quota atteint » peut apparaître — il suffit de réessayer une minute plus tard. L'assistant peut écrire du code informatique dans n'importe quel langage, mais ne l'exécute pas.</div>
@@ -7388,7 +7381,7 @@ function techniqueContenuHTML(){
 }
 
 /* ===== Guide technique (Paramètres, réservé au Fondateur) ===== */
-const GUIDE_TECHNIQUE_MD = "# Guide technique — Base de Données de Gestion, Collège Tekoulo Centre\n\nDestiné à la personne qui maintient l'application (modifications, nouveaux modules, serveur relais, version Android). Le guide d'utilisation destiné au personnel est intégré à l'application (chapitre « Guide d'utilisation », menu Système).\n\n## 1. Vue d'ensemble\n\n| Élément | Détail |\n|---|---|\n| Application web | Un seul fichier `index.html` (≈ 6,3 Mo), HTML + CSS + JavaScript, sans serveur ni base de données. |\n| Stockage | `localStorage` du navigateur, clés préfixées par `DB_PREFIX`. Fonctions `dbGet(collection)` et `dbSet(collection, valeur)`. |\n| Session | `sessionStorage` : rôle connecté (`tekoulo_role`), espace actif (`TEKOULO_CYCLE_ACTIF`). |\n| Synchronisation | Google Drive (Google Identity Services). Liste des données synchronisées : constante `CLES_SYNCHRONISEES`. |\n| Assistant IA | Passe par un serveur relais Cloudflare Worker (`worker-assistant-tekoulo.js`). Aucune clé d'IA dans l'application. |\n| Version Android | Projet Kotlin dans `android-tekoulo/` : une WebView qui charge `assets/index.html`. |\n| Audit | `rapport-audit-tekoulo.md` (points P0 à P3, état de chaque correction). |\n\nAucune clé d'API, aucun mot de passe administrateur en clair ne doit figurer dans le fichier. Le mot de passe administrateur est stocké sous forme de hachage (`tekouloVerifierMdp`).\n\n## 2. Structure du fichier `index.html`\n\nOrdre général, de haut en bas :\n\n1. `<style>` principaux (thèmes par cycle : Élémentaire orange, Primaire bleu, Collège vert, Lycée violet ; variables CSS sur `:root`).\n2. `<style id=\"style-horloge\">` : cadran analogique, heure, date, météo du tableau de bord.\n3. `<style id=\"style-formulaires\">` : présentation commune de tous les champs de formulaire.\n4. `<\/head>` puis le HTML de l'écran de connexion et de la coquille (menu `#nav`, zone `#content`).\n5. Scripts : constantes de référence, fonctions d'affichage, d'impression, d'assistant, puis le script de démarrage en bas de page.\n\nLe fichier contient aussi des chaînes HTML qui sont elles-mêmes des documents (`<html>…<\/html>` écrits dans une nouvelle fenêtre). Le script de vérification doit donc ignorer le premier bloc `<script>` (faux positif connu, déjà présent dans la version d'origine).\n\n## 3. Référentiels à connaître\n\n| Constante ou fonction | Rôle |\n|---|---|\n| `NAV` | Menu latéral : groupes et entrées (`key`, `label`, `icon`, `badge`). |\n| `PAGE_META` | Titre et fil d'Ariane de chaque page. |\n| `ROLE_MODULES` | Modules autorisés par rôle (`'*'` = tous). |\n| `TOUS_LES_MODULES_ADMIN_CYCLE` | Liste des modules administrés par cycle. |\n| `CYCLE_MODULES_EXCLUS` | Modules masqués par espace (Élémentaire, Primaire, Collège, Lycée). |\n| `moduleEnabled(key)` | Décision finale d'affichage : type d'établissement, rôle, espace. |\n| `CLES_SYNCHRONISEES` | Collections envoyées sur Google Drive et sauvegardées. |\n| `GENERIC_MODULES` | Modules construits à partir d'une liste de champs (voir §4). |\n| `MATRICULE_LINKS` | Remplissage automatique par matricule ou identifiant (liaisons entre modules). |\n| `PARENT_LIENS_ELEVE` | Remplissage des champs de l'élève à partir du code d'une fiche parent. |\n| `UNIQUE_KEY_FIELDS` | Champs dont la valeur doit être unique (identifiant élève, matricule…). |\n| `CRITICAL_KEYS` | Champs obligatoires : signalés par un astérisque et contrôlés à l'enregistrement. |\n| `ELEVE_FIELDS`, `champsEleves()` | Champs du formulaire élève (le module élèves est écrit à la main, pas en générique). |\n\nRoutage : `renderView(key)` appelle `renderDashboard`, `renderEleves`, etc., puis, en dernier recours, `renderGenericModule(target, GENERIC_MODULES[key])`.\n\n## 4. Modules génériques\n\nUn module générique est un objet de `GENERIC_MODULES` :\n\n```js\nparents:{ label:'Parents d’élèves', codePrefix:'PAR',\n  fields:[ {key:'nom', label:'Nom', type:'text'}, … ],   // types : text, date, number, select (options), textarea, photo\n  columns:['nom','prenoms','lienParente','telephone','profession'],  // colonnes du tableau\n  extraFormHTML(record){ … }   // HTML ajouté sous le formulaire (ex. liste des enfants)\n}\n```\n\n- `codePrefix` : préfixe du code automatique (`__code`, ex. PAR001), généré par `nextCode`.\n- `genSave` enregistre ; `cycle` est ajouté automatiquement (filtrage par espace via `cycleModuleVisible`).\n- `extraFormHTML(record)` reçoit l'enregistrement en cours ; il est appelé en ajout (`record` vide) et en modification.\n\n### Checklist pour ajouter un module générique\n\n1. Déclarer le module dans `GENERIC_MODULES` (fields, columns, codePrefix).\n2. Ajouter l'entrée dans `NAV`, avec son icône et son compteur `badge`.\n3. Ajouter le titre dans `PAGE_META`.\n4. Ajouter la clé dans `CLES_SYNCHRONISEES` (sinon le module n'est ni sauvegardé ni synchronisé).\n5. Ajouter la clé dans `TOUS_LES_MODULES_ADMIN_CYCLE` et dans les listes de `ROLE_MODULES` qui doivent y accéder.\n6. Si le module doit se remplir à partir d'un autre, ajouter une entrée dans `MATRICULE_LINKS` ou une fonction dédiée.\n7. Vérifier les espaces où le module doit être masqué (`CYCLE_MODULES_EXCLUS`).\n\nExemple réalisé : le module « Parents d’élèves » (fiches parents) et la liaison avec les élèves (`PARENT_LIENS_ELEVE`, champs `codeParentPere`, `codeParentMere`, `codeParentTuteur` dans `ELEVE_FIELDS`, liste de suggestions `<datalist>` construite dans `fieldInput`).\n\n## 5. Formulaires\n\n- Les champs sont rendus par `fieldInput(f, val, excludeId)`. Il en existe une version par contexte (module générique, élèves, édition d'élève, personnel…).\n- Apparence : `style-formulaires` (champs blancs, focus vert, champs invalides en rouge). Les champs sont reconnus par `.field` et `[data-f]`.\n- Aide et astérisques : script `script-formulaires` en fin de fichier. Il utilise un `MutationObserver` et ajoute, pour chaque `.field` :\n  - un astérisque rouge si la clé figure dans `CRITICAL_KEYS` ;\n  - une aide grise si la clé figure dans le dictionnaire `AIDE` (à compléter pour les nouveaux champs).\n  Ce script ne modifie aucune donnée.\n\n## 6. Impression\n\nTous les documents passent par une seule fonction d'écriture :\n\n```\ndocument imprimable → tekouloDocumentImprimable(o)  ──┐\nautres fonctions d'impression (tekouloOuvrirFenetre)  ─┴→ tekouloEcrireDocument(fenetre, html)\n                                                          └→ tekouloAjouterPageDeGarde(html)  (page d'accueil)\n```\n\n- `tekouloOuvrirFenetre()` ouvre la fenêtre (pop-up) ; si elle est bloquée, un message le signale.\n- `tekouloAjouterPageDeGarde(html)` insère la page d'accueil après `<body>`. Elle reprend le `<title>`, l'établissement (`getParams()`), l'espace, l'année, le nombre de tableaux et de lignes, et un sommaire des `<h2>`/`<h3>` du contenu (après le repère `vue-contenu`).\n- Exclusion : les documents dont le titre commence par `Bulletin`, `Certificat`, `Attestation`, `Fiche`, `Reçu`, `Note de service`, `Acte`, `Badge` ou `Carte` ne reçoivent pas de page d'accueil. Pour modifier cette règle, changer la regex dans `tekouloAjouterPageDeGarde`.\n- `tekouloBarreActions` : barre de boutons (retour, tableau de bord, imprimer), masquée à l'impression (`.no-print`).\n- `tekouloScriptAutoPrint` : lance l'impression une fois les images chargées.\n\n## 7. Horloge et météo du tableau de bord\n\n- `htmlHorloge()` construit la carte (cadran SVG, heure, date, météo) ; les identifiants `horloge-heure`, `horloge-date`, `horloge-meteo` sont utilisés par `majHorloge()`, appelé chaque seconde par `demarrerHorloge()`.\n- Météo : `majMeteo()` interroge l'API Open-Meteo (sans clé) avec la position de l'appareil ou, à défaut, Guéckédou (`METEO_LIEU`). Un cache de 15 minutes limite les appels. En mode hors connexion, la météo n'est pas demandée.\n\n## 8. Assistant IA et serveur relais\n\nFichier : `worker-assistant-tekoulo.js` (Cloudflare Worker).\n\n- Route unique : `POST /api/assistant/chat`. Le navigateur envoie `Authorization: Bearer <jeton école>`.\n- Vérification du jeton (`ECOLE_TOKEN`) en temps constant. Sans jeton valide : réponse 401.\n- Fournisseur par défaut : `gemini`, modèle `gemini-3.8-flash` (constante `FOURNISSEURS`). Les autres fournisseurs (anthropic, openai, mistral, deepseek) sont prêts.\n- Secrets du Worker : `ECOLE_TOKEN` (obligatoire), `GEMINI_API_KEY`, et facultativement `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`. Ils se créent dans Settings › Variables and Secrets (type Secret).\n- Nouvel essai : jusqu'à 3 tentatives, espacées de 1,5 s puis 3 s, sur les erreurs 429 et 5xx (Gemini surchargé ou délai dépassé).\n- Pièces jointes : images (PNG, JPEG, WebP, GIF) et PDF pour Claude et Gemini ; 10 Mo maximum.\n- Côté application : `assistantAppelAPI(...)` envoie la demande au relais, sauf si une clé est enregistrée sur l'appareil : dans ce cas elle part directement vers le fournisseur (`requete`, bloc `script-ia-cles-appareil`). Les pièces jointes passent toujours par le relais. Les fournisseurs « web » (Perplexity, Copilot, Grok) restent gérés par copie de la demande (`assistantAppelFournisseur`).\n- Clés d'IA par appareil : stockées dans localStorage sous `DB_PREFIX + 'ia_cles_appareil'` (clé principale et clés de secours). Elles sont exclues de la sauvegarde et de la synchronisation Drive (`CLES_HORS_SAUVEGARDE`, `YEAR_EXEMPT_KEYS`). L'ancienne entrée `ia_cles` est supprimée au démarrage.\n- Jeton de l'assistant : stocké de façon durable dans localStorage (`DB_PREFIX + 'assistant_jeton'`), exclu des sauvegardes, relu en priorité au démarrage.\n- Fonctions de génération (cours, sujets, correction, analyse de répartition) : la disponibilité est vérifiée par `window.iaServiceDisponible()`, qui accepte une clé de l'appareil à la place du jeton école. La correction sans pièce jointe passe alors par la clé de l'appareil.\n\nMise à jour du modèle : changer la ligne `gemini: { … modele: … }` dans le Worker, puis `Deploy`. Dans `index.html`, le modèle n'apparaît qu'à titre informatif dans `IA_FOURNISSEURS`.\n\n## 9. Version Android\n\nDossier `android-tekoulo/` :\n\n- `app/src/main/AndroidManifest.xml` : permission `INTERNET`, `android:label=\"Albert Digital Guinée\"`, activité `.MainActivity`.\n- `app/src/main/java/com/tekoulo/centre/MainActivity.kt` : WebView (JavaScript, `localStorage`, accès aux fichiers), pont `AndroidBridge.enregistrerFichier(nom, base64)` pour les téléchargements (enregistrés dans Téléchargements via MediaStore), sélecteur de fichiers (`onShowFileChooser`), bouton Retour.\n- `app/build.gradle.kts` : `namespace` et `applicationId` = `com.tekoulo.centre`, `minSdk` 29 (requis par MediaStore), `versionCode` 2, `versionName` 1.1.\n- `app/src/main/assets/index.html` : copie de l'application à jour. **À recopier à chaque mise à jour de `index.html`**, sinon l'APK garde l'ancienne version.\n\nGénération de l'APK : Build › Generate App Bundles or APKs › Generate APKs (fichier `app/build/outputs/apk/debug/app-debug.apk`). Le build « release » non signé ne s'installe pas sur Android.\n\nLimites connues dans la WebView : connexion Google Drive et impression non garanties.\n\n## 10. Tests et vérifications\n\nTests Python (Playwright, Chromium dans `/opt/pw-browsers/chromium`) :\n\n| Fichier | Contenu | Résultat attendu |\n|---|---|---|\n| `tests/tests_tekoulo.py` | Parcours principaux | 49/49 |\n| `tests/test_sauvegarde.py` | Sauvegarde et restauration | 22/22 |\n| `tests/test_verrou_modules.py` | Verrous des modules et des rôles | 30/30 |\n\nVérification de syntaxe après chaque modification :\n\n1. Extraire chaque bloc `<script>` sans `src` et lancer `node --check` dessus.\n2. Le bloc 0 signale une erreur : c'est le faux positif connu (chaîne HTML de la première page), déjà présent dans la version d'origine.\n3. Les autres blocs doivent passer sans erreur.\n\nVérification fonctionnelle rapide : charger le fichier avec Playwright, appeler `renderView(key)` sur le module modifié et contrôler l'absence d'erreur (`pageerror`).\n\n## 11. Données, sauvegarde et sécurité\n\n- Les données vivent dans le navigateur de chaque appareil. La synchronisation Drive ne concerne que les collections de `CLES_SYNCHRONISEES`.\n- La sauvegarde complète (`⭳ Sauvegarder`) exporte toutes les collections, avec la date et le nom de l'école.\n- Mot de passe administrateur : haché ; à la première ouverture, la création est obligatoire sur chaque appareil.\n- Le module « Parents d’élèves » est réservé au personnel. Un accès des parents exigerait un serveur dédié (décision prise : non construit).\n- Points ouverts : P1-1, P1-4 et P2-1 de l'audit (reportés à la demande de l'école) ; bibliothèques hors ligne (P2-4) ; lenteur ponctuelle de l'assistant IA lors de la charge de Gemini.\n\n## 12. Procédure de livraison\n\n1. Modifier `index.html` ; vérifier la syntaxe (§10).\n2. Lancer les trois suites de tests ; elles doivent rester à 49/49, 22/22 et 30/30 (ou être mises à jour si une fonctionnalité a changé).\n3. Recopier `index.html` dans `android-tekoulo/app/src/main/assets/index.html`, puis générer l'APK.\n4. Publier `index.html` (GitHub Pages ou copie locale de l'école). Les données existantes ne sont pas touchées par une mise à jour du fichier, car elles restent dans le navigateur.\n5. Pour l'assistant : ne modifier le Worker que si le modèle ou le jeton change ; le redéployer et tester les huit contrôles de la fiche de test.\n";
+const GUIDE_TECHNIQUE_MD = "# Guide technique — Base de Données de Gestion, Collège Tekoulo Centre\n\nDestiné à la personne qui maintient l'application (modifications, nouveaux modules, serveur relais, version Android). Le guide d'utilisation destiné au personnel est intégré à l'application (chapitre « Guide d'utilisation », menu Système).\n\n## 1. Vue d'ensemble\n\n| Élément | Détail |\n|---|---|\n| Application web | Un seul fichier `index.html` (≈ 6,3 Mo), HTML + CSS + JavaScript, sans serveur ni base de données. |\n| Stockage | `localStorage` du navigateur, clés préfixées par `DB_PREFIX`. Fonctions `dbGet(collection)` et `dbSet(collection, valeur)`. |\n| Session | `sessionStorage` : rôle connecté (`tekoulo_role`), espace actif (`TEKOULO_CYCLE_ACTIF`). |\n| Synchronisation | Google Drive (Google Identity Services). Liste des données synchronisées : constante `CLES_SYNCHRONISEES`. |\n| Assistant IA | Passe par un serveur relais Cloudflare Worker (`worker-assistant-tekoulo.js`). Aucune clé d'IA dans l'application. |\n| Version Android | Projet Kotlin dans `android-tekoulo/` : une WebView qui charge `assets/index.html`. |\n| Audit | `rapport-audit-tekoulo.md` (points P0 à P3, état de chaque correction). |\n\nAucune clé d'API, aucun mot de passe administrateur en clair ne doit figurer dans le fichier. Le mot de passe administrateur est stocké sous forme de hachage (`tekouloVerifierMdp`).\n\n## 2. Structure du fichier `index.html`\n\nOrdre général, de haut en bas :\n\n1. `<style>` principaux (thèmes par cycle : Élémentaire orange, Primaire bleu, Collège vert, Lycée violet ; variables CSS sur `:root`).\n2. `<style id=\"style-horloge\">` : cadran analogique, heure, date, météo du tableau de bord.\n3. `<style id=\"style-formulaires\">` : présentation commune de tous les champs de formulaire.\n4. `<\/head>` puis le HTML de l'écran de connexion et de la coquille (menu `#nav`, zone `#content`).\n5. Scripts : constantes de référence, fonctions d'affichage, d'impression, d'assistant, puis le script de démarrage en bas de page.\n\nLe fichier contient aussi des chaînes HTML qui sont elles-mêmes des documents (`<html>…<\/html>` écrits dans une nouvelle fenêtre). Le script de vérification doit donc ignorer le premier bloc `<script>` (faux positif connu, déjà présent dans la version d'origine).\n\n## 3. Référentiels à connaître\n\n| Constante ou fonction | Rôle |\n|---|---|\n| `NAV` | Menu latéral : groupes et entrées (`key`, `label`, `icon`, `badge`). |\n| `PAGE_META` | Titre et fil d'Ariane de chaque page. |\n| `ROLE_MODULES` | Modules autorisés par rôle (`'*'` = tous). |\n| `TOUS_LES_MODULES_ADMIN_CYCLE` | Liste des modules administrés par cycle. |\n| `CYCLE_MODULES_EXCLUS` | Modules masqués par espace (Élémentaire, Primaire, Collège, Lycée). |\n| `moduleEnabled(key)` | Décision finale d'affichage : type d'établissement, rôle, espace. |\n| `CLES_SYNCHRONISEES` | Collections envoyées sur Google Drive et sauvegardées. |\n| `GENERIC_MODULES` | Modules construits à partir d'une liste de champs (voir §4). |\n| `MATRICULE_LINKS` | Remplissage automatique par matricule ou identifiant (liaisons entre modules). |\n| `PARENT_LIENS_ELEVE` | Remplissage des champs de l'élève à partir du code d'une fiche parent. |\n| `UNIQUE_KEY_FIELDS` | Champs dont la valeur doit être unique (identifiant élève, matricule…). |\n| `CRITICAL_KEYS` | Champs obligatoires : signalés par un astérisque et contrôlés à l'enregistrement. |\n| `ELEVE_FIELDS`, `champsEleves()` | Champs du formulaire élève (le module élèves est écrit à la main, pas en générique). |\n\nRoutage : `renderView(key)` appelle `renderDashboard`, `renderEleves`, etc., puis, en dernier recours, `renderGenericModule(target, GENERIC_MODULES[key])`.\n\n## 4. Modules génériques\n\nUn module générique est un objet de `GENERIC_MODULES` :\n\n```js\nparents:{ label:'Parents d’élèves', codePrefix:'PAR',\n  fields:[ {key:'nom', label:'Nom', type:'text'}, … ],   // types : text, date, number, select (options), textarea, photo\n  columns:['nom','prenoms','lienParente','telephone','profession'],  // colonnes du tableau\n  extraFormHTML(record){ … }   // HTML ajouté sous le formulaire (ex. liste des enfants)\n}\n```\n\n- `codePrefix` : préfixe du code automatique (`__code`, ex. PAR001), généré par `nextCode`.\n- `genSave` enregistre ; `cycle` est ajouté automatiquement (filtrage par espace via `cycleModuleVisible`).\n- `extraFormHTML(record)` reçoit l'enregistrement en cours ; il est appelé en ajout (`record` vide) et en modification.\n\n### Checklist pour ajouter un module générique\n\n1. Déclarer le module dans `GENERIC_MODULES` (fields, columns, codePrefix).\n2. Ajouter l'entrée dans `NAV`, avec son icône et son compteur `badge`.\n3. Ajouter le titre dans `PAGE_META`.\n4. Ajouter la clé dans `CLES_SYNCHRONISEES` (sinon le module n'est ni sauvegardé ni synchronisé).\n5. Ajouter la clé dans `TOUS_LES_MODULES_ADMIN_CYCLE` et dans les listes de `ROLE_MODULES` qui doivent y accéder.\n6. Si le module doit se remplir à partir d'un autre, ajouter une entrée dans `MATRICULE_LINKS` ou une fonction dédiée.\n7. Vérifier les espaces où le module doit être masqué (`CYCLE_MODULES_EXCLUS`).\n\nExemple réalisé : le module « Parents d’élèves » (fiches parents) et la liaison avec les élèves (`PARENT_LIENS_ELEVE`, champs `codeParentPere`, `codeParentMere`, `codeParentTuteur` dans `ELEVE_FIELDS`, liste de suggestions `<datalist>` construite dans `fieldInput`).\n\n## 5. Formulaires\n\n- Les champs sont rendus par `fieldInput(f, val, excludeId)`. Il en existe une version par contexte (module générique, élèves, édition d'élève, personnel…).\n- Apparence : `style-formulaires` (champs blancs, focus vert, champs invalides en rouge). Les champs sont reconnus par `.field` et `[data-f]`.\n- Aide et astérisques : script `script-formulaires` en fin de fichier. Il utilise un `MutationObserver` et ajoute, pour chaque `.field` :\n  - un astérisque rouge si la clé figure dans `CRITICAL_KEYS` ;\n  - une aide grise si la clé figure dans le dictionnaire `AIDE` (à compléter pour les nouveaux champs).\n  Ce script ne modifie aucune donnée.\n\n## 6. Impression\n\nTous les documents passent par une seule fonction d'écriture :\n\n```\ndocument imprimable → tekouloDocumentImprimable(o)  ──┐\nautres fonctions d'impression (tekouloOuvrirFenetre)  ─┴→ tekouloEcrireDocument(fenetre, html)\n                                                          └→ tekouloAjouterPageDeGarde(html)  (page d'accueil)\n```\n\n- `tekouloOuvrirFenetre()` ouvre la fenêtre (pop-up) ; si elle est bloquée, un message le signale.\n- `tekouloAjouterPageDeGarde(html)` insère la page d'accueil après `<body>`. Elle reprend le `<title>`, l'établissement (`getParams()`), l'espace, l'année, le nombre de tableaux et de lignes, et un sommaire des `<h2>`/`<h3>` du contenu (après le repère `vue-contenu`).\n- Exclusion : les documents dont le titre commence par `Bulletin`, `Certificat`, `Attestation`, `Fiche`, `Reçu`, `Note de service`, `Acte`, `Badge` ou `Carte` ne reçoivent pas de page d'accueil. Pour modifier cette règle, changer la regex dans `tekouloAjouterPageDeGarde`.\n- `tekouloBarreActions` : barre de boutons (retour, tableau de bord, imprimer), masquée à l'impression (`.no-print`).\n- `tekouloScriptAutoPrint` : lance l'impression une fois les images chargées.\n\n## 7. Horloge et météo du tableau de bord\n\n- `htmlHorloge()` construit la carte (cadran SVG, heure, date, météo) ; les identifiants `horloge-heure`, `horloge-date`, `horloge-meteo` sont utilisés par `majHorloge()`, appelé chaque seconde par `demarrerHorloge()`.\n- Météo : `majMeteo()` interroge l'API Open-Meteo (sans clé) avec la position de l'appareil ou, à défaut, Guéckédou (`METEO_LIEU`). Un cache de 15 minutes limite les appels. En mode hors connexion, la météo n'est pas demandée.\n\n## 8. Assistant IA et serveur relais\n\nFichier : `worker-assistant-tekoulo.js` (Cloudflare Worker).\n\n- Route unique : `POST /api/assistant/chat`. Le navigateur envoie `Authorization: Bearer <jeton école>`.\n- Vérification du jeton (`ECOLE_TOKEN`) en temps constant. Sans jeton valide : réponse 401.\n- Fournisseur par défaut : `gemini`, modèle `gemini-3.8-flash` (constante `FOURNISSEURS`). Les autres fournisseurs (anthropic, openai, mistral, deepseek) sont prêts.\n- Secrets du Worker : `ECOLE_TOKEN` (obligatoire), `GEMINI_API_KEY`, et facultativement `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`. Ils se créent dans Settings › Variables and Secrets (type Secret).\n- Nouvel essai : jusqu'à 3 tentatives, espacées de 1,5 s puis 3 s, sur les erreurs 429 et 5xx (Gemini surchargé ou délai dépassé).\n- Pièces jointes : images (PNG, JPEG, WebP, GIF) et PDF pour Claude et Gemini ; 10 Mo maximum.\n- Côté application : `assistantAppelAPI(...)` envoie la demande au relais Tekoulo. Aucune clé ni jeton n'est enregistré dans l'application : la configuration IA a été supprimée. Les fonctions de génération vérifient la configuration avec `TEKOULO_API_URL` et `TEKOULO_TOKEN`.\n\nMise à jour du modèle : changer la ligne `gemini: { … modele: … }` dans le Worker, puis `Deploy`. Dans `index.html`, le modèle n'apparaît qu'à titre informatif dans `IA_FOURNISSEURS`.\n\n## 9. Version Android\n\nDossier `android-tekoulo/` :\n\n- `app/src/main/AndroidManifest.xml` : permission `INTERNET`, `android:label=\"Albert Digital Guinée\"`, activité `.MainActivity`.\n- `app/src/main/java/com/tekoulo/centre/MainActivity.kt` : WebView (JavaScript, `localStorage`, accès aux fichiers), pont `AndroidBridge.enregistrerFichier(nom, base64)` pour les téléchargements (enregistrés dans Téléchargements via MediaStore), sélecteur de fichiers (`onShowFileChooser`), bouton Retour.\n- `app/build.gradle.kts` : `namespace` et `applicationId` = `com.tekoulo.centre`, `minSdk` 29 (requis par MediaStore), `versionCode` 2, `versionName` 1.1.\n- `app/src/main/assets/index.html` : copie de l'application à jour. **À recopier à chaque mise à jour de `index.html`**, sinon l'APK garde l'ancienne version.\n\nGénération de l'APK : Build › Generate App Bundles or APKs › Generate APKs (fichier `app/build/outputs/apk/debug/app-debug.apk`). Le build « release » non signé ne s'installe pas sur Android.\n\nLimites connues dans la WebView : connexion Google Drive et impression non garanties.\n\n## 10. Tests et vérifications\n\nTests Python (Playwright, Chromium dans `/opt/pw-browsers/chromium`) :\n\n| Fichier | Contenu | Résultat attendu |\n|---|---|---|\n| `tests/tests_tekoulo.py` | Parcours principaux | 49/49 |\n| `tests/test_sauvegarde.py` | Sauvegarde et restauration | 22/22 |\n| `tests/test_verrou_modules.py` | Verrous des modules et des rôles | 30/30 |\n\nVérification de syntaxe après chaque modification :\n\n1. Extraire chaque bloc `<script>` sans `src` et lancer `node --check` dessus.\n2. Le bloc 0 signale une erreur : c'est le faux positif connu (chaîne HTML de la première page), déjà présent dans la version d'origine.\n3. Les autres blocs doivent passer sans erreur.\n\nVérification fonctionnelle rapide : charger le fichier avec Playwright, appeler `renderView(key)` sur le module modifié et contrôler l'absence d'erreur (`pageerror`).\n\n## 11. Données, sauvegarde et sécurité\n\n- Les données vivent dans le navigateur de chaque appareil. La synchronisation Drive ne concerne que les collections de `CLES_SYNCHRONISEES`.\n- La sauvegarde complète (`⭳ Sauvegarder`) exporte toutes les collections, avec la date et le nom de l'école.\n- Mot de passe administrateur : haché ; à la première ouverture, la création est obligatoire sur chaque appareil.\n- Le module « Parents d’élèves » est réservé au personnel. Un accès des parents exigerait un serveur dédié (décision prise : non construit).\n- Points ouverts : P1-1, P1-4 et P2-1 de l'audit (reportés à la demande de l'école) ; bibliothèques hors ligne (P2-4) ; lenteur ponctuelle de l'assistant IA lors de la charge de Gemini.\n\n## 12. Procédure de livraison\n\n1. Modifier `index.html` ; vérifier la syntaxe (§10).\n2. Lancer les trois suites de tests ; elles doivent rester à 49/49, 22/22 et 30/30 (ou être mises à jour si une fonctionnalité a changé).\n3. Recopier `index.html` dans `android-tekoulo/app/src/main/assets/index.html`, puis générer l'APK.\n4. Publier `index.html` (GitHub Pages ou copie locale de l'école). Les données existantes ne sont pas touchées par une mise à jour du fichier, car elles restent dans le navigateur.\n5. Pour l'assistant : ne modifier le Worker que si le modèle ou le jeton change ; le redéployer et tester les huit contrôles de la fiche de test.\n";
 function gtInline(t){
   return esc(t).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
 }
@@ -19317,7 +19310,7 @@ function sujetsStatut(texte, estErreur){
 async function sujetsGenererTousParMatiere(){
   if(sujetsGenerationEnCours) return;
   if(!coursRepartitionDetectee.length){ toast("Importez et analysez une répartition, ou choisissez-en une enregistrée.", true); return; }
-  if(!window.iaServiceDisponible()){ toast("L'assistant IA est indisponible pour le moment (voir Guide, chapitre 10 ter).", true); return; }
+  if(!(TEKOULO_API_URL && TEKOULO_TOKEN)){ toast("L'assistant IA est indisponible pour le moment (voir Guide, chapitre 10 ter).", true); return; }
   const groupes = sujetsGroupesDepuisRepartition();
   if(!confirm("Générer un sujet d'évaluation avec barème et corrigé pour chacune des " + groupes.length + " matière(s) détectée(s) ?\nCela peut prendre plusieurs minutes.")) return;
   sujetsGenerationEnCours = true;
@@ -20588,7 +20581,7 @@ async function assistantAppelAPI(message, pieceJointe, mode, sansHistorique, fou
   // Le serveur Tekoulo n'est requis que si l'IA choisie est l'assistant Tekoulo : une IA directe avec clé peut répondre sans lui
   const _fournisseurPrevu = fournisseurForce || assistantFournisseurChoisi();
   const _directe = !!IA_FOURNISSEURS[_fournisseurPrevu] && IA_FOURNISSEURS[_fournisseurPrevu].mode === 'web';
-  const _disponible = pieceJointe ? (!!TEKOULO_API_URL && !!TEKOULO_TOKEN) : window.iaServiceDisponible();
+  const _disponible = !!TEKOULO_API_URL && !!TEKOULO_TOKEN;
   if(!_disponible && !_directe){
     return {ok:false, error:"L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter)."};
   }
@@ -22068,12 +22061,7 @@ ${texte}
 """`;
 }
 async function corrAppeler(prompt, piece){
-  if(!piece && window.iaCleActive && window.iaCleActive(window.iaChoixEffectif())){
-    const r = await assistantAppelAPI(prompt);
-    if(!r || !r.ok) throw new Error((r && r.error) || 'Erreur IA.');
-    return r.reponse || '';
-  }
-  if(!(piece ? (TEKOULO_API_URL && TEKOULO_TOKEN) : window.iaServiceDisponible())) throw new Error("L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter).");
+  if(!(TEKOULO_API_URL && TEKOULO_TOKEN)) throw new Error("L'assistant IA est actuellement désactivé (voir Guide, chapitre 10 ter).");
   let res;
   try{
     res = await fetch(TEKOULO_API_URL + '/api/assistant/chat', {
@@ -22679,369 +22667,93 @@ function corrTelecharger(){
   };
 })();
 </script>
-<script id="script-parametres-ia">
-/* Paramètres › Intelligence artificielle : choix du fournisseur, test de la connexion et état
-   par appareil (Android, tablette, ordinateur). Chaque appareil peut enregistrer ses propres clés ;
-   sans clé, les demandes passent par le serveur relais Tekoulo (voir le guide technique). */
+<script id="script-ia-configuration">
 (function(){
-  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const CSS = '<style id="style-param-ia">'
-    + '.pia-grille{display:grid;grid-template-columns:1fr 1fr;gap:12px}'
-    + '.pia-appareils{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px}'
-    + '.pia-appareils>div{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--paper)}'
-    + '.pia-statut{margin-top:10px;padding:10px 12px;border-radius:9px;background:var(--line-soft);font-size:12.5px;min-height:20px}'
-    + '@media (max-width:820px){.pia-grille{grid-template-columns:1fr}.pia-appareils{grid-template-columns:1fr}}'
-    + '</style>';
+  const CARTE_ID = 'ia-config-carte';
+  const estFondateur = () => { try{ return sessionStorage.getItem('tekoulo_role') === 'fondateur'; }catch(e){ return false; } };
+  const statut = t => { const z = document.getElementById('ia-config-statut'); if(z) z.textContent = t; };
+  const sauver = o => { try{ localStorage.setItem(DB_PREFIX + 'ia_config', JSON.stringify(o)); }catch(e){} IA_CONFIG = o; };
 
-  function carte(){
-    const choix = (()=>{ try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } })();
-    const options = Object.keys(IA_FOURNISSEURS).map(k =>
-      `<option value="${k}" ${k===choix?'selected':''}>${e(IA_FOURNISSEURS[k].nom)}</option>`).join('');
-    const cfg = IA_FOURNISSEURS[choix] || IA_FOURNISSEURS.tekoulo;
-    return CSS + `
-    <div id="param-ia-carte" class="card pia-carte">
-      <h3 style="margin:0 0 4px;color:var(--green-deep)">🤖 Intelligence artificielle</h3>
-      <p class="muted" style="margin:0 0 12px;font-size:12px">Choisissez l’IA utilisée par l’assistant et par les fonctions « Importer via IA » et « Génération IA ». Les clés enregistrées sur cet appareil sont utilisées en priorité ; sans clé, les réponses passent par le serveur sécurisé de Tekoulo.</p>
-      <div class="pia-grille">
-        <div class="field"><label>Fournisseur par défaut</label>
-          <select id="param-ia-choix" onchange="paramIaChoisir(this.value)">${options}</select></div>
-        <div class="field"><label>Tester la connexion</label>
-          <button class="btn" type="button" onclick="paramIaTester()">🔌 Tester l’IA choisie</button></div>
-      </div>
-      <div id="param-ia-statut" class="pia-statut">${e(cfg.mode==='web' ? cfg.nom+" n’est pas branché : la demande est copiée, puis collée sur "+cfg.site+'.' : 'IA prête : '+cfg.nom+' (modèle : '+(cfg.modele||'serveur Tekoulo')+').')}</div>
-      <h4 style="margin:16px 0 8px;color:var(--green-deep)">Utilisation selon l’appareil</h4>
-      <div class="pia-appareils">
-        <div><b>📱 Android</b><br>Ouvrir l’application dans le navigateur ou l’APK. Les pièces jointes passent par le sélecteur de fichiers ; la photo prise directement est acceptée.</div>
-        <div><b>📲 Tablette</b><br>Même affichage que le téléphone, mais avec deux colonnes. Idéal pour lire les bulletins avant de les imprimer.</div>
-        <div><b>💻 Ordinateur</b><br>Affichage complet. L’impression se fait depuis la fenêtre dédiée ; autorisez les fenêtres pop-up pour ce site.</div>
-      </div>
-    </div>`;
-  }
-
-  window.paramIaChoisir = function(f){
-    try{ localStorage.setItem(DB_PREFIX+'ia_choix', f); }catch(x){}
-    const s = document.getElementById('assistant-ia'); if(s && IA_FOURNISSEURS[f]) s.value = f;
-    if(typeof iaMettreAJourStatut === 'function') iaMettreAJourStatut();
-    const z = document.getElementById('param-ia-statut'); const cfg = IA_FOURNISSEURS[f];
-    if(z && cfg) z.textContent = cfg.mode==='web' ? cfg.nom+" n’est pas branché : la demande est copiée, puis collée sur "+cfg.site+'.' : 'IA prête : '+cfg.nom+' (modèle : '+(cfg.modele||'serveur Tekoulo')+').';
-  };
-
-  window.paramIaTester = async function(){
-    const f = document.getElementById('param-ia-choix').value;
-    const cfg = IA_FOURNISSEURS[f];
-    const z = document.getElementById('param-ia-statut');
-    if(cfg.mode === 'web'){ z.textContent = cfg.nom+" ne peut pas être testé ici : ouvrez "+cfg.site+' pour l’utiliser.'; return; }
-    z.textContent = '⏳ Test en cours… (la première réponse peut prendre quelques secondes)';
-    try{
-      const r = await assistantAppelAPI('Réponds uniquement par le mot : OK', undefined, undefined, true, f);
-      z.textContent = (r && r.ok) ? '✅ Connexion réussie avec '+cfg.nom+'.' : '⚠ '+((r && (r.error||r.reponse)) || 'Pas de réponse. Vérifiez la connexion internet.');
-    }catch(err){ z.textContent = '⚠ Échec du test : '+(err && err.message ? err.message : 'erreur inconnue')+'.'; }
-  };
-
-  const _renderView = window.renderView;
-  window.renderView = function(key){
-    _renderView(key);
-    if(key !== 'parametres') return;
-    const v = document.getElementById('view-parametres');
-    if(!v || document.getElementById('param-ia-carte')) return;
-    /* Insertion gérée par poserCarte() (second bloc) */
-  };
-})();
-</script>
-<script id="script-ia-cles-appareil">
-/* Clés d'IA propres à cet appareil, saisies par l'utilisateur. Elles sont stockées uniquement dans le
-   localStorage de ce navigateur, sous une clé distincte de « ia_cles » (effacée au démarrage) ; elles
-   ne font partie d'aucune collection synchronisée sur Drive. Pour les fournisseurs directs, les demandes
-   partent du navigateur vers le fournisseur choisi. Pour les autres, le serveur relais reste utilisé. */
-(function(){
-  const CLE_STOCK = DB_PREFIX + 'ia_cles_appareil';
-  /* Hors sauvegarde, hors migration annuelle : la clé ne quitte jamais l'appareil. */
-  try{ if(!CLES_HORS_SAUVEGARDE.includes('ia_cles_appareil')) CLES_HORS_SAUVEGARDE.push('ia_cles_appareil'); }catch(x){}
-  try{ if(!YEAR_EXEMPT_KEYS.includes('ia_cles_appareil')) YEAR_EXEMPT_KEYS.push('ia_cles_appareil'); }catch(x){}
-  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const DIRECT = ['anthropic','openai','gemini','mistral','deepseek'];
-  const CSS = '<style id="style-param-ia">'
-    + '.pia-grille{display:grid;grid-template-columns:1fr 1fr;gap:12px}'
-    + '.pia-appareils{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px}'
-    + '.pia-appareils>div{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--paper)}'
-    + '.pia-statut{margin-top:10px;padding:10px 12px;border-radius:9px;background:var(--line-soft);font-size:12.5px;min-height:20px}'
-    + '@media (max-width:820px){.pia-grille{grid-template-columns:1fr}.pia-appareils{grid-template-columns:1fr}}'
-    + '/* Paramètres compacts : cartes couleur et IA */'
-    + '.cp-carte{padding:10px 12px !important;}'
-    + '.cp-carte h3{font-size:15px;margin:0 0 2px;}'
-    + '.cp-aide{font-size:11.5px;margin:0 0 4px;}'
-    + '.cp-ligne{padding:4px 0 !important;gap:4px !important;}'
-    + '.cp-titre{font-size:12px;}'
-    + '.cp-ronds{gap:4px !important;}'
-    + '.cp-rond{width:22px !important;height:22px !important;min-height:22px !important;max-height:22px !important;border-width:1.5px !important;}'
-    + '.cp-actions{margin-top:6px !important;}'
-    + '.pia-carte{padding:10px 12px !important;margin:0 0 8px !important;}'
-    + '.pia-carte h3{font-size:15px;margin:0 0 2px !important;}'
-    + '.pia-carte p.muted{margin:0 0 6px !important;font-size:11px !important;}'
-    + '.pia-grille{gap:6px !important;}'
-    + '.pia-statut{margin-top:6px !important;padding:6px 8px !important;font-size:11.5px !important;}'
-    + '.pia-appareils{gap:6px !important;font-size:11px !important;}'
-    + '.pia-appareils>div{padding:5px 7px !important;}'
-    + '.pia-appareils>div b{margin-right:4px;}'
-    + '</style>';
-
-  function lire(){ try{ return JSON.parse(localStorage.getItem(CLE_STOCK) || '{}') || {}; }catch(x){ return {}; } }
-  function ecrire(o){ try{ localStorage.setItem(CLE_STOCK, JSON.stringify(o)); }catch(x){} }
-  function cleInfo(f){ const o = lire()[f] || {}; return {principale: o.principale || '', supp: Array.isArray(o.supp) ? o.supp : []}; }
-  function masque(k){ return k ? '•••• ' + String(k).slice(-4) : ''; }
-  function choixCourant(){ try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } }
-
-  window.iaCleActive = f => { const i = cleInfo(f); return DIRECT.includes(f) && !!(i.principale || i.supp.length); };
-  window.iaChoixEffectif = () => { if(document.getElementById('assistant-ia')) return assistantFournisseurChoisi(); try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } };
-  window.iaServiceDisponible = () => !!TEKOULO_API_URL && (!!TEKOULO_TOKEN || window.iaCleActive(window.iaChoixEffectif()));
-
-  async function requete(f, cfg, cle, message){
-    let url, headers = {'Content-Type':'application/json'}, body, extraire;
-    if(f === 'anthropic'){
-      url = 'https://api.anthropic.com/v1/messages';
-      headers['x-api-key'] = cle; headers['anthropic-version'] = '2023-06-01';
-      headers['anthropic-dangerous-direct-browser-access'] = 'true';
-      body = {model: cfg.modele, max_tokens: 4096, messages: [{role:'user', content: message}]};
-      extraire = d => (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-    } else if(f === 'gemini'){
-      url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(cfg.modele) + ':generateContent?key=' + encodeURIComponent(cle);
-      body = {contents: [{parts: [{text: message}]}]};
-      extraire = d => (d.candidates && d.candidates[0] && d.candidates[0].content) ? d.candidates[0].content.parts.map(p => p.text || '').join('') : '';
-    } else {
-      const urls = {openai:'https://api.openai.com/v1/chat/completions', mistral:'https://api.mistral.ai/v1/chat/completions', deepseek:'https://api.deepseek.com/chat/completions'};
-      url = urls[f]; headers['Authorization'] = 'Bearer ' + cle;
-      body = {model: cfg.modele, messages: [{role:'user', content: message}]};
-      extraire = d => (d.choices && d.choices[0] && d.choices[0].message) ? d.choices[0].message.content : '';
-    }
-    const rep = await fetch(url, {method:'POST', headers, body: JSON.stringify(body)});
-    let d = {}; try{ d = await rep.json(); }catch(x){}
-    if(!rep.ok){
-      const msg = (d.error && (d.error.message || d.error)) || ('erreur HTTP ' + rep.status);
-      const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg)); err.status = rep.status; throw err;
-    }
-    return (extraire(d) || '').trim();
-  }
-
-  async function appelDirect(f, message){
-    const cfg = IA_FOURNISSEURS[f];
-    const info = cleInfo(f);
-    const cles = [info.principale].concat(info.supp).map(k => String(k || '').trim()).filter(Boolean);
-    if(!cles.length) throw new Error('aucune clé enregistrée pour cette IA');
-    let derniere = null;
-    for(const cle of cles){
-      let derniereCle = null;
-      /* Réessai (3 essais) si le fournisseur est surchargé (500, 502, 503, 504), comme le serveur relais */
-      for(let essai = 1; essai <= 3; essai++){
-        try{ return await requete(f, cfg, cle, message); }
-        catch(err){
-          derniere = err; derniereCle = err;
-          if([500, 502, 503, 504].includes(err.status) && essai < 3){ await new Promise(r => setTimeout(r, essai * 1500)); continue; }
-          break;
-        }
-      }
-      if(!derniereCle || ![401, 403, 429].includes(derniereCle.status)) break;
-    }
-    throw derniere;
-  }
-
-  // Les demandes de l'assistant partent directement vers le fournisseur quand une clé est enregistrée ici.
-  // Les pièces jointes restent gérées par le serveur relais.
-  const _appel = window.assistantAppelAPI;
-  window.assistantAppelAPI = async function(message, pieceJointe, mode, sansHistorique, fournisseurForce){
-    const f = fournisseurForce || window.iaChoixEffectif();
-    if(window.iaCleActive(f) && !pieceJointe){
-      try{ return {ok: true, reponse: await appelDirect(f, message)}; }
-      catch(err){
-        /* « Failed to fetch » : la requête n'a pas atteint le fournisseur (réseau, VPN, DNS, filtre) */
-        if(err instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(err.message || ''))
-          return {ok: false, error: 'Impossible de joindre ' + IA_FOURNISSEURS[f].nom + '. Vérifiez la connexion internet de la tablette, et désactivez le VPN ou le DNS privé si besoin.'};
-        if([500, 502, 503, 504].includes(err.status)) return {ok: false, error: IA_FOURNISSEURS[f].nom + ' est surchargé en ce moment (' + err.message + '). Réessayez dans quelques minutes, ou choisissez un autre fournisseur.'};
-        return {ok: false, error: 'Échec avec ' + IA_FOURNISSEURS[f].nom + ' : ' + err.message + '. Vérifiez la clé ou le quota.'};
-      }
-    }
-    return _appel.apply(this, arguments);
-  };
-
-  function statut(t){ const z = document.getElementById('param-ia-statut'); if(z) z.textContent = t; }
-  function texteStatutChoix(f){
-    const cfg = IA_FOURNISSEURS[f]; const i = cleInfo(f);
-    if(cfg.mode === 'web') return cfg.nom + " n’est pas branché : la demande est copiée, puis collée sur " + cfg.site + '.';
-    if(window.iaCleActive(f)) return '🔑 Clé de cet appareil active pour ' + cfg.nom + ' (' + masque(i.principale || i.supp[0]) + ').';
-    return '✅ ' + cfg.nom + ' répondra via le serveur sécurisé de Tekoulo (modèle : ' + (cfg.modele || 'serveur') + ').';
-  }
-
-  function carte(){
-    const choix = choixCourant();
-    const cfg = IA_FOURNISSEURS[choix] || IA_FOURNISSEURS.tekoulo;
-    const info = cleInfo(choix);
-    const options = Object.keys(IA_FOURNISSEURS).map(k => `<option value="${k}" ${k===choix?'selected':''}>${e(IA_FOURNISSEURS[k].nom)}</option>`).join('');
-    const blocCle = DIRECT.includes(choix) ? `
-      <div class="pia-grille" style="margin-top:12px">
-        <div class="field" style="grid-column:1/-1"><label>Clé API de ${e(cfg.nom)} — cet appareil uniquement</label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="param-ia-cle" type="password" autocomplete="new-password" spellcheck="false" placeholder="${info.principale ? 'Clé enregistrée : ' + masque(info.principale) + ' (saisir pour remplacer)' : 'Collez votre clé ici'}" style="flex:1">
-            <button class="btn ghost sm" type="button" onclick="paramIaAfficher()">Afficher</button>
-          </div>
-          <small class="muted">Obtenir une clé : <a href="${e(cfg.lienCle)}" target="_blank" rel="noopener">${e(cfg.lienCle)}</a></small>
-        </div>
-        <div class="field" style="grid-column:1/-1"><label>Clés supplémentaires (facultatif, une par ligne)</label>
-          <textarea id="param-ia-supp" rows="2" autocomplete="off" spellcheck="false" placeholder="Une clé par ligne, de préférence d’un autre compte : utilisée si la première atteint son quota. Laisser vide pour garder les actuelles.${info.supp.length ? ' (' + info.supp.length + ' enregistrée(s))' : ''}"></textarea>
-        </div>
-        <div style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" type="button" onclick="paramIaEnregistrerCle()">💾 Enregistrer sur cet appareil</button>
-          <button class="btn ghost" type="button" onclick="paramIaEffacerCle()">Effacer les clés de cette IA</button>
-        </div>
-      </div>
-      <p class="muted" style="font-size:11.5px;margin:8px 0 0">⚠ La clé reste dans le navigateur de cet appareil. Ne l’enregistrez pas sur un ordinateur partagé, et ne la communiquez à personne. Elle n’est ni sauvegardée ni synchronisée avec Drive.</p>` : '';
-    return CSS + `
-    <div id="param-ia-carte" class="card pia-carte">
-      <h3 style="margin:0 0 4px;color:var(--green-deep)">🤖 Intelligence artificielle</h3>
-      <p class="muted" style="margin:0 0 12px;font-size:12px">Choisissez l’IA utilisée par l’assistant et par les fonctions « Importer via IA » et « Génération IA ».</p>
-      <div class="pia-grille">
-        <div class="field"><label>Fournisseur par défaut</label>
-          <select id="param-ia-choix" onchange="paramIaChoisir(this.value)">${options}</select></div>
-        <div class="field"><label>Tester la connexion</label>
-          <button class="btn" type="button" onclick="paramIaTester()">🔌 Tester l’IA choisie</button></div>
-      </div>
-      ${blocCle}
-      ${(sessionStorage.getItem('tekoulo_role') === 'fondateur') ? `
-      <div class="pia-jeton" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)">
-        <label style="font-weight:600;font-size:13px">Jeton de l’assistant Tekoulo (fondateur)</label>
-        <p class="muted" style="margin:4px 0 8px;font-size:11.5px">Jeton accepté par le serveur Tekoulo (ECOLE_TOKEN). Il ne s’affiche jamais en clair et n’est pas inclus dans la sauvegarde.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input id="jeton-saisie" type="password" autocomplete="new-password" spellcheck="false" placeholder="${TEKOULO_TOKEN ? 'Jeton enregistré (saisir pour remplacer)' : 'Collez le jeton ici'}" style="flex:1;min-width:180px">
-          <button class="btn sm" type="button" onclick="jetonEnregistrer()">💾 Enregistrer le jeton</button>
-          <button class="btn ghost sm" type="button" onclick="jetonTester()">🔌 Tester le jeton</button>
-          <button class="btn ghost sm" type="button" onclick="jetonEffacer()">Supprimer le jeton</button>
-        </div>
-        <div id="jeton-statut" class="pia-statut" style="margin-top:8px">${TEKOULO_TOKEN ? '✅ Un jeton est enregistré sur cet appareil.' : '⚠ Aucun jeton enregistré : l’assistant sans clé est désactivé.'}</div>
-      </div>` : ''}
-      <div id="param-ia-statut" class="pia-statut">${e(texteStatutChoix(choix))}</div>
-      <h4 style="margin:16px 0 8px;color:var(--green-deep)">Utilisation selon l’appareil</h4>
-      <div class="pia-appareils">
-        <div><b>📱 Android</b><br>Dans le navigateur ou l’APK. Les pièces jointes passent par le sélecteur de fichiers ; la photo prise directement est acceptée.</div>
-        <div><b>📲 Tablette</b><br>Même affichage que le téléphone, sur deux colonnes. Pratique pour relire les bulletins avant impression.</div>
-        <div><b>💻 Ordinateur</b><br>Affichage complet. Autorisez les fenêtres pop-up pour ce site afin d’imprimer.</div>
-      </div>
-    </div>`;
+  function carteHTML(){
+    const options = ['tekoulo'].concat(Object.keys(IA_FOURNISSEURS).filter(k => k !== 'tekoulo' && IA_FOURNISSEURS[k].mode !== 'web'))
+      .map(k => '<option value="' + k + '"' + (k === (IA_CONFIG.fournisseur || 'tekoulo') ? ' selected' : '') + '>' +
+        (k === 'tekoulo' ? 'Assistant Tekoulo (serveur)' : IA_FOURNISSEURS[k].nom) + '</option>').join('');
+    return '<div id="' + CARTE_ID + '" class="card" style="padding:12px 14px;margin:0 0 12px">' +
+      '<h3 style="margin:0 0 6px">🤖 Assistant IA — configuration (fondateur)</h3>' +
+      '<p class="muted" style="margin:0 0 8px;font-size:12px">Adresse du serveur Tekoulo, jeton de l\'école et fournisseur par défaut. Ces réglages restent sur cet appareil et ne sont pas inclus dans la sauvegarde.</p>' +
+      '<label style="font-size:12.5px;font-weight:600">Adresse du serveur</label>' +
+      '<input id="ia-url" type="url" spellcheck="false" placeholder="https://…workers.dev" value="' + (IA_CONFIG.url || '').replace(/"/g,'&quot;') + '" style="width:100%;margin:2px 0 8px">' +
+      '<label style="font-size:12.5px;font-weight:600">Jeton de l\'école</label>' +
+      '<input id="ia-jeton" type="password" autocomplete="new-password" spellcheck="false" placeholder="' + (IA_CONFIG.jeton ? 'Jeton enregistré (saisir pour remplacer)' : 'Collez le jeton ici') + '" style="width:100%;margin:2px 0 8px">' +
+      '<label style="font-size:12.5px;font-weight:600">Fournisseur par défaut</label>' +
+      '<select id="ia-fournisseur" style="width:100%;margin:2px 0 10px">' + options + '</select>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn sm" type="button" onclick="iaConfigEnregistrer()">💾 Enregistrer</button>' +
+        '<button class="btn ghost sm" type="button" onclick="iaConfigTester()">🔌 Tester</button>' +
+        '<button class="btn ghost sm" type="button" onclick="iaConfigEffacer()">Effacer la configuration</button>' +
+      '</div>' +
+      '<div id="ia-config-statut" style="margin-top:8px;font-size:12px">' + (TEKOULO_API_URL && TEKOULO_TOKEN ? '✅ Assistant configuré sur cet appareil.' : '⚠ Assistant non configuré : adresse et jeton requis.') + '</div>' +
+    '</div>';
   }
 
   function poserCarte(){
-    const v = document.getElementById('view-parametres'); if(!v) return;
-    v.querySelectorAll('#param-ia-carte, #style-param-ia').forEach(n => n.remove());
-    const div = document.createElement('div'); div.innerHTML = carte();
-    Array.from(div.childNodes).filter(n => n.nodeType === 1).reverse().forEach(n => v.insertBefore(n, v.firstChild));
+    document.querySelectorAll('#' + CARTE_ID).forEach(n => n.remove());
+    const v = document.getElementById('view-parametres');
+    if(!v || !estFondateur()) return;
+    const div = document.createElement('div'); div.innerHTML = carteHTML();
+    v.insertBefore(div.firstElementChild, v.firstChild);
   }
-  // Les actions qui réaffichent la page Paramètres (dossier Drive, nombre de GP…) appellent renderParametres()
-  // sans passer par renderView : la carte est reposée à chaque affichage.
-  const _rendreParametres = window.renderParametres;
-  window.renderParametres = function(container){
-    const r = _rendreParametres.apply(this, arguments);
+
+  window.iaConfigEnregistrer = function(){
+    if(!estFondateur()){ statut('Action réservée au compte fondateur.'); return; }
+    const url = (document.getElementById('ia-url').value || '').trim().replace(/\/+$/,'');
+    const saisi = (document.getElementById('ia-jeton').value || '').trim();
+    const fournisseur = document.getElementById('ia-fournisseur').value;
+    if(!/^https:\/\//.test(url)){ statut('⚠ L\'adresse du serveur doit commencer par https://'); return; }
+    const jeton = saisi || IA_CONFIG.jeton || '';
+    if(!jeton){ statut('⚠ Saisissez le jeton de l\'école.'); return; }
+    sauver({url: url, jeton: jeton, fournisseur: fournisseur});
+    TEKOULO_API_URL = url; TEKOULO_TOKEN = jeton;
+    const sel = document.getElementById('assistant-ia'); if(sel) sel.value = fournisseur;
     poserCarte();
-    return r;
+    statut('✅ Configuration enregistrée sur cet appareil. Cliquez sur « Tester ».');
   };
 
-  window.paramIaChoisir = function(f){
-    try{ localStorage.setItem(DB_PREFIX+'ia_choix', f); }catch(x){}
-    const s = document.getElementById('assistant-ia'); if(s && IA_FOURNISSEURS[f]) s.value = f;
-    if(typeof iaMettreAJourStatut === 'function') iaMettreAJourStatut();
-    poserCarte();
-  };
-
-  window.paramIaAfficher = function(){
-    const c = document.getElementById('param-ia-cle'); if(!c) return;
-    /* Si le champ est vide, il affiche la clé enregistrée sur cet appareil */
-    if(!c.value){
-      const f = document.getElementById('param-ia-choix').value;
-      const enreg = cleInfo(f).principale;
-      if(enreg){ c.value = enreg; c.dataset.recopiee = '1'; }
-    }
-    c.type = c.type === 'password' ? 'text' : 'password';
-    const b = c.parentElement && c.parentElement.querySelector('button'); if(b) b.textContent = c.type === 'password' ? 'Afficher' : 'Masquer';
-  };
-
-  window.paramIaEnregistrerCle = function(){
-    const f = document.getElementById('param-ia-choix').value;
-    const princ = (document.getElementById('param-ia-cle').value || '').trim();
-    const supp = (document.getElementById('param-ia-supp').value || '').split('\n').map(s => s.trim()).filter(Boolean);
-    const o = lire(); const ancien = o[f] || {};
-    /* Les clés de secours saisies s'ajoutent à celles déjà enregistrées (sans doublon) */
-    const suppFusion = Array.from(new Set([...(ancien.supp || []), ...supp]));
-    const nouvelle = {principale: princ || ancien.principale || '', supp: suppFusion};
-    if(!nouvelle.principale && !nouvelle.supp.length){ statut('Saisissez au moins une clé avant d’enregistrer.'); return; }
-    o[f] = nouvelle; ecrire(o);
-    poserCarte();
-    statut('✅ Clés enregistrées sur cet appareil : clé principale' + (nouvelle.principale ? ' (' + masque(nouvelle.principale) + ')' : ' absente') + ', ' + nouvelle.supp.length + ' clé(s) de secours. Testez-la avec le bouton ci-dessus.');
-  };
-
-
-  /* ---- Jeton de l'assistant Tekoulo : saisie, test et suppression (fondateur) ---- */
-  function jetonStatut(t){ const z = document.getElementById('jeton-statut'); if(z) z.textContent = t; }
-  function jetonEstFondateur(){ try{ return sessionStorage.getItem('tekoulo_role') === 'fondateur'; }catch(e){ return false; } }
-  window.jetonEnregistrer = function(){
-    if(!jetonEstFondateur()){ jetonStatut('Action réservée au compte fondateur.'); return; }
-    const v = (document.getElementById('jeton-saisie').value || '').trim();
-    if(!v){ jetonStatut('Saisissez le jeton avant d’enregistrer.'); return; }
-    try{ localStorage.setItem(DB_PREFIX + 'assistant_jeton', v); sessionStorage.setItem('tekoulo_token', v); }catch(e){}
-    TEKOULO_TOKEN = v;
-    poserCarte();
-    jetonStatut('✅ Jeton enregistré sur cet appareil. Cliquez sur « Tester le jeton » pour vérifier.');
-  };
-  window.jetonTester = async function(){
-    if(!jetonEstFondateur()){ jetonStatut('Action réservée au compte fondateur.'); return; }
-    const saisi = (document.getElementById('jeton-saisie').value || '').trim();
+  window.iaConfigTester = async function(){
+    if(!estFondateur()){ statut('Action réservée au compte fondateur.'); return; }
+    const url = (document.getElementById('ia-url').value || '').trim().replace(/\/+$/,'') || TEKOULO_API_URL;
+    const saisi = (document.getElementById('ia-jeton').value || '').trim();
     const jeton = saisi || TEKOULO_TOKEN;
-    if(!jeton){ jetonStatut('Aucun jeton à tester.'); return; }
-    if(!TEKOULO_API_URL){ jetonStatut('Adresse du serveur Tekoulo manquante dans l’application.'); return; }
-    jetonStatut('⏳ Test du jeton en cours…');
+    if(!url || !jeton){ statut('⚠ Adresse ou jeton manquant.'); return; }
+    statut('⏳ Test en cours (la première réponse peut prendre quelques secondes)…');
     let res;
     try{
-      res = await fetch(TEKOULO_API_URL + '/api/assistant/chat', {
+      res = await fetch(url + '/api/assistant/chat', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jeton},
-        body: JSON.stringify({message: 'Réponds uniquement par le mot : OK', historique: [], mode: 'general'})
+        body: JSON.stringify({message: 'Réponds uniquement par le mot : OK', historique: [], mode: 'general', fournisseur: document.getElementById('ia-fournisseur').value})
       });
-    }catch(e){ jetonStatut('⚠ Serveur injoignable : vérifiez la connexion internet de la tablette.'); return; }
+    }catch(e){ statut('⚠ Serveur injoignable : vérifiez la connexion internet et l\'adresse du serveur.'); return; }
     let d = {}; try{ d = await res.json(); }catch(x){}
-    if(res.ok){ jetonStatut('✅ Jeton accepté par le serveur Tekoulo.' + (saisi ? ' Pensez à l’enregistrer.' : '')); return; }
-    if(res.status === 401 || res.status === 403){ jetonStatut('⚠ Jeton refusé par le serveur : il ne correspond pas à ECOLE_TOKEN dans Cloudflare.'); return; }
-    jetonStatut('⚠ Erreur du serveur (' + res.status + ') : ' + ((d && (d.error || d.message)) || 'sans détail') + '.');
+    if(res.ok){ statut('✅ Connexion réussie avec le serveur Tekoulo.'); return; }
+    if(res.status === 401 || res.status === 403){ statut('⚠ Jeton refusé : il ne correspond pas à ECOLE_TOKEN sur le serveur.'); return; }
+    statut('⚠ Erreur du serveur (' + res.status + ') : ' + ((d && (d.error || d.message)) || 'sans détail') + '.');
   };
-  window.jetonEffacer = function(){
-    if(!jetonEstFondateur()){ jetonStatut('Action réservée au compte fondateur.'); return; }
-    if(!confirm('Supprimer le jeton de l’assistant sur cet appareil ?')) return;
-    try{ localStorage.removeItem(DB_PREFIX + 'assistant_jeton'); sessionStorage.removeItem('tekoulo_token'); }catch(e){}
-    TEKOULO_TOKEN = null;
+
+  window.iaConfigEffacer = function(){
+    if(!estFondateur()){ statut('Action réservée au compte fondateur.'); return; }
+    if(!confirm('Effacer la configuration de l\'assistant sur cet appareil ?')) return;
+    try{ localStorage.removeItem(DB_PREFIX + 'ia_config'); }catch(e){}
+    IA_CONFIG = {url:'', jeton:'', fournisseur:'tekoulo'};
+    TEKOULO_API_URL = null; TEKOULO_TOKEN = null;
     poserCarte();
-    jetonStatut('Jeton supprimé de cet appareil.');
+    statut('Configuration effacée sur cet appareil.');
   };
 
-  window.paramIaEffacerCle = function(){
-    const f = document.getElementById('param-ia-choix').value;
-    const o = lire(); delete o[f]; ecrire(o);
-    poserCarte();
-    statut('Clés effacées de cet appareil pour ' + IA_FOURNISSEURS[f].nom + '.');
-  };
-
-  window.paramIaTester = async function(){
-    const f = document.getElementById('param-ia-choix').value;
-    const cfg = IA_FOURNISSEURS[f];
-    if(cfg.mode === 'web'){ statut(cfg.nom + ' ne peut pas être testé ici : ouvrez ' + cfg.site + ' pour l’utiliser.'); return; }
-    statut('⏳ Test en cours… (la première réponse peut prendre quelques secondes)');
-    /* Même chemin que l'assistant (messages en français, réessais, bascule entre les clés) */
-    const direct = window.iaCleActive(f);
-    try{
-      const r = await assistantAppelAPI('Réponds uniquement par le mot : OK', undefined, undefined, true, f);
-      if(r && r.ok) statut('✅ Connexion réussie avec ' + cfg.nom + (direct ? ' (clé de cet appareil).' : ' (serveur Tekoulo).'));
-      else statut('⚠ ' + ((r && (r.error || r.reponse)) || 'Pas de réponse. Vérifiez la connexion internet.'));
-    }catch(err){ statut('⚠ Échec du test : ' + (err && err.message ? err.message : 'erreur inconnue') + '.'); }
-  };
-
-  const _renderView = window.renderView;
-  window.renderView = function(key){
-    _renderView(key);
-    if(key === 'parametres') poserCarte();
-  };
+  const _rv = window.renderView;
+  window.renderView = function(key){ _rv(key); if(key === 'parametres') poserCarte(); };
+  const _rp = window.renderParametres;
+  window.renderParametres = function(){ const r = _rp.apply(this, arguments); poserCarte(); return r; };
 })();
 </script>
 <script id="script-fonctions-complementaires">
