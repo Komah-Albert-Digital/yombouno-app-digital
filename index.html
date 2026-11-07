@@ -12845,7 +12845,7 @@ function renderGenericModule(container, mod, filterFn){
     }
     if(f.type==='photo'){
       return `<div class="photo-upload">
-        <img id="photo-preview-${f.key}" class="photo-preview" src="${val||''}" style="${val?'':'display:none;'}">
+        <img id="photo-preview-${f.key}" class="photo-preview" ${val?`src="${val}"`:''} style="${val?'':'display:none;'}">
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
           <input type="file" accept="image/*" onchange="handlePhotoField(this,'${f.key}')">
           <button type="button" class="btn ghost sm" onclick="openCameraCapture('${f.key}')">📷 Prendre une photo</button>
@@ -13398,7 +13398,7 @@ function buildEditFormHTML(mod, record){
     }
     if(f.type==='photo'){
       return `<div class="photo-upload">
-        <img id="photo-preview-${f.key}" class="photo-preview" src="${val||''}" style="${val?'':'display:none;'}">
+        <img id="photo-preview-${f.key}" class="photo-preview" ${val?`src="${val}"`:''} style="${val?'':'display:none;'}">
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
           <input type="file" accept="image/*" onchange="handlePhotoField(this,'${f.key}')">
           <button type="button" class="btn ghost sm" onclick="openCameraCapture('${f.key}')">📷 Prendre une photo</button>
@@ -15714,7 +15714,7 @@ function renderEleves(container){
     }
     if(f.type==='photo'){
       return `<div class="photo-upload">
-        <img id="photo-preview-${f.key}" class="photo-preview" src="${val||''}" style="${val?'':'display:none;'}">
+        <img id="photo-preview-${f.key}" class="photo-preview" ${val?`src="${val}"`:''} style="${val?'':'display:none;'}">
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
           <input type="file" accept="image/*" onchange="handlePhotoField(this,'${f.key}')">
           <button type="button" class="btn ghost sm" onclick="openCameraCapture('${f.key}')">📷 Prendre une photo</button>
@@ -15856,7 +15856,7 @@ function renderEleveEditing(container, rec){
     }
     if(f.type==='photo'){
       return `<div class="photo-upload">
-        <img id="photo-preview-${f.key}" class="photo-preview" src="${val||''}" style="${val?'':'display:none;'}">
+        <img id="photo-preview-${f.key}" class="photo-preview" ${val?`src="${val}"`:''} style="${val?'':'display:none;'}">
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
           <input type="file" accept="image/*" onchange="handlePhotoField(this,'${f.key}')">
           <button type="button" class="btn ghost sm" onclick="openCameraCapture('${f.key}')">📷 Prendre une photo</button>
@@ -16051,7 +16051,7 @@ function renderCarteScolaire(container){
       <div class="card pad" style="margin-top:14px; max-width:520px;">
         <h4 style="margin:0 0 10px; font-family:var(--serif); color:var(--green-deep); font-size:14px;">Photo de l'élève</h4>
         <div class="photo-upload">
-          <img id="photo-preview-carte" class="photo-preview" src="${e.photo||''}" style="${e.photo?'':'display:none;'}">
+          <img id="photo-preview-carte" class="photo-preview" ${e.photo?`src="${e.photo}"`:''} style="${e.photo?'':'display:none;'}">
           <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
             <input type="file" accept="image/*" onchange="handleCartePhotoUpload(this,'${e.__id}')">
             <button type="button" class="btn ghost sm" onclick="openCameraCapture('carteScolaire:${e.__id}')">📷 Prendre une photo</button>
@@ -16326,7 +16326,7 @@ function renderBadgePersonnel(container){
       <div class="card pad" style="margin-top:14px; max-width:520px;">
         <h4 style="margin:0 0 10px; font-family:var(--serif); color:var(--green-deep); font-size:14px;">Photo du membre du personnel</h4>
         <div class="photo-upload">
-          <img id="photo-preview-badge" class="photo-preview" src="${person.photo||''}" style="${person.photo?'':'display:none;'}">
+          <img id="photo-preview-badge" class="photo-preview" ${person.photo?`src="${person.photo}"`:''} style="${person.photo?'':'display:none;'}">
           <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
             <input type="file" accept="image/*" onchange="handleBadgePhotoUpload(this,'${person.__id}')">
             <button type="button" class="btn ghost sm" onclick="openCameraCapture('badgePersonnel:${person.__id}')">📷 Prendre une photo</button>
@@ -22555,6 +22555,10 @@ function corrTelecharger(){
   // Erreurs JavaScript non gérées
   window.addEventListener('error', function(ev){
     if(ev.target && ev.target !== window && ev.target.tagName){
+      // Un élément sans adresse réelle (src/href vide, ex. aperçu photo masqué) fait charger la page elle-même :
+      // ce n'est pas une ressource manquante, on ne le signale pas.
+      const attr = (ev.target.getAttribute && (ev.target.getAttribute('src') ?? ev.target.getAttribute('href')));
+      if(attr !== null && attr.trim() === '') return;
       const src = ev.target.src || ev.target.href || ev.target.tagName;
       enregistrer('Ressource', 'Fichier non chargé : ' + src, '', false);
       return;
