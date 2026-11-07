@@ -1520,6 +1520,32 @@
 #content .report-module-item > span{ flex:none !important; font-size:11px !important; font-weight:600; line-height:1.25; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #content .report-module-item > .btn{ flex:none !important; width:100%; box-sizing:border-box; min-width:0 !important; max-width:none !important; padding:4px 4px !important; font-size:10px !important; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; justify-content:center; }
 </style>
+<style id="style-esthetique">
+/* ===== Esthétique générale : boutons, champs, cartes, tableaux, en-tête (couche unique) ===== */
+body{ -webkit-font-smoothing:antialiased; }
+/* Boutons : même hauteur, même arrondi, retour visuel au survol et au clavier */
+.btn{ border-radius:10px !important; font-weight:600; letter-spacing:.1px; transition:background .15s, box-shadow .15s, transform .08s, border-color .15s; }
+.btn:not(:disabled):hover{ transform:translateY(-1px); }
+.btn:not(:disabled):active{ transform:translateY(0); }
+.btn:disabled{ opacity:.55; cursor:not-allowed; }
+.btn.sm{ min-height:34px; padding:7px 10px; font-size:12.5px; line-height:1.15; }
+button:focus-visible, a:focus-visible{ outline:none; box-shadow:0 0 0 3px rgba(20,157,99,.28) !important; }
+/* Champs : fond blanc, bordure douce, focus vert */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]), select, textarea{ border-radius:9px; border:1px solid #CFC8B4; background:#fff; color:var(--ink); transition:border-color .15s, box-shadow .15s; }
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):focus, select:focus, textarea:focus{ border-color:var(--green); box-shadow:0 0 0 3px rgba(20,157,99,.18); outline:none; }
+/* Cartes : contours fins, ombre légère, rayons homogènes */
+.card{ border-radius:var(--radius-lg) !important; border:1px solid var(--line-soft); box-shadow:var(--shadow) !important; }
+/* Tableaux : en-tête marqué, lignes alternées, survol */
+.table-wrap{ border-radius:var(--radius); border:1px solid var(--line-soft); background:#fff; }
+.table-wrap thead th{ background:var(--green-deep); color:#fff; font-size:12px; font-weight:600; letter-spacing:.3px; padding:9px 10px; }
+.table-wrap tbody td{ padding:8px 10px; font-size:13px; border-bottom:1px solid var(--line-soft); }
+.table-wrap tbody tr:nth-child(even) td{ background:#FBFAF5; }
+.table-wrap tbody tr:hover td{ background:#EEF6F1; }
+/* En-tête sur ordinateur : les boutons passent à la ligne au lieu de sortir de l'écran */
+@media (min-width:701px){ #topbar .right{ flex-wrap:wrap; justify-content:flex-end; } }
+/* Notifications */
+.toast{ border-radius:12px !important; box-shadow:0 10px 28px rgba(10,20,15,.28); }
+</style>
 </head>
 <body>
 
@@ -4198,7 +4224,7 @@ function tekouloAjouterPageDeGarde(html){
   const sommaireHTML = titres.length
     ? `<section class="page-sommaire">
     <style>
-      .page-sommaire{ page-break-after:always; break-after:page; min-height:250mm; box-sizing:border-box; display:flex; flex-direction:column; padding-top:9mm; }
+      .page-sommaire{ break-after:page; page-break-after:always; min-height:0; box-sizing:border-box; display:flex; flex-direction:column; padding-top:6mm; }
       .gs-entete{ display:flex; justify-content:space-between; align-items:center; gap:16px; padding:14px 0 12px; border-bottom:1px solid #D9DED6; }
       .gs-entete img{ height:50px; max-width:130px; object-fit:contain; }
       .gs-t{ text-align:center; }
@@ -4227,9 +4253,9 @@ function tekouloAjouterPageDeGarde(html){
     <style>
       @page gd-couverture{ size:A4; margin:0; }
       body:has(.page-garde) .print-logo-badge, body:has(.page-garde) .print-emblem-badge{ display:none !important; }
-      .page-garde{ page:gd-couverture; margin:-36px 0 0 0; padding:0; page-break-after:always; break-after:page; }
-      .gd-cover{ position:relative; z-index:1000; width:100%; height:297mm; margin:0; overflow:hidden; box-sizing:border-box; padding:20mm 16mm 14mm; display:flex; flex-direction:column; color:#fff;
-        background-color:${deep}; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .page-garde{ page:gd-couverture; margin:-36px 0 0 0; padding:0; height:296mm; overflow:hidden; break-after:page; page-break-after:always; }
+      .gd-cover{ position:relative; z-index:1000; width:100%; height:296mm; margin:0; overflow:hidden; box-sizing:border-box; padding:20mm 18mm 14mm; display:flex; flex-direction:column; color:#fff;
+        background:linear-gradient(160deg, ${deep} 0%, ${mid} 70%, ${deep} 100%); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .gd-cover::before{ content:''; position:absolute; z-index:0; right:-120px; top:-120px; width:420px; height:420px; border-radius:50%; border:2px solid rgba(228,180,38,.35); }
       .gd-cover::after{ content:''; position:absolute; z-index:0; right:-40px; top:-40px; width:260px; height:260px; border-radius:50%; border:1px solid rgba(255,255,255,.14); }
       .gd-bande{ position:absolute; z-index:5; left:0; right:0; height:9px; background:linear-gradient(90deg,#CE1126 33.33%,#FCD116 33.33%,#FCD116 66.66%,#009460 66.66%); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
@@ -4242,11 +4268,11 @@ function tekouloAjouterPageDeGarde(html){
       .gd-etab{ font-size:11px; font-weight:700; color:#E4B426; margin-top:4px; text-transform:uppercase; letter-spacing:.6px; }
       .gd-corps{ position:relative; z-index:1; margin-top:auto; margin-bottom:auto; }
       .gd-kicker{ font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#E4B426; }
-      .gd-titre{ margin-top:12px; font-size:42px; font-weight:800; line-height:1.1; text-transform:uppercase; }
+      .gd-titre{ margin-top:12px; font-size:40px; font-weight:800; line-height:1.08; text-transform:uppercase; letter-spacing:.4px; text-shadow:0 2px 14px rgba(0,0,0,.18); }
       .gd-bar{ width:96px; height:4px; background:#E4B426; border-radius:2px; margin-top:18px; }
       .gd-chip{ display:inline-block; margin-top:20px; background:#fff; color:${deep}; font-weight:800; padding:7px 18px; border-radius:999px; font-size:14px; }
-      .gd-infos{ position:relative; z-index:1; margin-top:34px; display:grid; grid-template-columns:1fr 1fr; column-gap:22px; background:none; }
-      .gd-infos .c{ background:none; border:0; vertical-align:top; padding:12px 0; border-top:1px solid rgba(255,255,255,.2); color:#fff; }
+      .gd-infos{ position:relative; z-index:1; margin-top:30px; display:grid; grid-template-columns:1fr 1fr; column-gap:14px; background:none; }
+      .gd-infos .c{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:10px; vertical-align:top; padding:10px 14px; margin-bottom:10px; color:#fff; }
       
       .gd-infos span{ display:block; font-size:9.5px; font-weight:700; letter-spacing:.9px; text-transform:uppercase; opacity:.7; }
       .gd-infos b{ display:block; font-size:14px; margin-top:4px; }
@@ -12283,9 +12309,10 @@ const TEKOULO_VUES_IMPRIMABLES = {
   guide:{qr:'GUIDE_UTILISATION', sansTitre:true}, biographie:{qr:'BIOGRAPHIE', sansTitre:true}
 };
 function tekouloImprimerVueCourante(){
-  const key = CURRENT_VIEW, cfg = TEKOULO_VUES_IMPRIMABLES[key];
+  const key = CURRENT_VIEW, cfg = TEKOULO_VUES_IMPRIMABLES[key] || {};
   const src = document.getElementById('view-'+key) || document.getElementById('content');
-  if(!cfg || !src){ window.print(); return; }
+  // Toutes les vues passent par la mise en page commune (jamais d'impression directe de la page de l'application)
+  if(!src){ return; }
   const clone = src.cloneNode(true);
   clone.querySelectorAll('.no-print, .toolbar, .hint-box, .pillbar, .form-actions, button, select, input, textarea, script').forEach(el=>el.remove());
   clone.querySelectorAll('[onclick]').forEach(el=>el.removeAttribute('onclick'));
@@ -22404,23 +22431,164 @@ function corrTelecharger(){
 })();
 </script>
 <script id="script-impression-apercu">
-/* Impression : aperçu dans la page avec les boutons « Imprimer » et « Fermer ».
-   Un document n'imprime jamais tout seul : l'impression part uniquement lorsque l'utilisateur
-   appuie sur « Imprimer » (aperçu ou bouton du document). Remplace tekouloOuvrirFenetre :
-   même interface (document.open/write/close, focus, print). */
+/* Impression : aperçu dans la page, choix des lignes et colonnes à imprimer, puis impression à la demande.
+   Un document n'imprime jamais tout seul. Remplace tekouloOuvrirFenetre (mêmes méthodes :
+   document.open/write/close, focus, print). Mise en page commune à tous les documents imprimés. */
 (function(){
-  // Injecté dans chaque document : un appel à window.print() par un script est ignoré ;
-  // un clic de l'utilisateur, ou une autorisation explicite, imprime.
   const STUB = '<script>(function(){var r=window.print;window.__printReal=r;window.__autoriserImpression=false;window.print=function(){var clic=!!(window.event&&window.event.type==="click");if(window.__autoriserImpression||clic){r.call(window);}};})();<\/script>';
-  const CSS_APERCU = '<style>.tk-print-actions{display:none!important}</style>';
+  const CSS_IMPRESSION = '<style>@page{size:A4;margin:14mm 12mm 16mm}@media print{html,body{background:#fff !important}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}h1,h2,h3,h4,.section-title,.sec-title{break-after:avoid;page-break-after:avoid}thead{display:table-header-group}tfoot{display:table-footer-group}tr,td,th{break-inside:avoid;page-break-inside:avoid}table{border-collapse:collapse}img,svg{break-inside:avoid;page-break-inside:avoid}.gd-espace:empty,.page-sommaire:empty{display:none}}</style>';
+  const CSS_APERCU = '<style>.tk-print-actions{display:none!important}html,body{background:#fff}</style>';
   function preparer(html, pourAperçu){
     html = String(html||'');
-    const ajout = STUB + (pourAperçu ? CSS_APERCU : '');
+    const ajout = STUB + CSS_IMPRESSION + (pourAperçu ? CSS_APERCU : '');
     if(/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, function(m){ return m + ajout; });
     return ajout + html;
   }
   function notifier(texte, err){ if(typeof window.toast==='function') window.toast(texte, err); }
-  // Ouvre une fenêtre d'impression à partir d'un clic utilisateur (autorisé même si les pop-up sont bloqués)
+
+  /* ---------- Choix des lignes et colonnes ---------- */
+  function tablesDe(doc){
+    const t = doc.querySelectorAll('.vue-contenu table');
+    return Array.from(t.length ? t : doc.querySelectorAll('table'));
+  }
+  function enteteColonnes(tbl){
+    const lignes = tbl.querySelectorAll('thead tr');
+    const tr = lignes.length ? lignes[lignes.length-1] : tbl.querySelector('tr');
+    return tr ? Array.from(tr.children).map(c => c.textContent.replace(/\s+/g,' ').trim()) : [];
+  }
+  function lignesCorps(tbl){
+    const tb = tbl.querySelector('tbody');
+    const src = tb ? tb : tbl;
+    return Array.from(src.children).filter(tr => tr.tagName === 'TR');
+  }
+  // Les colonnes ne peuvent être retirées que si le tableau n'a pas de cellules fusionnées
+  function colonnesModifiables(tbl){ return !tbl.querySelector('[colspan],[rowspan]'); }
+  function appliquerChoix(brut, choix){
+    const doc = new DOMParser().parseFromString(String(brut||''), 'text/html');
+    tablesDe(doc).forEach(function(tbl, ti){
+      const c = choix[ti]; if(!c) return;
+      if(colonnesModifiables(tbl) && c.colsOff.size){
+        tbl.querySelectorAll('tr').forEach(function(tr){
+          const cellules = Array.from(tr.children);
+          cellules.forEach(function(td, i){ if(c.colsOff.has(i)) td.remove(); });
+        });
+      }
+      lignesCorps(tbl).forEach(function(tr, ri){ if(c.rowsOff.has(ri)) tr.remove(); });
+    });
+    return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+  }
+  function panneauChoix(brut, choix, onOk){
+    const doc = new DOMParser().parseFromString(String(brut||''), 'text/html');
+    const tbls = tablesDe(doc);
+    const ancien = document.getElementById('impr-choix'); if(ancien) ancien.remove();
+    const fond = document.createElement('div');
+    fond.id = 'impr-choix';
+    fond.style.cssText = 'position:fixed;inset:0;z-index:100001;background:rgba(10,20,15,.5);display:flex;align-items:flex-end;justify-content:center';
+    const feuille = document.createElement('div');
+    feuille.style.cssText = 'background:#fff;color:#20241F;width:100%;max-width:560px;max-height:88vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;font:13px system-ui,sans-serif';
+    const entete = document.createElement('div');
+    entete.style.cssText = 'padding:12px 16px;border-bottom:1px solid #e3e0d2;font-weight:700;font-size:15px';
+    entete.textContent = 'Lignes et colonnes à imprimer';
+    const corps = document.createElement('div');
+    corps.style.cssText = 'overflow:auto;padding:10px 16px;flex:1 1 auto';
+    const etat = choix.map(function(c){ return { colsOff: new Set(c.colsOff), rowsOff: new Set(c.rowsOff) }; });
+    if(!tbls.length){
+      corps.innerHTML = '<p style="color:#5B6259">Ce document ne contient pas de tableau : il s’imprime en entier.</p>';
+    }
+    tbls.forEach(function(tbl, ti){
+      const titre = document.createElement('div');
+      titre.style.cssText = 'font-weight:700;margin:10px 0 6px;color:#0B4A32';
+      titre.textContent = 'Tableau ' + (ti+1) + (tbls.length>1 ? '' : '');
+      corps.appendChild(titre);
+      const cols = enteteColonnes(tbl);
+      const modif = colonnesModifiables(tbl);
+      const lab = document.createElement('div');
+      lab.style.cssText = 'font-size:11.5px;color:#5B6259;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.5px';
+      lab.textContent = modif ? 'Colonnes' : 'Colonnes (non modifiables : cellules fusionnées)';
+      corps.appendChild(lab);
+      const grille = document.createElement('div');
+      grille.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px 10px';
+      cols.forEach(function(nom, i){
+        if(!nom) return;
+        const l = document.createElement('label');
+        l.style.cssText = 'display:flex;gap:6px;align-items:center;cursor:' + (modif?'pointer':'default');
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = !etat[ti].colsOff.has(i); cb.disabled = !modif;
+        cb.onchange = function(){ cb.checked ? etat[ti].colsOff.delete(i) : etat[ti].colsOff.add(i); };
+        const s = document.createElement('span'); s.textContent = nom;
+        l.append(cb, s); grille.appendChild(l);
+      });
+      corps.appendChild(grille);
+      const lr = document.createElement('div');
+      lr.style.cssText = 'font-size:11.5px;color:#5B6259;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.5px';
+      lr.textContent = 'Lignes';
+      corps.appendChild(lr);
+      lignesCorps(tbl).forEach(function(tr, ri){
+        const l = document.createElement('label');
+        l.style.cssText = 'display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #f0eee4;cursor:pointer';
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = !etat[ti].rowsOff.has(ri);
+        cb.onchange = function(){ cb.checked ? etat[ti].rowsOff.delete(ri) : etat[ti].rowsOff.add(ri); };
+        const s = document.createElement('span');
+        const premier = tr.children[0] ? tr.children[0].textContent.replace(/\s+/g,' ').trim() : '';
+        const second = tr.children[1] ? tr.children[1].textContent.replace(/\s+/g,' ').trim() : '';
+        s.textContent = (ri+1) + '. ' + (premier || '—') + (second ? ' — ' + second : '');
+        s.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+        l.append(cb, s); corps.appendChild(l);
+      });
+    });
+    const pied = document.createElement('div');
+    pied.style.cssText = 'display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;padding:10px 16px;border-top:1px solid #e3e0d2';
+    const gauche = document.createElement('div'); gauche.style.cssText = 'display:flex;gap:8px';
+    const tout = document.createElement('button'); tout.type='button'; tout.textContent='Tout cocher';
+    const rien = document.createElement('button'); rien.type='button'; rien.textContent='Tout décocher';
+    [tout, rien].forEach(function(b){ b.style.cssText = 'padding:8px 10px;border-radius:8px;border:1px solid #C9C2AE;background:#fff;cursor:pointer'; });
+    tout.onclick = function(){ etat.forEach(function(e){ e.colsOff.clear(); e.rowsOff.clear(); }); corps.querySelectorAll('input[type=checkbox]').forEach(function(c){ if(!c.disabled) c.checked = true; }); };
+    rien.onclick = function(){ tbls.forEach(function(t,ti){ etat[ti].rowsOff = new Set(lignesCorps(t).map(function(_,i){return i;})); if(colonnesModifiables(t)) etat[ti].colsOff = new Set(enteteColonnes(t).map(function(_,i){return i;})); }); corps.querySelectorAll('input[type=checkbox]').forEach(function(c){ if(!c.disabled) c.checked = false; }); };
+    gauche.append(tout, rien);
+    const droite = document.createElement('div'); droite.style.cssText = 'display:flex;gap:8px';
+    const annuler = document.createElement('button'); annuler.type='button'; annuler.textContent='Annuler';
+    annuler.style.cssText = 'padding:9px 12px;border-radius:8px;border:1px solid #C9C2AE;background:#fff;cursor:pointer';
+    const ok = document.createElement('button'); ok.type='button'; ok.textContent='Appliquer';
+    ok.style.cssText = 'padding:9px 14px;border-radius:8px;border:0;background:#F2C230;font-weight:700;cursor:pointer';
+    annuler.onclick = function(){ fond.remove(); };
+    ok.onclick = function(){ fond.remove(); onOk(etat); };
+    droite.append(annuler, ok);
+    pied.append(gauche, droite);
+    feuille.append(entete, corps, pied);
+    fond.appendChild(feuille);
+    document.body.appendChild(fond);
+  }
+
+  /* ---------- Aperçu ---------- */
+  function largeurUtile(html){ return /size:A4 landscape/i.test(html) ? 1032 : 703; }
+  function zoomDemande(html){
+    const re = /\.vue-contenu\{zoom:([\d.]+)/g;
+    let dernier = null, m;
+    while((m = re.exec(html))) dernier = m[1];
+    const v = parseFloat(dernier);
+    return isNaN(v) || v <= 0 ? 1 : v;
+  }
+  // Mesure la largeur naturelle du contenu sur une page A4 et calcule le zoom sûr (limité à 60 %)
+  function zoomSur(html, cb){
+    const cible = largeurUtile(html), zUser = zoomDemande(html);
+    const f = document.createElement('iframe');
+    f.style.cssText = 'position:fixed;left:-10000px;top:0;width:'+cible+'px;height:800px;border:0;visibility:hidden';
+    f.srcdoc = preparer(html + '<style>.vue-contenu{zoom:1 !important}</style>', false);
+    let fini = false;
+    const terminer = function(z){ if(fini) return; fini = true; try{ f.remove(); }catch(e){} cb(z); };
+    f.onload = function(){
+      setTimeout(function(){
+        try{
+          const d = f.contentDocument;
+          const c = d.querySelector('.vue-contenu') || d.body;
+          const large = c.scrollWidth;
+          const sur = large > cible ? Math.max(0.6, cible / large) : 1;
+          terminer(Math.min(zUser, sur));
+        }catch(e){ terminer(zUser); }
+      }, 250);
+    };
+    setTimeout(function(){ terminer(zUser); }, 8000);
+    document.body.appendChild(f);
+  }
   function imprimerDansFenetre(html){
     let w = null;
     try{ w = window.open('', '_blank'); }catch(e){ w = null; }
@@ -22439,8 +22607,12 @@ function corrTelecharger(){
     if(w.document.readyState === 'complete') lancer(); else w.addEventListener('load', lancer);
     return true;
   }
-  function apercu(html, titre){
+  function apercu(brut, titre){
     const ancien = document.getElementById('impr-apercu'); if(ancien) ancien.remove();
+    const nbTables = tablesDe(new DOMParser().parseFromString(String(brut||''), 'text/html')).length;
+    // Sélection courante : par tableau, colonnes et lignes retirées (vide = tout imprimer)
+    let choix = Array.from({length: nbTables}, function(){ return { colsOff: new Set(), rowsOff: new Set() }; });
+    let courant = brut;
     const ov = document.createElement('div');
     ov.id = 'impr-apercu';
     ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Aperçu avant impression');
@@ -22450,31 +22622,65 @@ function corrTelecharger(){
     const libelle = document.createElement('span');
     libelle.style.cssText = 'flex:1 1 120px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
     libelle.textContent = titre || 'Aperçu avant impression';
+    const bChoix = document.createElement('button');
+    bChoix.type = 'button'; bChoix.textContent = '☑ Lignes et colonnes';
+    bChoix.style.cssText = 'border:1px solid #fff;border-radius:8px;padding:8px 10px;font:600 13px system-ui,sans-serif;background:transparent;color:#fff;cursor:pointer';
     const bImp = document.createElement('button');
     bImp.type = 'button'; bImp.textContent = '🖨️ Imprimer';
     bImp.style.cssText = 'border:0;border-radius:8px;padding:9px 14px;font:700 13px system-ui,sans-serif;background:#F2C230;color:#1d1d1d;cursor:pointer';
     const bFerm = document.createElement('button');
     bFerm.type = 'button'; bFerm.textContent = '✕ Fermer';
     bFerm.style.cssText = 'border:1px solid #fff;border-radius:8px;padding:8px 12px;font:600 13px system-ui,sans-serif;background:transparent;color:#fff;cursor:pointer';
-    barre.append(libelle, bImp, bFerm);
+    if(!nbTables) bChoix.style.display = 'none';
+    barre.append(libelle, bChoix, bImp, bFerm);
+    const aide = document.createElement('div');
+    aide.style.cssText = 'padding:6px 12px;background:#F4F1E6;color:#3b4a40;font:500 12px system-ui,sans-serif;border-bottom:1px solid #d9d4c2;flex:0 0 auto';
+    aide.textContent = 'Vérifiez l’aperçu, puis appuyez sur Imprimer.';
     const cadre = document.createElement('iframe');
     cadre.setAttribute('title', 'Aperçu avant impression');
     cadre.style.cssText = 'flex:1 1 auto;width:100%;border:0;background:#fff';
-    cadre.srcdoc = preparer(html, true);
-    ov.append(barre, cadre);
+    ov.append(barre, aide, cadre);
     document.body.appendChild(ov);
-    const onKey = function(e){ if(e.key === 'Escape') fermer(); };
+    const echec = function(texte){ aide.style.background = '#FBE3E1'; aide.style.color = '#7a1a14'; aide.textContent = texte; };
+    const ok = function(texte){ aide.style.background = '#E3F1E8'; aide.style.color = '#0B4A32'; aide.textContent = texte; };
+    const neutre = function(texte){ aide.style.background = '#F4F1E6'; aide.style.color = '#3b4a40'; aide.textContent = texte; };
+    // Affiche le document (avec le zoom sûr calculé pour la sélection en cours)
+    const afficher = function(source){
+      zoomSur(source, function(z){
+        const extra = z < 0.999 ? '<style>.vue-contenu{zoom:' + z.toFixed(3) + ' !important}</style>' : '';
+        courant = source + extra;
+        cadre.srcdoc = preparer(courant, true);
+      });
+    };
     const fermer = function(){ ov.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = function(e){ if(e.key === 'Escape') fermer(); };
     document.addEventListener('keydown', onKey);
     bFerm.onclick = fermer;
+    bChoix.onclick = function(){
+      panneauChoix(brut, choix, function(nouveau){
+        choix = nouveau;
+        const retires = choix.reduce(function(n,c){ return n + c.colsOff.size + c.rowsOff.size; }, 0);
+        afficher(appliquerChoix(brut, choix));
+        if(retires) ok('Sélection appliquée : seules les lignes et colonnes cochées seront imprimées.');
+        else neutre('Vérifiez l’aperçu, puis appuyez sur Imprimer.');
+      });
+    };
     bImp.onclick = function(){
-      if(imprimerDansFenetre(html)) return;
+      neutre('Ouverture de la fenêtre d’impression…');
+      if(imprimerDansFenetre(courant)){
+        ok('Fenêtre d’impression ouverte : choisissez votre imprimante, ou « Enregistrer au format PDF ».');
+        return;
+      }
       // Repli : impression depuis le cadre d'aperçu si aucune fenêtre n'a pu s'ouvrir
       try{
         const cw = cadre.contentWindow;
         cw.__autoriserImpression = true; (cw.__printReal || cw.print).call(cw); cw.__autoriserImpression = false;
-      }catch(e){ notifier('Impression impossible sur cet appareil. Essayez depuis un ordinateur.', true); }
+        ok('Fenêtre d’impression ouverte.');
+      }catch(e){
+        echec('Impression directe indisponible sur cet appareil. Utilisez le menu ⋮ du navigateur, puis « Imprimer » ou « Partager ».');
+      }
     };
+    afficher(brut);
   }
   // Même interface que l'ancienne fenêtre : les documents écrivent dedans, puis l'aperçu s'affiche
   window.tekouloOuvrirFenetre = function(){
