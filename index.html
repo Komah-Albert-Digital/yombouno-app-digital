@@ -3162,6 +3162,43 @@ function verifierAncienneteSync(){
   try{ if(sessionStorage.getItem('tekoulo_alerte_sync_vue')) return; sessionStorage.setItem('tekoulo_alerte_sync_vue','1'); }catch(e){}
   toast('⚠ Cet appareil n\'a pas synchronisé depuis '+jours+' jours. Appuyez sur « 🔄 Synchroniser » avant toute saisie : des suppressions très anciennes pourraient ne pas être prises en compte.', true);
 }
+/* Purge définitive, une seule fois, des données des modules retirés (Plan de progression, Cahier journal,
+   Banque d'évaluations, Corriger une copie, Dossier pédagogique). Une copie est téléchargée avant suppression.
+   Réservée au fondateur, avec confirmation. Les données de la synchronisation Drive ne sont pas touchées. */
+const MODULES_RETIRES_DEFINITIVEMENT = ['planProgression','cahierJournal','banqueEvaluations','corrigerCopie','dossierPedagogique'];
+function _estCleModuleRetire(court){
+  return MODULES_RETIRES_DEFINITIVEMENT.some(b => court === b || court.startsWith(b + '__'));
+}
+function purgerModulesRetires(){
+  const cles = [];
+  for(let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith(DB_PREFIX) && _estCleModuleRetire(k.slice(DB_PREFIX.length))) cles.push(k);
+  }
+  // 1) Copie de secours téléchargée AVANT toute suppression
+  const copie = {};
+  cles.forEach(k => { copie[k] = localStorage.getItem(k); });
+  const blob = new Blob([JSON.stringify(copie, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'sauvegarde_modules_retires_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  // 2) Suppression locale
+  cles.forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
+  // 3) Retirer ces clés de la file d'attente de synchronisation
+  try{ setClesEnAttente(getClesEnAttente().filter(c => !_estCleModuleRetire(c))); }catch(e){}
+  try{ localStorage.setItem('tekoulo_purge_modules_retires', '1'); }catch(e){}
+  toast('Données des modules retirés supprimées sur cet appareil (' + cles.length + ' élément(s)). Une copie a été téléchargée.');
+  return cles.length;
+}
+function demanderPurgeModulesRetires(){
+  try{ if(localStorage.getItem('tekoulo_purge_modules_retires')) return; }catch(e){ return; }
+  try{ if(sessionStorage.getItem('tekoulo_role') !== 'fondateur') return; }catch(e){ return; }
+  try{ if(sessionStorage.getItem('tekoulo_purge_proposee')) return; sessionStorage.setItem('tekoulo_purge_proposee', '1'); }catch(e){}
+  if(!confirm("Supprimer DÉFINITIVEMENT, sur cet appareil, les données des modules retirés :\n- Plan de progression\n- Cahier journal\n- Banque d'évaluations\n- Corriger une copie\n- Dossier pédagogique\n\nUne copie de ces données sera téléchargée avant suppression. Cette action est irréversible sur cet appareil.")) return;
+  purgerModulesRetires();
+}
 function _majIndicateurSync(echec){
   if(echec) return; // ne masque pas un message d'erreur détaillé
   // Heure de la dernière synchronisation réussie, propre à cet appareil (hors préfixe : non sauvegardée)
@@ -7180,7 +7217,7 @@ function renderGuide(container){
 
     <div class="guide-chapter" id="g16b">
       <h2>16 bis. Registre des notes</h2>
-      <div class="guide-callout"><b class="gc-label">ℹ Formulaires retirés du menu</b>Les formulaires Plan de progression, Cahier journal, Banque d'évaluations, Corriger une copie et Dossier pédagogique ont été retirés du menu. Les données déjà enregistrées ne sont pas supprimées. Les sujets générés par l'assistant restent accessibles dans son panneau (chapitre 10 ter), section « Sujets enregistrés ».</div>
+      <div class="guide-callout"><b class="gc-label">ℹ Formulaires retirés</b>Les formulaires Plan de progression, Cahier journal, Banque d'évaluations, Corriger une copie et Dossier pédagogique ont été entièrement retirés de l'application. Les données déjà enregistrées sont conservées sur l'appareil. Les sujets générés par l'assistant restent accessibles dans son panneau (chapitre 10 ter), section « Sujets enregistrés ».</div>
       <h3>16 bis.1 Registre des notes</h3>
       <p>Le registre mensuel s'imprime par matière, avec tri par nom, numéro d'ordre ou moyenne, masquage du N et du matricule, zoom et impression en paysage. Des statistiques affichent les moyennes, le taux de réussite, le tableau d'honneur et les élèves en difficulté. Le registre peut être exporté en Word. Seuls les élèves actifs y figurent.</p>
     </div>
@@ -7260,7 +7297,7 @@ function renderGuide(container){
       <h3>L'application fonctionne-t-elle sans internet ?</h3>
       <p>Oui pour l'essentiel : les modules, les listes, les impressions et les formules mathématiques fonctionnent hors connexion. Ne fonctionnent qu'avec internet : la synchronisation et la connexion Google Drive, la météo, l'assistant IA et les polices Google (remplacées par une police de secours hors connexion).</p>
       <h3>Pourquoi certains formulaires ont-ils disparu du menu ?</h3>
-      <p>Plan de progression, Cahier journal, Banque d'évaluations, Corriger une copie et Dossier pédagogique ont été retirés du menu à la demande de l'école. Leurs données déjà enregistrées ne sont pas supprimées.</p>
+      <p>Plan de progression, Cahier journal, Banque d'évaluations, Corriger une copie et Dossier pédagogique ont été entièrement retirés de l'application à la demande de l'école. Leurs données déjà enregistrées sont conservées sur l'appareil.</p>
           <h3>L'impression ne sort pas sur mon téléphone : que faire ?</h3>
       <p>Lisez la ligne d'information sous la barre de l'aperçu (voir le chapitre 8.7). Assurez-vous d'avoir appuyé sur <b>🖨️ Imprimer</b> dans l'aperçu, puis sur le bouton d'impression de la fenêtre Android. Si rien n'apparaît, ouvrez <b>⚠ Problèmes</b> et copiez le rapport.</p>
       <h3>Certaines lignes ou colonnes manquent à l'impression</h3>
@@ -11081,7 +11118,7 @@ function definirGpNombrePourNiveau(niveau, valeur){
   cfg[annee] = cfg[annee] || {};
   cfg[annee][niveau] = n;
   dbSet('gpNombreParAnneeEtNiveau', cfg);
-  toast('Nombre de GP de '+niveau+' mis à jour pour l\u2019année '+annee+' : '+n+'.');
+  toast('Nombre de GP de '+niveauLabel(niveau)+' mis à jour pour l\u2019année '+annee+' : '+n+'.');
   renderParametres();
 }
 function reinitialiserGpNombrePourNiveau(niveau){
@@ -11138,7 +11175,7 @@ function gpConfigTableauHTML(){
           const idInput = 'gp-nb-'+cycleKey+'-'+i;
           return `<tr>
             ${i===0 ? `<td rowspan="${cycle.niveaux.length}" style="font-weight:700;vertical-align:top;">${esc(cycle.label)}</td>` : ''}
-            <td>${esc(niveau)}</td>
+            <td>${esc(niveauLabel(niveau))}</td>
             <td style="white-space:nowrap;"><input id="${idInput}" type="number" min="1" max="${GP_NOMBRE_MAX}" value="${n}" style="width:64px;"></td>
             <td style="white-space:nowrap;">
               <button type="button" class="btn sm" onclick="definirGpNombrePourNiveau('${esc(niveau)}', document.getElementById('${idInput}').value)">💾</button>
@@ -18874,6 +18911,7 @@ function printEffectifs(){
   try{ migrerMotsDePasseComptes(); }catch(e){}
   try{ migrerMotsDePasseClairs(); }catch(e){}
   setTimeout(()=>{ try{ verifierAncienneteSync(); }catch(e){} }, 8000); // laisse à Drive le temps de se reconnecter
+  setTimeout(()=>{ try{ demanderPurgeModulesRetires(); }catch(e){} }, 10000);
   // Une session sans rôle (par ex. fabriquée à la main dans la console) n'est pas acceptée
   if(sessionStorage.getItem('tekoulo_session')==='1' && !sessionStorage.getItem('tekoulo_role')){
     sessionStorage.removeItem('tekoulo_session'); sessionStorage.removeItem('tekoulo_token');
@@ -22426,24 +22464,7 @@ function corrTelecharger(){
 }
 
 </script>
-<script id="script-retrait-formulaires">
-/* Retrait du menu de quatre formulaires : Plan de progression, Corriger une copie,
-   Banque d'évaluations, Cahier journal et Dossier pédagogique. Les données déjà enregistrées sont conservées ;
-   seules les entrées de menu et leur accès par rôle sont retirés. */
-(function(){
-  const RETIRES = ['planProgression', 'corrigerCopie', 'banqueEvaluations', 'cahierJournal', 'dossierPedagogique'];
-  try{
-    if(typeof NAV !== 'undefined'){
-      NAV.forEach(g => { g.items = g.items.filter(i => !RETIRES.includes(i.key)); });
-    }
-    if(typeof ROLE_MODULES === 'object'){
-      Object.keys(ROLE_MODULES).forEach(r => {
-        if(Array.isArray(ROLE_MODULES[r])) ROLE_MODULES[r] = ROLE_MODULES[r].filter(k => !RETIRES.includes(k));
-      });
-    }
-  }catch(x){ console.warn('Retrait des formulaires : partiel', x); }
-})();
-</script>
+
 <style id="style-diagnostic">
 #diag-bouton{position:fixed;left:10px;bottom:10px;z-index:99998;display:none;background:#B3231C;color:#fff;border:0;border-radius:999px;padding:6px 12px;font:600 12px system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
 #diag-panneau{position:fixed;inset:0;z-index:99999;display:none;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:12px;box-sizing:border-box}
@@ -23536,7 +23557,7 @@ function corrTelecharger(){
 <script id="script-fonctions-complementaires">
 /* Fonctions complémentaires : rédaction IA de l’appréciation, tableau de synthèse et impression
    de tous les bulletins, alertes de supervision, et trois modules (cahier de participation,
-   travail de groupe, plan de progression) enregistrés comme les autres modules génériques. */
+   travail de groupe) enregistrés comme les autres modules génériques. */
 (function(){
   const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const nomDe = r => ((r.nom||'')+' '+(r.prenoms||'')).trim() || 'Non identifié';
@@ -23649,207 +23670,6 @@ function corrTelecharger(){
   window.renderView = function(key){
     _renderView(key);
     if(key === 'supervision') poserComplements();
-  };
-})();
-</script>
-<script id="script-plan-progression">
-/* Plan de progression : suivi mois par mois des chapitres et leçons, et génération IA
-   du cours et du sujet correspondant à chaque entrée. Les résultats sont enregistrés dans le
-   Studio pédagogique (cours générés et sujets générés), comme les autres créations de l'IA. */
-(function(){
-  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const cle = () => { try{ return localStorage.getItem(DB_PREFIX+'ia_choix') || 'tekoulo'; }catch(x){ return 'tekoulo'; } };
-  const entrees = () => (dbGet('planProgression', []) || []).filter(Boolean);
-  const libelle = r => [r.classe, r.matiere, r.chapitre].filter(Boolean).join(' · ') || 'Entrée sans titre';
-
-  /* ---------- Enregistrement du module ---------- */
-  const MODULE = {
-    label:'Plan de progression', codePrefix:'PPR',
-    fields:[
-      {key:'classe', label:'Classe', type:'text'},
-      {key:'matiere', label:'Matière', type:'text'},
-      {key:'periode', label:'Mois', type:'select', options:['Octobre','Novembre','Décembre','Janvier','Février','Mars','Avril','Mai','Juin']},
-      {key:'chapitre', label:'Chapitre', type:'text', span:2},
-      {key:'leconPrevue', label:'Leçon ou contenu prévu', type:'text', span:2},
-      {key:'datePrevue', label:'Date prévue', type:'date'},
-      {key:'dateRealisee', label:'Date réalisée', type:'date'},
-      {key:'statut', label:'Statut', type:'select', options:['PRÉVU','RÉALISÉ','EN RETARD','REPORTÉ']},
-      {key:'observation', label:'Observation', type:'text', span:2}
-    ],
-    columns:['classe','matiere','periode','chapitre','datePrevue','statut']
-  };
-  try{
-    if(typeof GENERIC_MODULES === 'object' && !GENERIC_MODULES.planProgression) GENERIC_MODULES.planProgression = MODULE;
-    if(typeof CLES_SYNCHRONISEES !== 'undefined' && !CLES_SYNCHRONISEES.includes('planProgression')) CLES_SYNCHRONISEES.push('planProgression');
-    if(typeof PAGE_META === 'object' && !PAGE_META.planProgression) PAGE_META.planProgression = {title:'Plan de progression', crumb:'Enseignement / Plan de progression'};
-    if(typeof NAV !== 'undefined' && !NAV.some(g => g.items.some(i => i.key === 'planProgression'))){
-      const groupe = NAV.find(g => g.items.some(i => i.key === 'supervision')) || NAV[NAV.length-1];
-      groupe.items.push({key:'planProgression', label:'Plan de progression', icon:'📅'});
-    }
-    if(typeof ROLE_MODULES === 'object') Object.keys(ROLE_MODULES).forEach(role => {
-      const l = ROLE_MODULES[role];
-      if(Array.isArray(l) && l.includes('supervision') && !l.includes('planProgression')) l.push('planProgression');
-    });
-    if(typeof TOUS_LES_MODULES_ADMIN_CYCLE !== 'undefined' && Array.isArray(TOUS_LES_MODULES_ADMIN_CYCLE) && !TOUS_LES_MODULES_ADMIN_CYCLE.includes('planProgression')) TOUS_LES_MODULES_ADMIN_CYCLE.push('planProgression');
-  }catch(x){ console.warn('Plan de progression : enregistrement partiel', x); }
-
-  /* ---------- Consignes données à l’IA ---------- */
-  function consigneCours(r){
-    return 'Tu es professeur expérimenté dans un établissement en Guinée.\n'
-      + `Classe : ${r.classe||'—'} · Matière : ${r.matiere||'—'} · Mois prévu : ${r.periode||'—'}\n`
-      + `Chapitre : ${r.chapitre||'—'}\nLeçon prévue : ${r.leconPrevue||'—'}\n${r.observation ? 'Remarque : '+r.observation+'\n' : ''}\n`
-      + 'Rédige le cours complet de cette leçon, en français clair et adapté au niveau de la classe. Structure-le avec des titres « ## » : objectifs, introduction, notions (définitions et exemples), schéma ou tableau décrit en texte si utile, résumé, puis trois exercices corrigés.';
-  }
-  function consigneSujet(r){
-    return 'Tu es professeur expérimenté dans un établissement en Guinée.\n'
-      + `Classe : ${r.classe||'—'} · Matière : ${r.matiere||'—'} · Mois : ${r.periode||'—'}\n`
-      + `Chapitre : ${r.chapitre||'—'}\nLeçon : ${r.leconPrevue||'—'}\n\n`
-      + 'Rédige un sujet d’évaluation de 1 heure sur cette leçon, total 20 points : consignes générales, puis des exercices numérotés (Exercice 1, Exercice 2…) avec le nombre de points entre parenthèses, par exemple « (1,5 pt) ». Termine par la section « ## Corrigé » avec les réponses attendues et le barème.';
-  }
-
-  async function generer(type){
-    const sel = document.getElementById('pp-sel');
-    const r = entrees().find(x => sel && String(x.__id) === sel.value);
-    const z = document.getElementById('pp-statut');
-    if(!r){ if(z) z.textContent = 'Choisissez une entrée du plan.'; return; }
-    if(z) z.textContent = '⏳ Génération en cours : ' + (type==='cours' ? 'le cours' : 'le sujet') + ' (quelques secondes)…';
-    try{
-      const res = await assistantAppelAPI(type==='cours' ? consigneCours(r) : consigneSujet(r), undefined, undefined, true, cle());
-      if(!res || !res.ok){ if(z) z.textContent = '⚠ ' + ((res && res.error) || 'Pas de réponse de l’IA.'); return; }
-      const titre = (type==='cours' ? 'Cours : ' : 'Sujet : ') + (r.chapitre || r.matiere || 'sans titre') + (r.leconPrevue ? ' — ' + r.leconPrevue : '');
-      const base = {titre, matiere: r.matiere||'', niveau: r.classe||'', chapitre: r.chapitre||'', dateGeneration: new Date().toISOString(), source:'plan', contenu: res.reponse, planId: r.__id};
-      if(type === 'cours') coursGeneresAjouter(base); else sujetsGeneresAjouter(base);
-      if(z) z.textContent = '✅ ' + (type==='cours' ? 'Cours' : 'Sujet') + ' enregistré dans le Studio pédagogique (' + (type==='cours' ? 'cours générés' : 'sujets générés') + ').';
-    }catch(err){ if(z) z.textContent = '⚠ ' + (err && err.message ? err.message : 'erreur inconnue'); }
-  }
-  window.ppGenererCours = () => generer('cours');
-  window.ppGenererSujet = () => generer('sujet');
-
-  /* ---------- Barre IA dans la rubrique Plan de progression ---------- */
-  function poser(){
-    const v = document.getElementById('view-planProgression');
-    if(!v || document.getElementById('pp-bar')) return;
-    const liste = entrees();
-    const opts = liste.map(r => `<option value="${e(r.__id)}">${e(libelle(r))}${r.periode ? ' — ' + e(r.periode) : ''}</option>`).join('');
-    const bar = document.createElement('div');
-    bar.id = 'pp-bar'; bar.className = 'card';
-    bar.style.cssText = 'padding:12px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
-    bar.innerHTML = '<b style="color:var(--green-deep)">✨ Générer depuis le plan</b>'
-      + `<select id="pp-sel" style="min-width:240px">${opts || '<option value="">Ajoutez d’abord une entrée au plan</option>'}</select>`
-      + '<button class="btn" type="button" onclick="ppGenererCours()">Générer le cours</button>'
-      + '<button class="btn ghost" type="button" onclick="ppGenererSujet()">Générer le sujet</button>'
-      + '<div id="pp-statut" class="muted" style="width:100%;font-size:12px;margin-top:4px"></div>';
-    v.insertBefore(bar, v.firstChild);
-  }
-  const _renderView = window.renderView;
-  window.renderView = function(key){
-    _renderView(key);
-    if(key === 'planProgression') poser();
-  };
-})();
-</script>
-<script id="script-modules-enseignant">
-/* Liaison plan de progression ↔ répartition annuelle, et deux modules issus des captures :
-   cahier journal et banque d’évaluations. Mêmes principes que les modules génériques. */
-(function(){
-  const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const cycle = () => (typeof TEKOULO_CYCLE_ACTIF !== 'undefined' ? TEKOULO_CYCLE_ACTIF : '');
-
-  /* ---------- 1. Plan ← répartition ---------- */
-  window.ppCreerDepuisRepartition = function(){
-    const sel = document.getElementById('pp-rep-sel');
-    const z = document.getElementById('pp-statut');
-    const rep = (dbGet('repartitionsProgramme', []) || []).find(r => sel && r.id === sel.value);
-    if(!rep){ if(z) z.textContent = 'Choisissez une répartition enregistrée (Créer un cours › Répartition annuelle).'; return; }
-    const plan = (dbGet('planProgression', []) || []).filter(Boolean);
-    let ajoutes = 0, deja = 0;
-    const nouveaux = [];
-    (rep.cours || []).forEach((c, i) => {
-      const doublon = plan.concat(nouveaux).some(p => p.classe === c.niveau && p.matiere === c.matiere && p.leconPrevue === c.titre);
-      if(doublon){ deja++; return; }
-      const n = plan.length + nouveaux.length + 1;
-      nouveaux.push({
-        __id: 'pp' + Date.now() + i + Math.random().toString(36).slice(2,6),
-        __code: 'PPR' + String(n).padStart(3, '0'),
-        cycle: cycle(), classe: c.niveau || '', matiere: c.matiere || '', periode: '', chapitre: c.chapitre || '',
-        leconPrevue: c.titre || '', datePrevue: '', dateRealisee: '', statut: 'PRÉVU',
-        observation: (c.sousTitres || []).join(' ; '), source: 'repartition'
-      });
-      ajoutes++;
-    });
-    dbSet('planProgression', plan.concat(nouveaux));
-    if(z) z.textContent = '✅ ' + ajoutes + ' entrée(s) ajoutée(s) au plan depuis « ' + rep.nom + ' »' + (deja ? ' ; ' + deja + ' déjà présente(s), ignorée(s).' : '.') + ' Rechargez la rubrique pour les voir.';
-  };
-
-  /* ---------- 2. Deux modules des captures ---------- */
-  const MODULES = {
-    cahierJournal: {
-      label:'Cahier journal', codePrefix:'CJO', icon:'📓',
-      fields:[
-        {key:'date', label:'Date', type:'date'},
-        {key:'classe', label:'Classe', type:'text'},
-        {key:'matiere', label:'Matière', type:'text'},
-        {key:'theme', label:'Thème ou leçon traitée', type:'text', span:2},
-        {key:'presents', label:'Élèves présents', type:'number'},
-        {key:'effectif', label:'Effectif', type:'number'},
-        {key:'travailDonne', label:'Travail donné aux élèves', type:'text', span:2},
-        {key:'observation', label:'Observation', type:'text', span:2}
-      ],
-      columns:['date','classe','matiere','theme','presents','effectif']
-    },
-    banqueEvaluations: {
-      label:'Banque d’évaluations', codePrefix:'BEV', icon:'🧾',
-      fields:[
-        {key:'titre', label:'Titre', type:'text', span:2},
-        {key:'matiere', label:'Matière', type:'text'},
-        {key:'classe', label:'Classe', type:'text'},
-        {key:'type', label:'Type', type:'select', options:['Devoir','Interrogation','Composition','Examen blanc']},
-        {key:'date', label:'Date', type:'date'},
-        {key:'points', label:'Total des points', type:'number'},
-        {key:'contenu', label:'Sujet et corrigé', type:'textarea', rows:6, span:2},
-        {key:'source', label:'Source', type:'select', options:['Saisi à la main','Généré par l’IA']}
-      ],
-      columns:['titre','matiere','classe','type','date','points']
-    }
-  };
-  const LIB = {cahierJournal:'Cahier journal', banqueEvaluations:'Banque d’évaluations'};
-  try{
-    Object.keys(MODULES).forEach(k => {
-      const m = MODULES[k];
-      if(typeof GENERIC_MODULES === 'object' && !GENERIC_MODULES[k]) GENERIC_MODULES[k] = m;
-      if(typeof CLES_SYNCHRONISEES !== 'undefined' && !CLES_SYNCHRONISEES.includes(k)) CLES_SYNCHRONISEES.push(k);
-      if(typeof PAGE_META === 'object' && !PAGE_META[k]) PAGE_META[k] = {title: LIB[k], crumb: 'Enseignement / ' + LIB[k]};
-      if(typeof NAV !== 'undefined' && !NAV.some(g => g.items.some(i => i.key === k))){
-        const groupe = NAV.find(g => g.items.some(i => i.key === 'supervision')) || NAV[NAV.length-1];
-        groupe.items.push({key:k, label:LIB[k], icon:m.icon});
-      }
-      if(typeof ROLE_MODULES === 'object') Object.keys(ROLE_MODULES).forEach(role => {
-        const l = ROLE_MODULES[role];
-        if(Array.isArray(l) && l.includes('supervision') && !l.includes(k)) l.push(k);
-      });
-      if(typeof TOUS_LES_MODULES_ADMIN_CYCLE !== 'undefined' && Array.isArray(TOUS_LES_MODULES_ADMIN_CYCLE) && !TOUS_LES_MODULES_ADMIN_CYCLE.includes(k)) TOUS_LES_MODULES_ADMIN_CYCLE.push(k);
-    });
-  }catch(x){ console.warn('Modules enseignant : enregistrement partiel', x); }
-
-  /* ---------- 3. Barre de liaison dans la rubrique Plan de progression ---------- */
-  function poser(){
-    const v = document.getElementById('view-planProgression');
-    if(!v || document.getElementById('pp-link-bar')) return;
-    const reps = dbGet('repartitionsProgramme', []) || [];
-    const opts = reps.map(r => `<option value="${e(r.id)}">${e(r.nom)}${r.annee ? ' (' + e(r.annee) + ')' : ''} — ${(r.cours||[]).length} cours</option>`).join('');
-    const bar = document.createElement('div');
-    bar.id = 'pp-link-bar'; bar.className = 'card';
-    bar.style.cssText = 'padding:12px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
-    bar.innerHTML = '<b style="color:var(--green-deep)">📥 Remplir depuis la répartition</b>'
-      + (reps.length ? `<select id="pp-rep-sel" style="min-width:240px">${opts}</select><button class="btn ghost" type="button" onclick="ppCreerDepuisRepartition()">Créer les entrées du plan</button>`
-                     : '<span class="muted" style="font-size:12px">Aucune répartition enregistrée. Importez-la dans « Créer un cours ».</span>');
-    const ancre = document.getElementById('pp-bar');
-    if(ancre) ancre.after(bar); else v.insertBefore(bar, v.firstChild);
-  }
-  const _renderView = window.renderView;
-  window.renderView = function(key){
-    _renderView(key);
-    if(key === 'planProgression') poser();
   };
 })();
 </script>
@@ -24086,7 +23906,6 @@ function corrTelecharger(){
 </script>
 <script id="script-suite-enseignant">
 /* Suite enseignant : (1) statistiques et listes du registre des notes (analyse des évaluations) ;
-   (2) module « Corriger une copie » : correction assistée par IA à partir d’une photo ou d’un PDF.
    Ces fonctions s’ajoutent aux écrans existants ; aucune donnée n’est modifiée sans action de l’utilisateur. */
 (function(){
   const e = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -24147,108 +23966,6 @@ function corrTelecharger(){
   try{ new MutationObserver(() => { clearTimeout(t1); t1 = setTimeout(barreStats, 90); })
     .observe(document.getElementById('content') || document.body, {childList:true, subtree:true}); }catch(x){}
 
-  /* ---------- 2. Corriger une copie (module + IA) ---------- */
-  const MODULE = {
-    label:'Corriger une copie', codePrefix:'COP',
-    fields:[
-      {key:'eleve', label:'Nom de l’élève', type:'text', span:2},
-      {key:'matiere', label:'Matière', type:'text'},
-      {key:'classe', label:'Classe', type:'text'},
-      {key:'date', label:'Date', type:'date'},
-      {key:'bareme', label:'Barème (sur)', type:'number'},
-      {key:'noteProposee', label:'Note proposée', type:'number'},
-      {key:'appreciation', label:'Appréciation (relue)', type:'textarea', rows:4, span:2},
-      {key:'source', label:'Source', type:'select', options:['Saisie manuelle','Proposée par l’IA et relue']}
-    ],
-    columns:['eleve','matiere','classe','date','noteProposee','source']
-  };
-  try{
-    if(typeof GENERIC_MODULES === 'object' && !GENERIC_MODULES.corrigerCopie) GENERIC_MODULES.corrigerCopie = MODULE;
-    if(typeof CLES_SYNCHRONISEES !== 'undefined' && !CLES_SYNCHRONISEES.includes('corrigerCopie')) CLES_SYNCHRONISEES.push('corrigerCopie');
-    if(typeof PAGE_META === 'object' && !PAGE_META.corrigerCopie) PAGE_META.corrigerCopie = {title:'Corriger une copie', crumb:'Enseignement / Corriger une copie'};
-    if(typeof NAV !== 'undefined' && !NAV.some(g => g.items.some(i => i.key === 'corrigerCopie'))){
-      const groupe = NAV.find(g => g.items.some(i => i.key === 'supervision')) || NAV[NAV.length-1];
-      groupe.items.push({key:'corrigerCopie', label:'Corriger une copie', icon:'📝'});
-    }
-    if(typeof ROLE_MODULES === 'object') Object.keys(ROLE_MODULES).forEach(role => {
-      const l = ROLE_MODULES[role];
-      if(Array.isArray(l) && l.includes('supervision') && !l.includes('corrigerCopie')) l.push('corrigerCopie');
-    });
-  }catch(x){ console.warn('Corriger une copie : enregistrement partiel', x); }
-
-  function lireFichier(f){
-    return new Promise((ok, ko) => {
-      const r = new FileReader();
-      r.onload = () => ok({nom: f.name, mediaType: f.type || 'image/jpeg', base64: String(r.result).split(',')[1]});
-      r.onerror = () => ko(new Error('lecture du fichier impossible'));
-      r.readAsDataURL(f);
-    });
-  }
-  window.copieCorriger = async function(){
-    const f = (document.getElementById('cop-fichier')||{}).files;
-    const z = document.getElementById('cop-statut');
-    const sortie = document.getElementById('cop-sortie');
-    const matiere = (document.getElementById('cop-matiere')||{}).value || '';
-    const bareme = (document.getElementById('cop-bareme')||{}).value || '20';
-    const consignes = (document.getElementById('cop-consignes')||{}).value || '';
-    if(!f || !f[0]){ z.textContent = 'Joignez d’abord la photo ou le PDF de la copie.'; return; }
-    if(f[0].size > 10 * 1024 * 1024){ z.textContent = 'Fichier trop lourd (10 Mo maximum).'; return; }
-    z.textContent = '⏳ Lecture de la copie et correction en cours…';
-    try{
-      const piece = await lireFichier(f[0]);
-      const consigne = 'Tu es professeur correcteur dans un établissement en Guinée. Lis la copie jointe (écriture manuscrite possible), corrige-la à partir du barème et des consignes ci-dessous, sans inventer de réponse absente de la copie.\n\n'
-        + `Matière : ${matiere || '—'} · Barème : ${bareme} points\n`
-        + (consignes ? `Corrigé ou consignes du professeur :\n${consignes}\n\n` : 'Aucun corrigé fourni : juge la copie d’après le niveau attendu.\n\n')
-        + 'Réponds exactement sous cette forme :\nNote proposée : X/' + bareme + '\nPoints forts : ...\nErreurs relevées : ...\nAppréciation : ...';
-      const res = await assistantAppelAPI(consigne, piece, undefined, true, cle());
-      if(!res || !res.ok){ z.textContent = '⚠ ' + ((res && res.error) || 'Pas de réponse de l’IA.'); return; }
-      sortie.style.display = 'block'; sortie.value = res.reponse;
-      const m = /Note proposée\s*:\s*([0-9]+(?:[.,][0-9]+)?)/i.exec(res.reponse || '');
-      document.getElementById('cop-note').value = m ? m[1].replace(',', '.') : '';
-      z.textContent = '✅ Proposition prête. Relisez-la, puis enregistrez-la si elle vous convient.';
-    }catch(err){ z.textContent = '⚠ ' + (err && err.message ? err.message : 'erreur inconnue'); }
-  };
-  window.copieEnregistrer = function(){
-    const sortie = document.getElementById('cop-sortie');
-    if(!sortie || !sortie.value.trim()){ toast('Lancez d’abord la correction.', true); return; }
-    const liste = dbGet('corrigerCopie', []) || [];
-    const bareme = (document.getElementById('cop-bareme')||{}).value || '20';
-    const eleve = (document.getElementById('cop-eleve')||{}).value || '';
-    const m = (document.getElementById('cop-matiere')||{}).value || '';
-    const note = (document.getElementById('cop-note')||{}).value || '';
-    const n = liste.length + 1;
-    liste.unshift({__id: 'cop'+Date.now()+Math.random().toString(36).slice(2,6), __code:'COP'+String(n).padStart(3,'0'),
-      cycle: (typeof TEKOULO_CYCLE_ACTIF !== 'undefined' ? TEKOULO_CYCLE_ACTIF : ''), eleve, matiere: m, classe: '', date: new Date().toISOString().slice(0,10),
-      bareme, noteProposee: note, appreciation: sortie.value, source: 'Proposée par l’IA et relue'});
-    dbSet('corrigerCopie', liste);
-    toast('Copie corrigée enregistrée.');
-    if(typeof renderView === 'function') renderView('corrigerCopie');
-  };
-  function poserCorrection(){
-    const v = document.getElementById('view-corrigerCopie');
-    if(!v || document.getElementById('cop-bar')) return;
-    const bar = document.createElement('div');
-    bar.id = 'cop-bar'; bar.className = 'card'; bar.style.cssText = 'padding:14px 16px;margin:0 0 12px';
-    bar.innerHTML = '<b style="color:var(--green-deep)">📝 Correction assistée par IA</b>'
-      + '<p class="muted" style="font-size:12px;margin:6px 0 10px">Joignez la photo ou le PDF de la copie. L’IA propose une note et une appréciation ; vous relisez et enregistrez.</p>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="pia-grille">'
-      + '<div class="field"><label>Nom de l’élève</label><input id="cop-eleve" type="text"></div>'
-      + '<div class="field"><label>Matière</label><input id="cop-matiere" type="text"></div>'
-      + '<div class="field"><label>Barème (sur)</label><input id="cop-bareme" type="number" value="20" min="1"></div>'
-      + '<div class="field"><label>Copie (photo ou PDF)</label><input id="cop-fichier" type="file" accept="image/*,application/pdf"></div>'
-      + '<div class="field" style="grid-column:1/-1"><label>Corrigé ou consignes (facultatif)</label><textarea id="cop-consignes" rows="3" placeholder="Réponses attendues, barème détaillé…"></textarea></div>'
-      + '</div>'
-      + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><button class="btn" type="button" onclick="copieCorriger()">✨ Corriger par IA</button><span id="cop-statut" class="muted" style="font-size:12px"></span></div>'
-      + '<textarea id="cop-sortie" rows="7" style="display:none;width:100%;margin-top:10px"></textarea>'
-      + '<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><label style="font-size:12px">Note retenue <input id="cop-note" type="number" step="0.25" style="max-width:110px"></label><button class="btn ghost" type="button" onclick="copieEnregistrer()">💾 Enregistrer la copie corrigée</button></div>'
-      + '<p class="muted" style="font-size:11.5px;margin:8px 0 0">La note et l’appréciation proposées par l’IA doivent être vérifiées par le professeur.</p>';
-    v.insertBefore(bar, v.firstChild);
-  }
-  const _renderView = window.renderView;
-  window.renderView = function(key){
-    _renderView(key);
-    if(key === 'corrigerCopie') poserCorrection();
-  };
 })();
 </script>
 <script id="script-dossier-pedagogique">
@@ -24262,35 +23979,6 @@ function corrTelecharger(){
   const sujetsL = () => (dbGet('sujetsGeneres', []) || []).filter(Boolean);
   const fichesL = () => (dbGet('fichesQR', []) || []).filter(Boolean);
 
-  const MODULES = {
-    dossierPedagogique: {
-      label:'Dossier pédagogique complet', codePrefix:'DOS', icon:'🗂️',
-      fields:[
-        {key:'matiere', label:'Matière', type:'text'},
-        {key:'niveau', label:'Niveau', type:'text'},
-        {key:'annee', label:'Année scolaire', type:'text'},
-        {key:'observation', label:'Observation', type:'text', span:2}
-      ],
-      columns:['matiere','niveau','annee']
-    }
-  };
-  const LIB = {fichesQR:'Fiches questions-réponses', dossierPedagogique:'Dossier pédagogique complet'};
-  try{
-    Object.keys(MODULES).forEach(k => {
-      if(k === 'fichesQR') return; // module retiré du menu (formulaire non utilisé)
-      if(typeof GENERIC_MODULES === 'object' && !GENERIC_MODULES[k]) GENERIC_MODULES[k] = MODULES[k];
-      if(typeof CLES_SYNCHRONISEES !== 'undefined' && !CLES_SYNCHRONISEES.includes(k)) CLES_SYNCHRONISEES.push(k);
-      if(typeof PAGE_META === 'object' && !PAGE_META[k]) PAGE_META[k] = {title: LIB[k], crumb: 'Enseignement / ' + LIB[k]};
-      if(typeof NAV !== 'undefined' && !NAV.some(g => g.items.some(i => i.key === k))){
-        const groupe = NAV.find(g => g.items.some(i => i.key === 'supervision')) || NAV[NAV.length-1];
-        groupe.items.push({key:k, label:LIB[k], icon:MODULES[k].icon});
-      }
-      if(typeof ROLE_MODULES === 'object') Object.keys(ROLE_MODULES).forEach(role => {
-        const l = ROLE_MODULES[role];
-        if(Array.isArray(l) && l.includes('supervision') && !l.includes(k)) l.push(k);
-      });
-    });
-  }catch(x){ console.warn('Dossier pédagogique : enregistrement partiel', x); }
 
   /* ---------- Fiches questions-réponses (IA) ---------- */
   window.qrGenerer = async function(){
@@ -24328,51 +24016,17 @@ function corrTelecharger(){
     v.insertBefore(bar, v.firstChild);
   }
 
-  /* ---------- Dossier pédagogique complet (impression) ---------- */
+  /* ---------- Rendu du contenu (utilisé par les fiches questions-réponses) ---------- */
   function rendre(texte){
     const tmp = document.createElement('div');
     try{ assistantRendreContenu(tmp, texte || ''); }catch(x){ tmp.textContent = texte || ''; }
     return tmp.innerHTML;
-  }
-  window.dossierImprimer = function(){
-    const mat = (document.getElementById('dos-mat')||{}).value || '';
-    const niv = (document.getElementById('dos-niv')||{}).value || '';
-    const z = document.getElementById('dos-statut');
-    const cours = coursL().filter(c => (!mat || c.matiere === mat) && (!niv || c.niveau === niv));
-    const sujets = sujetsL().filter(s => (!mat || s.matiere === mat) && (!niv || s.niveau === niv));
-    const fiches = fichesL().filter(f => (!mat || f.matiere === mat) && (!niv || f.niveau === niv));
-    if(!cours.length && !sujets.length && !fiches.length){ if(z) z.textContent = 'Aucun document pour cette matière et ce niveau.'; return; }
-    const section = (titre, items, fn) => items.length ? `<h2 style="page-break-before:always">${e(titre)}</h2>` + items.map(fn).join('') : '';
-    const sommaire = `<h2>Sommaire</h2><ol>${cours.map(c => `<li>Cours : ${e(c.titre||'sans titre')}</li>`).join('')}${sujets.map(s => `<li>Sujet : ${e(s.titre||'sans titre')}</li>`).join('')}${fiches.map(f => `<li>Fiche : ${e(f.titre||'sans titre')}</li>`).join('')}</ol>`;
-    const html = `<p>Matière : <b>${e(mat||'toutes')}</b> · Niveau : <b>${e(niv||'tous')}</b> · ${cours.length} cours, ${sujets.length} sujet(s), ${fiches.length} fiche(s).</p>${sommaire}`
-      + section('Cours', cours, c => `<div style="page-break-before:always"><h3>${e(c.titre||'Cours')}</h3>${rendre(c.contenu)}</div>`)
-      + section('Sujets d’évaluation', sujets, s => `<div style="page-break-before:always"><h3>${e(s.titre||'Sujet')}</h3>${rendre(s.contenu)}</div>`)
-      + section('Fiches questions-réponses', fiches, f => `<div style="page-break-before:always"><h3>${e(f.titre||'Fiche')}</h3>${rendre(f.contenu)}</div>`);
-    const p = getParams();
-    tekouloDocumentImprimable({titre: 'Dossier pédagogique' + (mat ? ' — ' + mat : ''), sousTitre: [niv, p.anneeScolaire].filter(Boolean).join(' · '),
-      contenuHTML: html, module: 'dossierPedagogique', avecStylesApp: true});
-    if(z) z.textContent = '';
-  };
-  function barreDossier(){
-    const v = document.getElementById('view-dossierPedagogique');
-    if(!v || document.getElementById('dos-bar')) return;
-    const mats = Array.from(new Set([].concat(coursL(), sujetsL(), fichesL()).map(x => x.matiere).filter(Boolean))).sort();
-    const nivs = Array.from(new Set([].concat(coursL(), sujetsL(), fichesL()).map(x => x.niveau).filter(Boolean))).sort();
-    const bar = document.createElement('div');
-    bar.id = 'dos-bar'; bar.className = 'card'; bar.style.cssText = 'padding:12px 14px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
-    bar.innerHTML = '<b style="color:var(--green-deep)">🗂️ Imprimer le dossier</b>'
-      + `<select id="dos-mat"><option value="">Toutes les matières</option>${mats.map(m => `<option>${e(m)}</option>`).join('')}</select>`
-      + `<select id="dos-niv"><option value="">Tous les niveaux</option>${nivs.map(m => `<option>${e(m)}</option>`).join('')}</select>`
-      + '<button class="btn" type="button" onclick="dossierImprimer()">⎙ Imprimer le dossier</button>'
-      + '<span id="dos-statut" class="muted" style="width:100%;font-size:12px"></span>';
-    v.insertBefore(bar, v.firstChild);
   }
 
   const _renderView = window.renderView;
   window.renderView = function(key){
     _renderView(key);
     if(key === 'fichesQR') barreQR();
-    if(key === 'dossierPedagogique') barreDossier();
   };
 })();
 </script>
