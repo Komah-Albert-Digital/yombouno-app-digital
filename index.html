@@ -6324,6 +6324,9 @@ function renderBiographie(container){
 }
 
 /* Sceau de l'établissement utilisé dans le guide (fonction absente auparavant : le guide ne s'affichait pas). */
+/* Logo sur les documents imprimés : le sceau a des lettres claires ; un liseré sombre les rend lisibles sur papier blanc
+   (sans changer les couleurs). Non appliqué à l'écran de connexion ni à la barre latérale. */
+const STYLE_LOGO_IMPRESSION = 'filter:drop-shadow(0 0 0.6px #0b2e1f) drop-shadow(0 0 0.6px #0b2e1f) drop-shadow(0 0 0.6px #0b2e1f);';
 function logoEcoleActuel(){
   return (typeof TEKOULO_SEAL_DATAURI!=='undefined') ? TEKOULO_SEAL_DATAURI : '';
 }
@@ -12420,7 +12423,7 @@ function tekouloBadgesCSS(CP){
       .print-watermark{position:fixed;top:50%;left:50%;width:300px;height:300px;transform:translate(-50%,-50%);opacity:.045;filter:grayscale(1);background-size:contain;background-repeat:no-repeat;background-position:center;pointer-events:none;z-index:0;}`;
 }
 function tekouloBadgesHTML(){
-  return `<img class="print-logo-badge" src="${logoEcoleActuel()}">
+  return `<img class="print-logo-badge" style="${STYLE_LOGO_IMPRESSION}" src="${logoEcoleActuel()}">
     <img class="print-emblem-badge" src="${GUINEA_EMBLEM_DATAURI}">
     <div class="print-motto"><span class="orn">❧</span><span class="txt">Nul n'apprend sans désir, nul n'apprend sans effort</span><span class="orn">❧</span></div>
     <div class="print-watermark" style="background-image:url('${logoEcoleActuel()}')"></div>`;
@@ -16235,11 +16238,11 @@ function carteScolaireCardHTML(e, p){
   const session = p.session || (p.anneeScolaire? p.anneeScolaire.split('-').pop() : '');
   const ecoleNom = esc(p.nomEcole||'Établissement scolaire');
   const headerHTML = `<div class="id2-header">
-      <img src="${logoEcoleActuel()}">
+      <img style="${STYLE_LOGO_IMPRESSION}" src="${logoEcoleActuel()}">
       <div class="htxt"><b>${ecoleNom}</b><span>République de Guinée</span></div>
     </div>`;
   const versoHeaderHTML = `<div class="id2-header">
-      <img src="${logoEcoleActuel()}">
+      <img style="${STYLE_LOGO_IMPRESSION}" src="${logoEcoleActuel()}">
       <div class="htxt"><b>République de Guinée</b><span>Travail — Justice — Solidarité</span></div>
     </div>`;
 
@@ -16386,7 +16389,7 @@ function badgePersonnelCardHTML(person, p){
   const ecoleNom = esc(p.nomEcole||'Établissement scolaire');
   const badgeVars = "--id-accent:#1C3D5A; --id-border:#B9C2D0; --id-border-soft:#A9B6C8; --id-bg1:#F8FAFC; --id-bg2:#EEF2F7; --id-bg3:#E3E9F0; --id-texture:rgba(28,61,90,.045);";
   const headerHTML = `<div class="id2-header">
-      <img src="${logoEcoleActuel()}">
+      <img style="${STYLE_LOGO_IMPRESSION}" src="${logoEcoleActuel()}">
       <div class="htxt"><b>${ecoleNom}</b><span>République de Guinée</span></div>
     </div>`;
 
@@ -16560,7 +16563,7 @@ function certificatOfficielHeaderHTML(p, numeroDoc, personName){
           <div style="font-size:6.2pt; color:var(--ink-soft); margin-top:0.8mm; letter-spacing:.3px;">VÉRIFICATION</div>
         </div>
       </div>
-      <div class="center-badge"><img src="${logoEcoleActuel()}" alt="Logo de l'établissement"></div>
+      <div class="center-badge"><img style="${STYLE_LOGO_IMPRESSION}" src="${logoEcoleActuel()}" alt="Logo de l'établissement"></div>
       <div class="side state-block">
         <div class="country">RÉPUBLIQUE DE GUINÉE</div>
         <div class="devise">Travail — Justice — Solidarité</div>
@@ -16939,7 +16942,7 @@ function certificatReconnaissanceHTML(person, p, extra){
             <span style="font-size:7.4pt; opacity:.85;">Édité le ${new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})} à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span>
           </div>
         </div>
-        <div class="center-badge"><img src="${logoEcoleActuel()}" alt=""></div>
+        <div class="center-badge"><img style="${STYLE_LOGO_IMPRESSION}" src="${logoEcoleActuel()}" alt=""></div>
         <div class="side right">
           <img class="mini-seal" src="${GUINEA_EMBLEM_DATAURI}">
           <div class="right-text">
@@ -22434,7 +22437,7 @@ function corrDocumentComplet(corps, titre){
   .pied { position:fixed; bottom:0; left:0; right:0; text-align:center; font-size:9pt; color:#6b7a70; }
 </style></head><body>
 <div class="page-garde">
-  ${logo ? `<img src="${logo}" alt="">` : ''}
+  ${logo ? `<img style="${STYLE_LOGO_IMPRESSION}" src="${logo}" alt="">` : ''}
   <div style="font-size:11pt;letter-spacing:2px;color:#0B4A32;font-weight:700;">RÉPUBLIQUE DE GUINÉE</div>
   <div style="font-size:10pt;font-style:italic;color:#555;">Travail — Justice — Solidarité</div>
   <div class="bande"></div>
