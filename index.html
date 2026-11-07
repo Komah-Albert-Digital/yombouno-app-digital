@@ -5464,6 +5464,8 @@ async function openLinkedFile(){
     const file = await handle.getFile();
     const text = await file.text();
     const data = JSON.parse(text);
+    if(!data || typeof data!=='object' || Array.isArray(data)) throw new Error('Le fichier ne contient pas une sauvegarde Tekoulo.');
+    if(!Object.keys(data).some(k=>k.startsWith(DB_PREFIX))) throw new Error('Ce fichier ne contient pas les données de cette application.');
     if(!confirm('Charger les données de "'+handle.name+'" ? Cela remplacera les données actuellement affichées dans l\u2019application.')) return;
     restoreSnapshotIntoStorage(data);
     LINKED_FILE_HANDLE = handle; LINKED_FILE_NAME = handle.name;
@@ -5471,7 +5473,15 @@ async function openLinkedFile(){
     localStorage.setItem(DB_PREFIX+'__lastLinkedSyncAt', new Date().toISOString());
     toast('Données chargées depuis le fichier lié. Rechargement…');
     setTimeout(()=>location.reload(), 900);
-  }catch(err){ if(err.name!=='AbortError') toast('Impossible d\u2019ouvrir ce fichier.', true); }
+  }catch(err){
+    if(err && err.name==='AbortError') return;
+    let msg;
+    if(err instanceof SyntaxError) msg='Le fichier choisi n’est pas un fichier de données valide (contenu illisible).';
+    else if(err && (err.name==='NotAllowedError' || err.name==='SecurityError')) msg='Le navigateur a refusé l’accès au fichier. Réessayez et autorisez l’accès.';
+    else msg='Impossible d’ouvrir ce fichier : '+String((err&&err.message)||'erreur inconnue').replace(/\.$/,'')+'.';
+    toast(msg, true);
+    if(typeof window.tekouloSignaler==='function') window.tekouloSignaler('Ouverture du fichier lié impossible', (err&&err.name||'Erreur')+': '+((err&&err.message)||'')+'\n'+((err&&err.stack)||''));
+  }
 }
 async function writeLinkedFileNow(){
   if(!LINKED_FILE_HANDLE) return;
@@ -22390,6 +22400,102 @@ function corrTelecharger(){
     document.body.appendChild(cadre);
     setTimeout(() => { try{ cadre.remove(); }catch(e){} }, 120000);
     return cadre.contentWindow;
+  };
+})();
+</script>
+<script id="script-impression-apercu">
+/* Impression : aperçu dans la page avec les boutons « Imprimer » et « Fermer ».
+   Un document n'imprime jamais tout seul : l'impression part uniquement lorsque l'utilisateur
+   appuie sur « Imprimer » (aperçu ou bouton du document). Remplace tekouloOuvrirFenetre :
+   même interface (document.open/write/close, focus, print). */
+(function(){
+  // Injecté dans chaque document : un appel à window.print() par un script est ignoré ;
+  // un clic de l'utilisateur, ou une autorisation explicite, imprime.
+  const STUB = '<script>(function(){var r=window.print;window.__printReal=r;window.__autoriserImpression=false;window.print=function(){var clic=!!(window.event&&window.event.type==="click");if(window.__autoriserImpression||clic){r.call(window);}};})();<\/script>';
+  const CSS_APERCU = '<style>.tk-print-actions{display:none!important}</style>';
+  function preparer(html, pourAperçu){
+    html = String(html||'');
+    const ajout = STUB + (pourAperçu ? CSS_APERCU : '');
+    if(/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, function(m){ return m + ajout; });
+    return ajout + html;
+  }
+  function notifier(texte, err){ if(typeof window.toast==='function') window.toast(texte, err); }
+  // Ouvre une fenêtre d'impression à partir d'un clic utilisateur (autorisé même si les pop-up sont bloqués)
+  function imprimerDansFenetre(html){
+    let w = null;
+    try{ w = window.open('', '_blank'); }catch(e){ w = null; }
+    if(!w) return false;
+    w.document.open(); w.document.write(preparer(html, false)); w.document.close();
+    const lancer = function(){
+      setTimeout(function(){
+        try{
+          w.focus();
+          w.__autoriserImpression = true;
+          (w.__printReal || w.print).call(w);
+          w.__autoriserImpression = false;
+        }catch(e){ notifier('Impression impossible : ' + (e && e.message ? e.message : 'erreur inconnue'), true); }
+      }, 300);
+    };
+    if(w.document.readyState === 'complete') lancer(); else w.addEventListener('load', lancer);
+    return true;
+  }
+  function apercu(html, titre){
+    const ancien = document.getElementById('impr-apercu'); if(ancien) ancien.remove();
+    const ov = document.createElement('div');
+    ov.id = 'impr-apercu';
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Aperçu avant impression');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#525659;display:flex;flex-direction:column';
+    const barre = document.createElement('div');
+    barre.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;background:#0B4A32;color:#fff;font:600 13px system-ui,sans-serif;flex:0 0 auto';
+    const libelle = document.createElement('span');
+    libelle.style.cssText = 'flex:1 1 120px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    libelle.textContent = titre || 'Aperçu avant impression';
+    const bImp = document.createElement('button');
+    bImp.type = 'button'; bImp.textContent = '🖨️ Imprimer';
+    bImp.style.cssText = 'border:0;border-radius:8px;padding:9px 14px;font:700 13px system-ui,sans-serif;background:#F2C230;color:#1d1d1d;cursor:pointer';
+    const bFerm = document.createElement('button');
+    bFerm.type = 'button'; bFerm.textContent = '✕ Fermer';
+    bFerm.style.cssText = 'border:1px solid #fff;border-radius:8px;padding:8px 12px;font:600 13px system-ui,sans-serif;background:transparent;color:#fff;cursor:pointer';
+    barre.append(libelle, bImp, bFerm);
+    const cadre = document.createElement('iframe');
+    cadre.setAttribute('title', 'Aperçu avant impression');
+    cadre.style.cssText = 'flex:1 1 auto;width:100%;border:0;background:#fff';
+    cadre.srcdoc = preparer(html, true);
+    ov.append(barre, cadre);
+    document.body.appendChild(ov);
+    const onKey = function(e){ if(e.key === 'Escape') fermer(); };
+    const fermer = function(){ ov.remove(); document.removeEventListener('keydown', onKey); };
+    document.addEventListener('keydown', onKey);
+    bFerm.onclick = fermer;
+    bImp.onclick = function(){
+      if(imprimerDansFenetre(html)) return;
+      // Repli : impression depuis le cadre d'aperçu si aucune fenêtre n'a pu s'ouvrir
+      try{
+        const cw = cadre.contentWindow;
+        cw.__autoriserImpression = true; (cw.__printReal || cw.print).call(cw); cw.__autoriserImpression = false;
+      }catch(e){ notifier('Impression impossible sur cet appareil. Essayez depuis un ordinateur.', true); }
+    };
+  }
+  // Même interface que l'ancienne fenêtre : les documents écrivent dedans, puis l'aperçu s'affiche
+  window.tekouloOuvrirFenetre = function(){
+    let html = '', titre = '', minuterie = null;
+    function titreDoc(){ return titre || ((html.match(/<title>([^<]*)<\/title>/i) || [])[1] || ''); }
+    function planifier(){
+      clearTimeout(minuterie);
+      minuterie = setTimeout(function(){ apercu(html, titreDoc()); }, 350);
+    }
+    return {
+      document: {
+        open: function(){ html = ''; },
+        write: function(){ html += Array.prototype.slice.call(arguments).join(''); },
+        close: function(){ planifier(); },
+        get title(){ return titre; },
+        set title(v){ titre = String(v || ''); }
+      },
+      focus: function(){},
+      close: function(){},
+      print: function(){ planifier(); }
+    };
   };
 })();
 </script>
