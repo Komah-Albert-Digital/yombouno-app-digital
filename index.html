@@ -12837,7 +12837,7 @@ function renderGenericModule(container, mod, filterFn){
     if(f.type==='select'){
       return `<select data-f="${f.key}" onchange="this.classList.remove('invalid')">
         <option value="">—</option>
-        ${f.options.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)}</option>`).join('')}
+        ${f.options.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(f.key==='niveau'?niveauLabel(o):o)}</option>`).join('')}
       </select>`;
     }
     if(f.type==='textarea'){
@@ -12952,6 +12952,7 @@ function renderGenericModule(container, mod, filterFn){
       const formatted = Number(v).toLocaleString('fr-FR');
       return isMonetaryField(f) ? formatted+' GNF' : formatted;
     }
+    if(c==='niveau') return niveauLabel(v);
     return v;
   }
 
@@ -13389,7 +13390,7 @@ function buildEditFormHTML(mod, record){
     if(f.type==='select'){
       return `<select data-f="${f.key}" onchange="this.classList.remove('invalid')">
         <option value="">—</option>
-        ${f.options.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)}</option>`).join('')}
+        ${f.options.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(f.key==='niveau'?niveauLabel(o):o)}</option>`).join('')}
       </select>`;
     }
     if(f.type==='textarea'){
@@ -14298,7 +14299,7 @@ function renderBilanAnnuel(container){
     <div class="section-title"><h3><span class="bar"></span>3. Analyse des résultats académiques</h3></div>
     <div class="table-wrap"><table>
       <thead><tr><th>Niveau</th><th>Élèves notés</th><th>Moyenne générale</th><th>Taux de réussite (≥10)</th></tr></thead>
-      <tbody>${d.resultatsParNiveau.map(r=>`<tr><td><b>${r.niveau}</b></td><td>${r.nbNotes}</td><td>${r.moyGenerale!==null?r.moyGenerale.toFixed(2):'—'}</td><td>${r.tauxReussite!==null?r.tauxReussite+'%':'—'}</td></tr>`).join('')}</tbody>
+      <tbody>${d.resultatsParNiveau.map(r=>`<tr><td><b>${niveauLabel(r.niveau)}</b></td><td>${r.nbNotes}</td><td>${r.moyGenerale!==null?r.moyGenerale.toFixed(2):'—'}</td><td>${r.tauxReussite!==null?r.tauxReussite+'%':'—'}</td></tr>`).join('')}</tbody>
     </table></div>
     <div class="card pad chart-card" style="--chart-color:var(--green-deep); margin-top:10px;">
       <div class="chart-title"><span class="ico">${dicon('pencil')}</span>Moyenne générale par niveau</div>
@@ -15577,7 +15578,7 @@ function renderDashboard(container){
         <div class="card pad" style="flex:1;">
           ${byNiveau.map(x=>`
         <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-          <div style="width:70px; font-size:12.5px; font-weight:700; color:var(--green-deep);">${x.niveau}</div>
+          <div style="width:70px; font-size:12.5px; font-weight:700; color:var(--green-deep);">${niveauLabel(x.niveau)}</div>
           <div style="flex:1; background:var(--line-soft); border-radius:6px; height:16px; overflow:hidden;">
             <div style="width:${(x.count/maxNiveau*100)||0}%; background:linear-gradient(90deg,var(--green),var(--gold)); height:100%;"></div>
           </div>
@@ -15709,7 +15710,7 @@ function renderEleves(container){
     excludeId = excludeId || '';
     if(f.type==='select'){
       const extraOnchange = f.key==='niveau' ? ' eleveNiveauChanged(this);' : '';
-      return `<select data-f="${f.key}" onchange="this.classList.remove('invalid');${extraOnchange}"><option value="">—</option>${f.options.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+      return `<select data-f="${f.key}" onchange="this.classList.remove('invalid');${extraOnchange}"><option value="">—</option>${f.options.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(f.key==='niveau'?niveauLabel(o):o)}</option>`).join('')}</select>`;
     }
     if(f.type==='photo'){
       return `<div class="photo-upload">
@@ -15792,7 +15793,7 @@ function renderEleves(container){
       ${formHTML(editRec)}
       <div class="toolbar">
         <div class="pillbar">
-          ${['TOUS',...NIVEAUX].map(n=>`<span class="pill-tab ${activeNiveau===n?'active':''}" onclick="eleveSetNiveau('${n}')">${n==='TOUS'?'Tous':n} ${n==='TOUS'?`(${items.length})`:`(${items.filter(e=>e.niveau===n).length})`}</span>`).join('')}
+          ${['TOUS',...NIVEAUX].map(n=>`<span class="pill-tab ${activeNiveau===n?'active':''}" onclick="eleveSetNiveau('${n}')">${n==='TOUS'?'Tous':niveauLabel(n)} ${n==='TOUS'?`(${items.length})`:`(${items.filter(e=>e.niveau===n).length})`}</span>`).join('')}
         </div>
         <span class="spacer"></span>
         <button class="btn sm" title="Inscrire un élève" onclick="eleveNew()">+ Élève</button>
@@ -15851,7 +15852,7 @@ function renderEleveEditing(container, rec){
     val = val===undefined?'':val;
     if(f.type==='select'){
       const extraOnchange = f.key==='niveau' ? ' eleveNiveauChanged(this);' : '';
-      return `<select data-f="${f.key}" onchange="this.classList.remove('invalid');${extraOnchange}"><option value="">—</option>${f.options.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+      return `<select data-f="${f.key}" onchange="this.classList.remove('invalid');${extraOnchange}"><option value="">—</option>${f.options.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(f.key==='niveau'?niveauLabel(o):o)}</option>`).join('')}</select>`;
     }
     if(f.type==='photo'){
       return `<div class="photo-upload">
@@ -17256,7 +17257,7 @@ function renderNotes(container){
       <div class="hint-box">Sélectionnez le niveau et le ${periodeMot(NOTES_STATE.niveau)} (3 trimestres en Élémentaire et Primaire, 2 semestres au Collège et au Lycée), puis saisissez les notes de <b>cours</b> et de <b>composition</b> pour chaque matière. Les moyennes, mentions et rangs sont calculés automatiquement. Barème de ce niveau : <b>sur ${baremeCtx()}</b> — moyenne : <b>${baremeCtx()/2}/${baremeCtx()}</b>.</div>
       <div class="toolbar">
         <div class="pillbar">
-          ${NIVEAUX.map(n=>`<span class="pill-tab ${NOTES_STATE.niveau===n?'active':''}" onclick="notesSetNiveau('${n}')">${n}</span>`).join('')}
+          ${NIVEAUX.map(n=>`<span class="pill-tab ${NOTES_STATE.niveau===n?'active':''}" onclick="notesSetNiveau('${n}')">${niveauLabel(n)}</span>`).join('')}
         </div>
         <span class="spacer"></span>
         <select onchange="notesSetSemestre(this.value)">
@@ -17990,7 +17991,7 @@ function renderOrientation(container){
       <div class="hint-box">L'orientation est calculée automatiquement à partir des moyennes de l'élève <b>de la 7ème à la 10ème</b> (tous semestres, toutes années scolaires confondues, retrouvées grâce à son identifiant) : meilleures notes en <b>Mathématiques, Physique, Chimie</b> → <b>Sciences Mathématiques</b> ; meilleures notes en <b>Biologie, Chimie, Physique</b> → <b>Sciences Expérimentales</b> ; meilleures notes en <b>Dictée-Questions, Rédaction, Histoire, Géographie, Anglais</b> → <b>Sciences Sociales</b> ; sinon, <b>Choix libre</b>. La suggestion peut être ajustée manuellement avant d'être enregistrée comme décision finale.</div>
       <div class="toolbar">
         <div class="pillbar">
-          ${NIVEAUX.map(n=>`<span class="pill-tab ${ORIENTATION_STATE.niveau===n?'active':''}" onclick="orientationSetNiveau('${n}')">${n}</span>`).join('')}
+          ${NIVEAUX.map(n=>`<span class="pill-tab ${ORIENTATION_STATE.niveau===n?'active':''}" onclick="orientationSetNiveau('${n}')">${niveauLabel(n)}</span>`).join('')}
         </div>
         <span class="spacer"></span>
         <input class="search" style="max-width:220px;" placeholder="Rechercher un élève…" value="${esc(ORIENTATION_STATE.search)}" oninput="orientationSearch(this.value)">
@@ -18088,7 +18089,7 @@ function orientationDetailHTML(e, history, scores, bestKey){
     const checked = (rec.classesRedoublees||[]).includes(n);
     const avg = ficheAnnualAverage(history, n);
     return `<label style="display:inline-flex; align-items:center; gap:5px; margin-right:16px; font-size:12.5px; cursor:pointer;">
-      <input type="checkbox" ${checked?'checked':''} onchange="orientationToggleRedouble('${e.__id}','${n}')"> ${esc(n)}
+      <input type="checkbox" ${checked?'checked':''} onchange="orientationToggleRedouble('${e.__id}','${n}')"> ${esc(niveauLabel(n))}
       <span class="muted" style="font-size:11px;">(moy. annuelle : <b>${avg!==null?avg.toFixed(2):'—'}</b>/20 — calculée automatiquement)</span>
     </label>`;
   }).join('');
@@ -18517,7 +18518,7 @@ function renderEmploi(container){
       <div class="hint-box">Cliquez sur une cellule pour saisir la matière et l'enseignant du créneau. Les cours durent 2 heures ; le créneau de 16h à 18h est réservé à la révision (une seule matière par jour et par classe). Chaque niveau compte 4 GP (Groupes Pédagogiques : A1 à A4) et chaque GP a son propre emploi du temps. Au Lycée, l'emploi du temps se choisit d'abord par niveau, puis par <b>série</b> (11ème : SL, SS) ou <b>option</b> (12ème et Terminale : SE, SS, SM), puis par GP.</div>
       ${legacyNotice}
       <div class="toolbar" style="flex-wrap:wrap; gap:8px;">
-        <div class="pillbar">${NIVEAUX.map(n=>`<span class="pill-tab ${EMPLOI_NIVEAU===n?'active':''}" onclick="emploiSetNiveau('${n}')">${n}</span>`).join('')}</div>
+        <div class="pillbar">${NIVEAUX.map(n=>`<span class="pill-tab ${EMPLOI_NIVEAU===n?'active':''}" onclick="emploiSetNiveau('${n}')">${niveauLabel(n)}</span>`).join('')}</div>
         ${lycee ? `<div class="pillbar">${seriesCodesPourNiveau(EMPLOI_NIVEAU).map(x=>`<span class="pill-tab ${EMPLOI_SERIE===x.code?'active':''}" onclick="emploiSetSerie('${x.code}')" title="${esc(x.label)}">${x.kind} ${x.code}</span>`).join('')}</div>` : ''}
         <div class="pillbar">${gpSuffixesPourNiveau(EMPLOI_NIVEAU).map(g=>`<span class="pill-tab ${EMPLOI_GP===g?'active':''}" onclick="emploiSetGP('${g}')">${gpLabelPourNiveau(EMPLOI_NIVEAU, g)}</span>`).join('')}</div>
         <span class="spacer"></span>
