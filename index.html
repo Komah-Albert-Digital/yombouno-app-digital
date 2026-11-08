@@ -4337,6 +4337,8 @@ function tekouloAjouterPageDeGarde(html){
   const mid = (CP && CP.mid) || '#0F6B45';
   const debut = bodyM.index + bodyM[0].length;
   const corps = html.slice(debut);
+  // Même orientation que le document (sinon la page de garde restait en portrait)
+  const paysage = /size:A4 landscape/i.test(html);
   // Sommaire : titres du contenu (sans l'en-tête administratif)
   const idx = corps.indexOf('vue-contenu');
   const zone = idx >= 0 ? corps.slice(idx) : corps;
@@ -4389,52 +4391,66 @@ function tekouloAjouterPageDeGarde(html){
     <div class="gs-bas"><div>${esc(p.nomEcole||'')}</div><div>Édité le ${esc(dateEdition)}</div></div>
   </section>` : '';
   const infosGarde2 = (() => { let h=''; for(let i=0;i<infos.length;i+=2){ const a=infos[i], b=infos[i+1]; h += '<div class="c"><span>'+esc(a[0])+'</span><b>'+esc(a[1])+'</b></div>' + (b ? '<div class="c"><span>'+esc(b[0])+'</span><b>'+esc(b[1])+'</b></div>' : '<div class="c"></div>'); } return h; })();
+  const H = paysage ? '209mm' : '296mm';
+  const anneeTxt = p.anneeScolaire ? ' · Année scolaire ' + esc(p.anneeScolaire) : '';
+  const logoGarde = logoEcoleActuel();
   const garde = `<section class="page-garde">
     <style>
-      @page gd-couverture{ size:A4; margin:0; }
-      body:has(.page-garde) .print-logo-badge, body:has(.page-garde) .print-emblem-badge{ display:none !important; }
-      .page-garde{ page:gd-couverture; margin:-36px 0 0 0; padding:0; height:296mm; overflow:hidden; break-after:page; page-break-after:always; }
-      .gd-cover{ position:relative; z-index:1000; width:100%; height:296mm; margin:0; overflow:hidden; box-sizing:border-box; padding:20mm 18mm 14mm; display:flex; flex-direction:column; color:#fff;
-        background:linear-gradient(160deg, ${deep} 0%, ${mid} 70%, ${deep} 100%); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .gd-cover::before{ content:''; position:absolute; z-index:0; right:-120px; top:-120px; width:420px; height:420px; border-radius:50%; border:2px solid rgba(228,180,38,.35); }
-      .gd-cover::after{ content:''; position:absolute; z-index:0; right:-40px; top:-40px; width:260px; height:260px; border-radius:50%; border:1px solid rgba(255,255,255,.14); }
+      @page gd-couverture{ size:A4 ${paysage?'landscape':'portrait'}; margin:0; }
+      body:has(.page-garde) .print-logo-badge, body:has(.page-garde) .print-emblem-badge, body:has(.page-garde) .print-watermark, body:has(.page-garde) .id2-watermark, body:has(.page-garde) .recon-watermark{ display:none !important; }
+      .page-garde{ page:gd-couverture; margin:-36px -36px 0 -36px; padding:0; height:${H}; overflow:hidden; break-after:page; page-break-after:always; }
+      .gd-cover{ position:relative; width:100%; height:${H}; margin:0; overflow:hidden; box-sizing:border-box; padding:15mm 19mm 14mm; display:flex; flex-direction:column; color:#0E1912; background:#fff; font-family:'Calibri','Carlito','Segoe UI',Arial,sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .gd-cover::before{ content:''; position:absolute; z-index:0; right:-110px; top:-110px; width:380px; height:380px; border-radius:50%; border:2px solid rgba(184,134,11,.6); }
+      .gd-cover::after{ content:''; position:absolute; z-index:0; right:-40px; top:-40px; width:230px; height:230px; border-radius:50%; border:1px solid rgba(11,74,50,.3); }
+      .gd-cadre{ position:absolute; z-index:0; left:7mm; right:7mm; top:7mm; bottom:7mm; border:1px solid rgba(122,86,0,.6); pointer-events:none; }
+      .gd-cadre::after{ content:''; position:absolute; left:1.6mm; right:1.6mm; top:1.6mm; bottom:1.6mm; border:.5px solid rgba(11,74,50,.4); }
+      .gd-filigrane{ position:absolute; z-index:0; width:150mm; left:50%; top:50%; transform:translate(-50%,-50%); opacity:.045; pointer-events:none; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .gd-bande{ position:absolute; z-index:5; left:0; right:0; height:9px; background:linear-gradient(90deg,#CE1126 33.33%,#FCD116 33.33%,#FCD116 66.66%,#009460 66.66%); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .gd-bande.haut{ top:0; }
       .gd-bande.bas{ bottom:0; }
-      .gd-top{ position:relative; z-index:1; display:flex; align-items:center; gap:14px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,.22); }
-      .gd-top img{ height:56px; max-width:130px; background:#fff; border-radius:8px; padding:5px 10px; object-fit:contain; }
-      .gd-rep{ font-size:12.5px; font-weight:800; letter-spacing:1.2px; }
-      .gd-devise{ font-size:10px; opacity:.85; margin-top:2px; }
-      .gd-etab{ font-size:11px; font-weight:700; color:#E4B426; margin-top:4px; text-transform:uppercase; letter-spacing:.6px; }
-      .gd-corps{ position:relative; z-index:1; margin-top:auto; margin-bottom:auto; }
-      .gd-kicker{ font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#E4B426; }
-      .gd-titre{ margin-top:12px; font-size:40px; font-weight:800; line-height:1.08; text-transform:uppercase; letter-spacing:.4px; text-shadow:0 2px 14px rgba(0,0,0,.18); }
-      .gd-bar{ width:96px; height:4px; background:#E4B426; border-radius:2px; margin-top:18px; }
-      .gd-chip{ display:inline-block; margin-top:20px; background:#fff; color:${deep}; font-weight:800; padding:7px 18px; border-radius:999px; font-size:14px; }
-      .gd-infos{ position:relative; z-index:1; margin-top:30px; display:grid; grid-template-columns:1fr 1fr; column-gap:14px; background:none; }
-      .gd-infos .c{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:10px; vertical-align:top; padding:10px 14px; margin-bottom:10px; color:#fff; }
-      
-      .gd-infos span{ display:block; font-size:9.5px; font-weight:700; letter-spacing:.9px; text-transform:uppercase; opacity:.7; }
-      .gd-infos b{ display:block; font-size:14px; margin-top:4px; }
-      .gd-bas{ position:relative; z-index:1; margin-top:auto; padding-top:16px; border-top:2px solid #E4B426; display:flex; justify-content:space-between; align-items:flex-end; gap:20px; }
-      .gd-bas .lbl{ font-size:9.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#E4B426; }
-      .gd-bas .nom{ font-size:17px; font-weight:800; margin-top:4px; }
-      .gd-bas .det{ font-size:11px; opacity:.85; margin-top:4px; line-height:1.55; }
-      .gd-bas .droite{ text-align:right; font-size:11px; opacity:.85; line-height:1.55; }
+      .gd-bande.mil{ top:50%; margin-top:-4.5px; left:19mm; right:19mm; }
+      .gd-entete{ position:relative; z-index:1; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; padding-bottom:12px; border-bottom:1px solid #B3BDB0; }
+      .gd-entete .g{ color:${deep}; }
+      .gd-entete .g.d{ text-align:right; }
+      .gd-rep{ font-size:13px; font-weight:800; letter-spacing:1.6px; }
+      .gd-devise{ font-size:11px; font-style:italic; color:#37403A; margin-top:3px; }
+      .gd-etab{ font-size:12.5px; font-weight:800; color:#7A5600; letter-spacing:.8px; text-transform:uppercase; }
+      .gd-sceau{ width:80px; height:80px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px #fff, 0 0 0 3px #B8860B, 0 3px 10px rgba(11,74,50,.16); display:flex; align-items:center; justify-content:center; }
+      .gd-sceau img{ width:64px; height:64px; object-fit:contain; }
+      .gd-corps{ position:relative; z-index:1; margin-top:${paysage?'9mm':'14mm'}; padding-left:20px; border-left:5px solid ${deep}; }
+      .gd-kicker{ font-size:13px; font-weight:700; letter-spacing:3.2px; text-transform:uppercase; color:#7A5600; }
+      .gd-titre{ margin-top:12px; font-family:Georgia,'Times New Roman',serif; font-size:${paysage?'44px':'52px'}; font-weight:700; line-height:1.08; text-transform:uppercase; letter-spacing:.5px; color:${deep}; }
+      .gd-bar{ width:110px; height:3px; background:linear-gradient(90deg,#B8860B,#F4D778); border-radius:2px; margin-top:16px; }
+      .gd-chip{ display:inline-block; margin-top:16px; background:${deep}; color:#fff; font-weight:700; padding:8px 22px; border-radius:4px; font-size:15px; letter-spacing:1px; text-transform:uppercase; }
+      .gd-bas-infos{ position:absolute; z-index:1; left:19mm; right:19mm; top:calc(50% + 14mm); }
+      .gd-infos{ display:grid; grid-template-columns:repeat(${paysage?3:2},1fr); gap:0 22px; }
+      .gd-info{ padding:10px 0 11px; border-bottom:1px solid #B3BDB0; }
+      .gd-info span{ display:block; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#37403A; }
+      .gd-info b{ display:block; font-family:Georgia,'Times New Roman',serif; font-size:${paysage?'17px':'18px'}; font-weight:700; margin-top:5px; color:#0E1912; }
+      .gd-bas{ position:relative; z-index:1; margin-top:auto; padding-top:14px; border-top:2px solid #B8860B; display:flex; justify-content:space-between; align-items:flex-end; gap:20px; }
+      .gd-bas .lbl{ font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#7A5600; }
+      .gd-bas .nom{ font-family:Georgia,'Times New Roman',serif; font-size:21px; font-weight:700; margin-top:4px; color:${deep}; }
+      .gd-bas .det{ font-size:13px; color:#37403A; margin-top:4px; line-height:1.55; }
+      .gd-bas .droite{ text-align:right; font-size:13px; color:#37403A; line-height:1.55; }
     </style>
     <div class="gd-cover">
+      <div class="gd-cadre"></div>
+      <img class="gd-filigrane" src="${logoGarde}" alt="">
       <div class="gd-bande haut"></div>
-      <div class="gd-top">
-        <img src="${logoEcoleActuel()}" alt="">
-        <div><div class="gd-rep">RÉPUBLIQUE DE GUINÉE</div><div class="gd-devise">Travail — Justice — Solidarité</div><div class="gd-etab">${esc(p.nomEcole||'')}</div></div>
+      <div class="gd-bande mil"></div>
+      <div class="gd-bande bas"></div>
+      <div class="gd-entete">
+        <div class="g"><div class="gd-rep">RÉPUBLIQUE DE GUINÉE</div><div class="gd-devise">Travail — Justice — Solidarité</div></div>
+        <div class="gd-sceau"><img src="${logoGarde}" alt=""></div>
+        <div class="g d"><div class="gd-etab">${esc(p.nomEcole||'')}</div><div class="gd-devise">${esc(p.ville||'')}</div></div>
       </div>
       <div class="gd-corps">
-        <div class="gd-kicker">Document officiel${p.anneeScolaire ? ' · Année scolaire ' + esc(p.anneeScolaire) : ''}</div>
+        <div class="gd-kicker">Document officiel${anneeTxt}</div>
         <div class="gd-titre">${titre}</div>
         <div class="gd-bar"></div>
         ${cycle ? `<div class="gd-chip">${esc(cycle)}</div>` : ''}
-        <div class="gd-infos">${infosGarde2}</div>
       </div>
+      <div class="gd-bas-infos"><div class="gd-infos">${infosGarde}</div></div>
       <div class="gd-bas">
         <div>
           <div class="lbl">Établissement</div>
@@ -4443,7 +4459,6 @@ function tekouloAjouterPageDeGarde(html){
         </div>
         <div class="droite">Document à usage interne<br>Édité le ${esc(dateEdition)}</div>
       </div>
-      <div class="gd-bande bas"></div>
     </div>
   </section>`;
   const espaceSuite = '<div class="gd-espace" style="height:18mm"></div>';
@@ -22635,8 +22650,29 @@ function corrTelecharger(){
   const STUB = '<script>(function(){var r=window.print;window.__printReal=r;window.__autoriserImpression=false;window.print=function(){var clic=!!(window.event&&window.event.type==="click");if(window.__autoriserImpression||clic){r.call(window);}};})();<\/script>';
   const CSS_IMPRESSION = '<style>@page{size:A4;margin:14mm 12mm 16mm}@media print{html,body{background:#fff !important}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}h1,h2,h3,h4,.section-title,.sec-title{break-after:avoid;page-break-after:avoid}thead{display:table-header-group}tfoot{display:table-footer-group}tr,td,th{break-inside:avoid;page-break-inside:avoid}table{border-collapse:collapse}img,svg{break-inside:avoid;page-break-inside:avoid}.gd-espace:empty,.page-sommaire:empty{display:none}}</style>';
   const CSS_APERCU = '<style>.tk-print-actions{display:none!important}html,body{background:#fff}</style>';
+  // Le sceau est recopié dans chaque document (en-têtes, filigranes, page de garde) sous forme de data URI
+  // d'environ 180 Ko. Pour l'aperçu et l'impression, chaque copie est remplacée par une URL locale courte.
+  let logoCourt = null;
+  function logoCourtUrl(){
+    if(logoCourt !== null) return logoCourt;
+    logoCourt = '';
+    try{
+      const src = (typeof TEKOULO_SEAL_DATAURI === 'string') ? TEKOULO_SEAL_DATAURI : '';
+      if(src.indexOf('data:image/png;base64,') === 0){
+        const bin = atob(src.slice(src.indexOf(',') + 1));
+        const oct = new Uint8Array(bin.length);
+        for(let i = 0; i < bin.length; i++) oct[i] = bin.charCodeAt(i);
+        logoCourt = URL.createObjectURL(new Blob([oct], { type: 'image/png' }));
+      }
+    }catch(e){ logoCourt = ''; }
+    return logoCourt;
+  }
   function preparer(html, pourAperçu){
     html = String(html||'');
+    const court = logoCourtUrl();
+    if(court && typeof TEKOULO_SEAL_DATAURI === 'string' && html.indexOf(TEKOULO_SEAL_DATAURI) >= 0){
+      html = html.split(TEKOULO_SEAL_DATAURI).join(court);
+    }
     const ajout = STUB + CSS_IMPRESSION + (pourAperçu ? CSS_APERCU : '');
     if(/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, function(m){ return m + ajout; });
     return ajout + html;
@@ -22885,7 +22921,7 @@ function corrTelecharger(){
     function titreDoc(){ return titre || ((html.match(/<title>([^<]*)<\/title>/i) || [])[1] || ''); }
     function planifier(){
       clearTimeout(minuterie);
-      minuterie = setTimeout(function(){ apercu(html, titreDoc()); }, 350);
+      minuterie = setTimeout(function(){ apercu(html, titreDoc()); }, 60);
     }
     return {
       document: {
